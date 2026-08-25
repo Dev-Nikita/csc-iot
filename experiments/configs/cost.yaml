@@ -1,0 +1,6 @@
+# FROZEN. Uniform on purpose: any other setting invites the accusation that
+# the weights were chosen to flatter minimum-necessary intervention.
+w_latency: 0.25
+w_resource: 0.25
+w_bandwidth: 0.25
+w_disruption: 0.25

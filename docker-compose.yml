@@ -1,0 +1,64 @@
+# Minimum reproducible environment. `docker compose up` must be enough.
+# Kubernetes is optional and only for the largest scalability points.
+name: csc-iot
+
+services:
+  nats:
+    image: nats:2-alpine
+    command: ["-js", "-m", "8222"]
+    ports: ["4222:4222", "8222:8222"]
+
+  edge-agent:
+    build: { context: ., dockerfile: deploy/Dockerfile.go, args: { CMD: edge-agent } }
+    depends_on: [nats]
+    environment:
+      CSC_NATS_URL: nats://nats:4222
+      CSC_RUN_ID: ${CSC_RUN_ID:-dev}
+      CSC_SEED: ${CSC_SEED:-42}
+    deploy: { replicas: 3 }
+
+  gateway:
+    build: { context: ., dockerfile: deploy/Dockerfile.go, args: { CMD: gateway } }
+    depends_on: [nats, edge-agent]
+    environment:
+      CSC_NATS_URL: nats://nats:4222
+      CSC_SEED: ${CSC_SEED:-42}
+
+  device-sim:
+    build: { context: ., dockerfile: deploy/Dockerfile.go, args: { CMD: device-sim } }
+    depends_on: [gateway]
+    environment:
+      CSC_DEVICE_COUNT: ${CSC_DEVICE_COUNT:-100}
+      CSC_SEED: ${CSC_SEED:-42}
+
+  intelligence:
+    build: { context: ., dockerfile: deploy/Dockerfile.py }
+    ports: ["50051:50051"]
+
+  controller:
+    build: { context: ., dockerfile: deploy/Dockerfile.go, args: { CMD: controller } }
+    depends_on: [intelligence, gateway]
+    environment:
+      CSC_INTELLIGENCE_ADDR: intelligence:50051
+      CSC_CONTROLLER: ${CSC_CONTROLLER:-csc}
+
+  fault-injector:
+    build: { context: ., dockerfile: deploy/Dockerfile.go, args: { CMD: fault-injector } }
+    # NET_ADMIN is required for kernel-level tc/netem impairment.
+    # Without it the injector falls back to application-layer impairment and
+    # MUST record that fact in the run manifest.
+    cap_add: ["NET_ADMIN"]
+    network_mode: "service:gateway"
+    environment:
+      CSC_SCENARIO: ${CSC_SCENARIO:-F1}
+      CSC_SEED: ${CSC_SEED:-42}
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes: ["./deploy/prometheus.yml:/etc/prometheus/prometheus.yml:ro"]
+    ports: ["9090:9090"]
+
+  grafana:
+    image: grafana/grafana:latest
+    ports: ["3000:3000"]
+    depends_on: [prometheus]

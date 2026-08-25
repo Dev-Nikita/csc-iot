@@ -1,0 +1,6 @@
+# FROZEN. J(a) = alpha*R(a) + beta*L(a) + gamma*C(a)
+alpha: 0.6
+beta: 0.2
+gamma: 0.2
+# Non-inferiority margin for the H3 availability claim (absolute).
+availability_equivalence_margin: 0.005

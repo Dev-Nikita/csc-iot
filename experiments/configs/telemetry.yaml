@@ -1,0 +1,8 @@
+# FROZEN
+sample_period_ms: 100
+network:     [rtt_ms, jitter_ms, loss_ratio, throughput_bps, retry_rate, conn_failure_rate]
+edge:        [cpu_load, mem_used, queue_depth, service_time_ms, request_rate, timeout_rate]
+application: [event_rate, delivery_ratio, e2e_latency_ms, sla_violations]
+mobility:    [pos_x, pos_y, velocity, gateway_id, handover_state, link_quality]
+# link_quality is an ABSTRACT [0,1] score driving netem parameters.
+# It is NOT a measured RF SINR and must never be described as one.

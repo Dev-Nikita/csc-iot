@@ -1,0 +1,7 @@
+# FROZEN
+warmup_s: 120
+measure_s: 300
+cooldown_s: 60
+seeds: 20            # target 30 if compute allows
+device_counts: [100, 500, 1000, 5000, 10000]
+stretch_device_count: 25000

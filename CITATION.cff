@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+title: "Counterfactual Shadow Control (CSC)"
+message: "If you use this software or its experimental artifacts, please cite the accompanying paper once published."
+type: software
+authors:
+  - family-names: Tarasov
+    given-names: Nikita
+    affiliation: "Lviv Polytechnic National University"
+    # orcid: TODO
+license: MIT
+repository-code: "TODO"
+abstract: >-
+  Uncertainty-aware proactive self-healing for mobile edge IoT systems.
+  Evaluates action-conditioned counterfactual futures before intervening,
+  executes the cheapest action satisfying a calibrated risk bound, abstains
+  when none does, and validates counterfactual rankings by deterministic
+  fork-and-replay of a distributed emulation testbed.

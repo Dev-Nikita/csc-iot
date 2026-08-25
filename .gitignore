@@ -1,0 +1,28 @@
+# build
+/bin/
+/gen/
+*.test
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+*.egg-info/
+
+# experiment output -- raw logs are append-only and NOT committed
+/data/raw/*
+!/data/raw/.gitkeep
+/data/processed/*
+!/data/processed/.gitkeep
+/experiments/manifests/*.json
+/paper/generated_tables/*.tex
+/paper/figures/*.pdf
+!/paper/figures/.gitkeep
+results_long.csv
+summary.csv
+statistical_tests.csv
+
+# local
+.DS_Store
+.env

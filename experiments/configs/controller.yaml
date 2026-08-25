@@ -1,0 +1,7 @@
+# FROZEN -- see EXPERIMENT_PROTOCOL.md section 2.
+# Changing any value here after main results are viewed invalidates the run set.
+tick_ms: 500
+R_safe: 0.20
+U_max: 0.25
+decision_deadline_ms: 50      # missed deadline => recorded fallback, not a wait
+fallback_action: NO_OP

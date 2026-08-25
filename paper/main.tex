@@ -1,0 +1,71 @@
+% CSC -- IEEE Internet of Things Journal
+% TARGET: 6.0 published pages INCLUDING references. Hard ceiling 8.
+% Page budget (see RESEARCH_SPEC.md):
+%   Abstract + Intro .......... 0.90
+%   Related work / gap ........ 0.45
+%   System model + method ..... 2.30
+%   Prototype + methodology ... 0.75
+%   Results ................... 1.20
+%   Discussion + conclusion ... 0.35
+%   References ................ remainder
+% Figures: exactly 4.  Tables: exactly 3.
+% Every number in Section V comes from paper/generated_tables/ -- typed
+% numbers are a bug, not a shortcut.
+%
+% DO NOT WRITE RESULTS OR THE ABSTRACT UNTIL BACKLOG PHASE 16 IS COMPLETE.
+
+\documentclass[journal]{IEEEtran}
+
+\begin{document}
+
+\title{Counterfactual Shadow Control: Uncertainty-Aware Proactive
+Self-Healing for Mobile Edge IoT Systems}
+
+\author{TODO}
+
+\maketitle
+
+\begin{abstract}
+TODO --- write last, 150--220 words, one paragraph, 2--3 real numbers,
+no citations, no equations, no superlatives.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Internet of Things, edge computing, self-healing systems, causal inference,
+uncertainty quantification.
+\end{IEEEkeywords}
+
+\section{Introduction}
+% Gap sentence (fixed by NOVELTY_AUDIT.md 1): recent work reasons causally
+% about which fault occurred and gates remediation on confidence, but still
+% selects the action with the best predicted outcome -- no cost model, no
+% calibrated coverage, and no observation of what the non-selected actions
+% would have done.
+% End with exactly 3-4 contributions. No "for the first time".
+TODO
+
+\section{Related Work and Research Gap}
+TODO
+
+\section{System Model and Counterfactual Shadow Control}
+TODO
+
+\section{Prototype and Experimental Methodology}
+TODO
+
+\section{Results}
+TODO --- \input{generated_tables/table_main.tex}
+
+\section{Discussion and Limitations}
+% Must cover: causal-model assumptions; emulation vs physical radio;
+% limits of deterministic replay; scenario shift; calibration validity;
+% centralized controller; energy proxy; scaling limits. Negative results stay.
+TODO
+
+\section{Conclusion}
+TODO
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}

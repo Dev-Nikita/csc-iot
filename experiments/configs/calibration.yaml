@@ -1,0 +1,5 @@
+# FROZEN
+coverage_target: 0.90
+method: adaptive_conformal      # falls back to split conformal on the ID split
+calibration_split: seed_block_C
+report_empirical_coverage: true # including where it degrades under shift

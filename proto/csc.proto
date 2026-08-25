@@ -1,0 +1,85 @@
+syntax = "proto3";
+
+package csc.v1;
+option go_package = "github.com/TODO-OWNER/csc-iot/gen/cscv1;cscv1";
+
+// The intelligence plane never decides. It ranks. The controller decides.
+
+service Intelligence {
+  // Score every candidate action for one decision state.
+  rpc EvaluateActions(StateSnapshot) returns (ActionRanking);
+  // Streaming variant used at high tick rates.
+  rpc EvaluateStream(stream StateSnapshot) returns (stream ActionRanking);
+  // Closed-loop feedback: what actually happened after the executed action.
+  rpc ReportOutcome(Outcome) returns (Ack);
+}
+
+enum Action {
+  ACTION_NO_OP     = 0;
+  ACTION_REROUTE   = 1;
+  ACTION_MIGRATE   = 2;
+  ACTION_THROTTLE  = 3;
+  ACTION_REPLICATE = 4;
+}
+
+message NodeFeatures {
+  string node_id   = 1;
+  string node_type = 2;   // device | gateway | link | edge | broker | service
+  repeated double values = 3;
+  repeated string names  = 4;   // parallel to values; asserted equal length
+}
+
+message Edge {
+  string src = 1;
+  string dst = 2;
+}
+
+message StateSnapshot {
+  string decision_id = 1;
+  string run_id      = 2;
+  int64  t_unix_nano = 3;
+  uint64 seed        = 4;
+  repeated NodeFeatures nodes = 5;
+  repeated Edge edges         = 6;
+  int32  window_len           = 7;   // telemetry steps included
+  repeated Action feasible_actions = 8;
+}
+
+message ActionScore {
+  Action action        = 1;
+  // Observational risk P(F | S). Kept separate from the interventional
+  // estimate on purpose -- these must never be conflated in logs or code.
+  double risk_observational = 2;
+  // Interventional risk P(F | S, do(A=a)).
+  double risk_interventional = 3;
+  double risk_lower     = 4;   // calibrated interval
+  double risk_upper     = 5;   // the bound the safety gate uses
+  double interval_width = 6;   // uncertainty U(a)
+  double cost           = 7;   // normalized C(a)
+}
+
+message ActionRanking {
+  string decision_id = 1;
+  repeated ActionScore scores = 2;
+  double coverage_target      = 3;
+  string model_version        = 4;
+  string calibration_version  = 5;
+  int64  t_features_nanos     = 6;
+  int64  t_model_nanos        = 7;
+  int64  t_counterfactual_nanos = 8;
+}
+
+message Outcome {
+  string decision_id     = 1;
+  Action executed        = 2;
+  bool   abstained       = 3;
+  bool   failure_observed = 4;
+  double latency_p99_ms  = 5;
+  double availability    = 6;
+  double queue_depth     = 7;
+  double realized_cost   = 8;
+  // Set only for fork-and-replay branches, never for online decisions.
+  bool   is_replay_branch = 9;
+}
+
+message Ack { bool ok = 1; }
