@@ -26,3 +26,4 @@ statistical_tests.csv
 # local
 .DS_Store
 .env
+_to_delete/

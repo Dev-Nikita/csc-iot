@@ -1,33 +1,54 @@
-% CSC -- IEEE Internet of Things Journal
-% TARGET: 6.0 published pages INCLUDING references. Hard ceiling 8.
-% Page budget (see RESEARCH_SPEC.md):
-%   Abstract + Intro .......... 0.90
-%   Related work / gap ........ 0.45
-%   System model + method ..... 2.30
-%   Prototype + methodology ... 0.75
-%   Results ................... 1.20
-%   Discussion + conclusion ... 0.35
-%   References ................ remainder
-% Figures: exactly 4.  Tables: exactly 3.
-% Every number in Section V comes from paper/generated_tables/ -- typed
-% numbers are a bug, not a shortcut.
+%==============================================================================
+% Counterfactual Shadow Control -- IEEE Internet of Things Journal
 %
-% DO NOT WRITE RESULTS OR THE ABSTRACT UNTIL BACKLOG PHASE 16 IS COMPLETE.
-
+% TARGET: 6.0 published pages INCLUDING references. Hard ceiling 8.
+% Figures: exactly 4.  Tables: exactly 3.
+%
+% RULE: every number in Section V is produced by analysis/ from
+% results_long.csv and pulled in with \input. A number typed by hand in
+% Section V is a bug. Section V, the abstract, and Figs. 3-4 stay as
+% placeholders until BACKLOG.md phase 16 is complete.
+%==============================================================================
 \documentclass[journal]{IEEEtran}
+
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,fit,calc,backgrounds}
+\usepackage[caption=false,font=footnotesize]{subfig}
+\usepackage{url}
+
+\newtheorem{proposition}{Proposition}
+\newcommand{\Rsafe}{R_{\mathrm{safe}}}
+\newcommand{\Umax}{U_{\max}}
+\newcommand{\Aset}{\mathcal{A}}
+\newcommand{\Asafe}{\Aset^{\mathrm{safe}}_{t}}
+\newcommand{\TODO}[1]{\textbf{[TODO: #1]}}
 
 \begin{document}
 
-\title{Counterfactual Shadow Control: Uncertainty-Aware Proactive
-Self-Healing for Mobile Edge IoT Systems}
+\title{Counterfactual Shadow Control: Uncertainty-Aware\\
+Proactive Self-Healing for Mobile Edge IoT Systems}
 
-\author{TODO}
+\author{Nikita Tarasov%
+\thanks{The author is with Lviv Polytechnic National University, Lviv, Ukraine
+(e-mail: TODO).}%
+\thanks{Source code, experiment configurations and run manifests: TODO.}}
 
 \maketitle
 
+%==============================================================================
 \begin{abstract}
-TODO --- write last, 150--220 words, one paragraph, 2--3 real numbers,
-no citations, no equations, no superlatives.
+\TODO{write last, after phase 16. 150--220 words, one paragraph, 2--3
+measured numbers, no citations, no equations, no superlatives. Draft skeleton:
+problem (mobile edge IoT failures develop through dependency chains); gap
+(prediction and diagnosis do not establish which intervention is worth making);
+method (action-conditioned counterfactual risk, calibrated bound,
+minimum-necessary intervention, safe abstention); implementation (distributed
+Go/Python prototype, emulated mobile-edge testbed); scope (N runs, 7 scenarios,
+6 controllers, paired seeds); findings (PFR, WIR, cost, overhead --- real
+numbers only); implication.}
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -35,36 +56,577 @@ Internet of Things, edge computing, self-healing systems, causal inference,
 uncertainty quantification.
 \end{IEEEkeywords}
 
+%==============================================================================
 \section{Introduction}
-% Gap sentence (fixed by NOVELTY_AUDIT.md 1): recent work reasons causally
-% about which fault occurred and gates remediation on confidence, but still
-% selects the action with the best predicted outcome -- no cost model, no
-% calibrated coverage, and no observation of what the non-selected actions
-% would have done.
-% End with exactly 3-4 contributions. No "for the first time".
-TODO
+\IEEEPARstart{M}{obile} edge deployments fail differently from the data-centre
+systems most resilience mechanisms were designed for. A device moves out of
+range of its gateway, link quality drops, packet loss rises, the transport layer
+retransmits, queues at the serving edge node grow, processing latency follows,
+requests begin to time out, timeouts trigger further retries, and a
+service-level agreement is violated several seconds after the first physically
+meaningful event. The failure is not a point in time but a chain, and every link
+in that chain is an opportunity to act that the previous approaches spend
+differently.
 
+Reactive recovery spends the whole chain: detection fires once the agreement is
+already broken, so downtime is a precondition for the response rather than
+something it avoids. Predictive schemes spend most of it. A model mapping the
+state to $P(F_{t+\Delta})$ raises an alarm early, but a probability is not a
+decision, and it says nothing about whether rerouting, migrating the workload,
+throttling the source or activating a replica would change that likelihood, by
+how much, or at what price. The gap is usually closed by a heuristic pairing
+each alarm with a prearranged action, which returns the system to acting without
+knowing what the action does.
+
+Recent work has moved closer. Causal and neuro-symbolic pipelines for the
+computing continuum build dependency graphs from runtime evidence and return
+root causes with recovery recommendations \cite{ye2026nesyedge}, and
+uncertainty-aware agents gate remediation on confidence, abstaining rather than
+acting on weak evidence \cite{desilva2026aurora}. Both reason about \emph{why}
+the system is degrading; neither establishes what a candidate action would cost,
+and both, having taken the action with the best predicted outcome, never observe
+what the rejected actions would have done. Reinforcement-learning controllers
+for edge migration do price their actions \cite{siew2022fire}, but inside a
+scalar reward fixed at training time: invisible at the decision, and not
+something the controller can decline to make.
+
+The question this paper takes as primary is therefore not whether the system
+will fail, but which intervention changes the predicted future enough to justify
+modifying a system that is still running --- and, given several that would, which
+is the least disruptive. We call the mechanism \emph{Counterfactual Shadow
+Control} (CSC). At each decision point CSC estimates the failure risk under no
+action and under each available intervention, converts each estimate into a
+conservative upper bound through conformal calibration, discards the actions
+whose bound or whose uncertainty exceeds a declared threshold, and executes the
+cheapest action that survives. When nothing survives, it executes a
+predetermined fallback rather than the least-bad learned option. After acting it
+compares what it predicted with what occurred and feeds the difference back into
+calibration.
+
+Showing that such a controller ranks alternative futures correctly is harder
+than it looks: in a live system exactly one action is taken and the rest are
+counterfactual by construction. We make the environment forkable. From a
+recorded decision state, with the same seed, workload trace, fault schedule and
+service state, the emulator is reconstructed and every candidate action is
+executed in its own branch. The outcomes are measured rather than assumed, which
+turns two questions that are usually argued into questions that are answered:
+how often the predicted best action is the actual best action, and how much
+objective value is lost when it is not. The lineage is chaos engineering
+\cite{basiri2016chaos}; the change is that the perturbation under study is the
+response rather than the fault.
+
+The contributions are:
+
+\begin{enumerate}
+\item \textbf{Counterfactual Shadow Control}, a runtime mechanism that compares
+several intervention-conditioned futures before modifying a running mobile-edge
+IoT system, keeping observational and interventional risk as distinct quantities
+throughout.
+\item \textbf{Minimum-necessary intervention}, formulated as selection of the
+lowest-cost action subject to a calibrated upper risk bound and an uncertainty
+bound, with safe abstention when the feasible set is empty, together with a
+coverage statement and its assumptions.
+\item \textbf{Deterministic fork-and-replay}, an experimental methodology that
+executes every candidate action from a common state and thereby provides ground
+truth for counterfactual action rankings, enabling ranking-accuracy and regret
+measurements in place of predictive-quality proxies.
+\item A distributed Go/Python prototype and an evaluation against reactive,
+predictive, graph-based and reinforcement-learning controllers under link
+degradation, latency inflation, overload, congestion, mobility, node failure,
+cascading faults and scenario-level distribution shift.
+\end{enumerate}
+
+%==============================================================================
 \section{Related Work and Research Gap}
-TODO
 
+\textbf{Edge resilience and failure prediction.}
+Aral and Brandic show that edge service failures are spatiotemporally
+correlated rather than independent and exploit this for resilience-aware
+placement \cite{aral2021spatiotemporal}; graph neural networks are the
+established detector class for relational IoT telemetry \cite{wu2022gnniiot}.
+Both stop at a score. Link-layer resilience switches between heterogeneous
+transports once one degrades \cite{kumar2023resilientedge} and slice-level work
+provisions redundancy at planning time \cite{esmat2023slicing}; neither selects
+among runtime responses.
+
+\textbf{Causal diagnosis and self-healing.}
+NeSy-Edge builds a sparse symbolic causal graph from runtime logs and returns
+root causes with recovery recommendations \cite{ye2026nesyedge}. AURORA performs
+counterfactual root-cause analysis within each fault's Markov blanket, selects
+the action maximising the do-calculus posterior of recovery, and gates execution
+on causal confidence and bounded epistemic uncertainty, abstaining otherwise
+\cite{desilva2026aurora}. AURORA is the closest prior work, and we claim neither
+uncertainty gating nor abstention as new. CSC differs in what the gate protects
+and what the selection optimises: a free-energy bound carries no coverage
+semantics, whereas a conformal bound admits a checkable miscoverage rate; and
+maximising recovery probability is not minimising disruption subject to a risk
+constraint, because it migrates a workload where rerouting would have sufficed.
+A large study of causal root-cause analysis for microservices finds no dominant
+method and, more usefully, that synthetic-data performance does not predict
+real-system performance \cite{pham2024rca}. We treat both as design constraints.
+
+\textbf{Learned control, twins and calibration.}
+FIRE prices delay, migration, failure and backup placement inside a
+reinforcement-learning reward \cite{siew2022fire}: the trade-off is fixed at
+training time, invisible at decision time, and cannot be declined. FIRE trains
+inside an edge digital twin, which locates the boundary --- a twin is a persistent
+synchronised replica \cite{wu2021dtn}, while CSC builds transient
+action-conditioned forecasts and keeps no standing model. Conformal prediction
+supplies distribution-free coverage under exchangeability
+\cite{angelopoulos2021gentle}, with variants for temporal dependence
+\cite{xu2023cptimeseries} and for shift \cite{gibbs2021aci}, and has been used
+to decide when edge inference may be trusted \cite{huang2025cascades} and as a
+route to practical safety guarantees in control
+\cite{lindemann2024cpverification}. CSC applies it to a quantity none of these
+address: the risk of an intervention that has not been taken.
+
+\textbf{Gap.}
+No prior approach, to our knowledge, jointly ranks candidate interventions by
+calibrated interventional risk, selects the cheapest action satisfying a
+declared safety constraint, and validates that ranking against alternative
+futures that were actually executed. Table~\ref{tab:related} summarises the
+comparison; a mark is withheld only where the cited work was read and the
+capability was absent, never by assumption.
+
+\input{table_related.tex}
+
+\begin{figure}[!t]
+\centering
+\input{figures/fig1_concept.tex}
+\caption{Reactive, predictive and counterfactual control on the same
+degradation chain. Reactive control acts after the SLA is broken; predictive
+control acts on a risk score with a fixed response; CSC evaluates the risk of
+every candidate action before acting, executes the cheapest action whose
+calibrated upper bound clears $\Rsafe$, and abstains when none does.}
+\label{fig:concept}
+\end{figure}
+
+%==============================================================================
 \section{System Model and Counterfactual Shadow Control}
-TODO
 
+\subsection{System and state}
+The system comprises IoT devices $\mathcal{D}=\{d_1,\dots,d_N\}$, edge nodes
+$\mathcal{E}=\{e_1,\dots,e_M\}$ and services
+$\mathcal{V}=\{v_1,\dots,v_K\}$. Devices move, associate with gateways, and
+generate events; gateways queue, retry and route them to edge nodes that execute
+services subject to an agreement on end-to-end latency and delivery ratio.
+
+The controller observes the system at a fixed tick as
+\begin{equation}
+S_t=(G_t,X_t),\qquad
+X_t\in\mathbb{R}^{|\mathcal{N}_t|\times d\times W},
+\label{eq:state}
+\end{equation}
+where $G_t=(\mathcal{N}_t,\mathcal{L}_t)$ is the dependency graph over device,
+gateway, link, edge-node, broker and service vertices, and $X_t$ stacks $d$
+telemetry features per vertex over a window of $W$ samples. Features span the
+network layer (round-trip time, jitter, loss, throughput, retry and
+connection-failure rates), the edge layer (load, memory, queue depth, service
+time, request and timeout rates), the application layer (event rate, delivery
+ratio, end-to-end latency, violations) and mobility (position, velocity, serving
+gateway, handover state, and a link-quality score $q_t\in[0,1]$). That score is
+an abstract quantity driving network impairment; it is not a measured radio
+signal-to-interference-plus-noise ratio and is not treated as one here.
+
+The failure event $F_{t+\Delta}$ indicates an agreement violation sustained
+within the horizon $\Delta$. The action set is deliberately small,
+\begin{equation}
+\Aset=\{a_0,\,a_1,\,a_2,\,a_3,\,a_4\},
+\label{eq:actions}
+\end{equation}
+denoting no action, reroute, workload migration, source throttling and replica
+activation. Each is a primitive the runtime can execute on a live system with
+bounded and measurable side effects.
+
+\subsection{Observational and interventional risk}
+A temporal predictor $f_\theta$ over graph-aggregated features gives the
+observational risk
+\begin{equation}
+R^{\mathrm{obs}}(S_t)=\Pr\!\left[F_{t+\Delta}=1 \mid S_t\right]=f_\theta(S_t).
+\label{eq:obs}
+\end{equation}
+Equation~\eqref{eq:obs} is what prediction-only controllers act on. It is not
+what CSC acts on, and the distinction is preserved in the implementation: the
+two quantities occupy separate fields of the decision record and are never
+substituted for one another.
+
+Causal structure is fixed from system semantics rather than discovered. The
+structural causal model $\mathcal{M}$ encodes
+\begin{align}
+&\textit{Mob}\rightarrow\textit{LinkQ}\rightarrow\textit{Loss}
+ \rightarrow\textit{Retry}\rightarrow\textit{Queue}, \nonumber\\
+&\textit{Queue}\rightarrow\textit{Lat}\rightarrow\textit{Timeout}
+ \rightarrow F, \nonumber\\
+&\textit{EvRate}\rightarrow\textit{Queue},\quad
+ \textit{Load}\rightarrow\textit{ProcTime}\rightarrow\textit{Queue}.
+\label{eq:scm}
+\end{align}
+Every edge in \eqref{eq:scm} is a mechanism the deployed system implements, and
+several reverse edges are excluded on physical grounds --- queue depth at time
+$t$ cannot influence device mobility at $t-1$. Restricting the graph this way
+trades discovery generality for identifiability and reproducibility, a trade
+supported by evidence that discovered structures transfer poorly from synthetic
+data to running systems \cite{pham2024rca}. Structure is fixed; parameters are
+estimated from training observations.
+
+Applying action $a$ replaces the mechanisms it controls, yielding the mutilated
+model $\mathcal{M}_a$ and the interventional risk
+\begin{equation}
+R(a\mid S_t)=\Pr_{\mathcal{M}_a}\!\left[F_{t+\Delta}=1 \mid
+\mathrm{do}(A_t=a),\,S_t\right].
+\label{eq:int}
+\end{equation}
+Rerouting overrides the gateway-to-edge assignment, migration overrides service
+placement, throttling overrides the source event rate, and replication overrides
+service capacity. Identification of \eqref{eq:int} requires that
+\eqref{eq:scm} contain no unmeasured common cause of an intervened variable and
+$F$, and that unintervened mechanisms be invariant to the intervention. Both are
+assumptions about the emulated system, stated rather than tested;
+Section~\ref{sec:discussion} returns to what happens when they are wrong.
+
+\subsection{Intervention cost}
+Each action carries a normalised cost
+\begin{equation}
+C(a)=w_L\hat{L}_a+w_R\hat{E}_a+w_B\hat{B}_a+w_D\hat{D}_a,
+\qquad \textstyle\sum w=1,
+\label{eq:cost}
+\end{equation}
+combining added latency, resource consumption, bandwidth overhead and
+disruption, each normalised to $[0,1]$ by the range observed during calibration.
+The weights are uniform, fixed in version control before any comparative result
+is examined, and never tuned; a sweep over non-uniform settings is in the
+supplementary material. Uniform is the conservative choice, since any other
+setting would make minimum-necessary intervention easier to demonstrate than it
+should be.
+
+\subsection{Calibration and the safety gate}
+A point estimate of \eqref{eq:int} does not authorise a change to a running
+system. On a calibration set disjoint from training and validation, split
+conformal calibration \cite{angelopoulos2021gentle} yields the residual quantile
+$\hat{q}_{1-\alpha}$ and the conservative bound
+\begin{equation}
+R^{+}(a\mid S_t)=R(a\mid S_t)+\hat{q}_{1-\alpha},
+\qquad
+U(a)=R^{+}(a)-R^{-}(a),
+\label{eq:conformal}
+\end{equation}
+with interval width $U(a)$ as the uncertainty measure. Under scenario-level
+shift the exchangeability behind \eqref{eq:conformal} is not guaranteed, so the
+adaptive variant \cite{gibbs2021aci}, which updates $\alpha$ online from
+realised coverage, is used instead; temporal dependence within a run follows
+\cite{xu2023cptimeseries}. Coverage is reported as measured, on identically
+distributed and shifted scenarios alike.
+
+The gate admits an action only if both its risk bound and its uncertainty are
+acceptable:
+\begin{equation}
+\Asafe=\left\{a\in\Aset \;:\; R^{+}(a\mid S_t)\le \Rsafe
+\;\wedge\; U(a)\le \Umax\right\}.
+\label{eq:feasible}
+\end{equation}
+
+\subsection{Minimum-necessary intervention}
+The controller then takes the cheapest admissible action rather than the safest
+one:
+\begin{equation}
+a^{*}_t=
+\begin{cases}
+\displaystyle\arg\min_{a\in\Asafe} C(a), & \Asafe\neq\emptyset,\\[6pt]
+a_{\mathrm{fb}}, & \Asafe=\emptyset .
+\end{cases}
+\label{eq:mni}
+\end{equation}
+The two branches of \eqref{eq:mni} carry the design. The first says that once
+predicted risk is low enough, further risk reduction does not justify further
+disruption: if rerouting brings the bound under $\Rsafe$, migrating the workload
+is a more expensive way of reaching a state the system has already reached. The
+second is safe abstention. When no action can be shown to be sufficient and
+reliable, the controller executes a predetermined fallback --- by default no
+action --- instead of the least-bad learned option, on the grounds that a
+controller which cannot justify an intervention should not perform one. This
+follows the gating principle of \cite{desilva2026aurora}; the difference is that
+$\Rsafe$ is a threshold on a quantity with a coverage interpretation, so the
+frequency with which the gate is wrong is a measurable property rather than a
+modelling artefact.
+
+\begin{proposition}[Bound violation under exchangeability]
+\label{prop:cov}
+Let the conformity scores of the calibration set and of the decision at time $t$
+be exchangeable, and let $R^{+}$ be constructed as in \eqref{eq:conformal} at
+level $1-\alpha$. Then for any action admitted by \eqref{eq:feasible},
+\begin{equation}
+\Pr\!\left[R(a^{*}_t)>\Rsafe\right]\le
+\Pr\!\left[R(a^{*}_t)>R^{+}(a^{*}_t)\right]\le\alpha .
+\label{eq:prop}
+\end{equation}
+\end{proposition}
+
+\begin{IEEEproof}
+Admission requires $R^{+}(a^{*}_t)\le\Rsafe$, so the event
+$\{R(a^{*}_t)>\Rsafe\}$ is contained in $\{R(a^{*}_t)>R^{+}(a^{*}_t)\}$, giving
+the first inequality. The second is the marginal coverage guarantee of split
+conformal prediction under exchangeability \cite{angelopoulos2021gentle}.
+\end{IEEEproof}
+
+Proposition~\ref{prop:cov} is deliberately weak: marginal rather than
+conditional, inheriting every assumption of the calibration, and with
+exchangeability violated by construction on the shifted scenarios of
+Section~\ref{sec:method}. It is stated because that assumption is what the
+experiments interrogate --- measured coverage under shift shows how far
+\eqref{eq:prop} can be relied upon, which is more useful than a guarantee that
+does not survive deployment.
+
+\subsection{Closed-loop verification}
+After $a^{*}_t$ executes, the controller observes $S_{t+\Delta}$ and records the
+signed prediction error
+\begin{equation}
+\epsilon_t=Y_{t+\Delta}-\hat{Y}^{\,a^{*}}_{t+\Delta},
+\label{eq:closed}
+\end{equation}
+which updates the adaptive calibration parameter and drives drift detection. An
+intervention is thus not merely issued; the forecast that authorised it is
+scored against what followed.
+
+%==============================================================================
 \section{Prototype and Experimental Methodology}
-TODO
+\label{sec:method}
 
+\begin{figure}[!t]
+\centering
+\input{figures/fig2_architecture.tex}
+\caption{Prototype architecture. The Go plane owns time, concurrency and every
+side effect; the Python plane returns a ranking with calibrated bounds and costs
+and has no authority to act. The safety gate and the minimum-necessary selector
+sit in the Go controller, so a slow or unavailable intelligence plane produces a
+recorded fallback rather than a stalled decision.}
+\label{fig:arch}
+\end{figure}
+
+\subsection{Implementation}
+CSC is a distributed prototype in which a Go plane executes and a Python plane
+infers (Fig.~\ref{fig:arch}). The Go services are a device simulator, a gateway
+performing routing, queueing, retry, backpressure and handover, edge agents
+exposing load, queue depth, service time and replication state, a fault
+injector, a replay orchestrator and the controller. The Python service hosts the
+predictor, the causal model, the calibrator and the counterfactual evaluator.
+The planes communicate over gRPC with a typed schema; the event bus is NATS and
+metrics are exported in Prometheus format.
+
+The split is not organisational convenience. Placing the gate and the selector
+of \eqref{eq:feasible}--\eqref{eq:mni} in the Go controller keeps the component
+that may refuse to act separate from the one that may be miscalibrated, and
+makes the decision path an RPC with an enforced deadline. A deadline miss is
+recorded as a fallback rather than awaited, which lets overhead be reported as a
+bounded cost rather than an average.
+
+\subsection{Testbed and scenarios}
+Experiments run on a software-defined emulation testbed rather than a numerical
+simulation: real processes, queues, gRPC calls over TCP, and container
+scheduling. Network conditions are emulated with Linux traffic control and
+\texttt{netem} driven by the link-quality score; mobility and radio behaviour
+are modelled, not measured. Where privileges for kernel-level impairment are
+unavailable an application-layer path is used, the mode is recorded in the run
+manifest, and such results are labelled rather than presented as kernel-network
+measurements. Table~\ref{tab:scenarios} lists the seven scenarios.
+
+Six controllers are compared: a reactive threshold controller (B1); a GRU
+predictor with a heuristic recovery rule (B2); a graph predictor with the same
+rule (B3); a PPO policy (B4) \cite{schulman2017ppo}; CSC-Predict (B5), sharing
+CSC's predictor and features but scoring actions observationally, without
+\eqref{eq:int}; and CSC (B6). B5 separates the benefit of counterfactual
+reasoning from that of a better predictor. All learned controllers receive
+identical features and windows, the same action set and execution mechanism, and
+comparable hyperparameter budgets; none receives future information. Three
+ablations remove the uncertainty gate, minimum-necessary selection (reverting to
+$\arg\min_a R(a)$), and the causal layer.
+
+\subsection{Fork-and-replay}
+At recorded decision states the environment is reconstructed deterministically
+from logged configuration and state --- same seed, workload trace, fault schedule,
+network and service state --- and each candidate action is executed in an
+independent branch. Reconstruction is used rather than process snapshotting,
+which would claim a fidelity the system does not have.
+
+Determinism is treated as a measured property. Before any counterfactual result
+is reported, at least $30$ branches are executed with the \emph{same} state and
+the \emph{same} action; the dispersion of their outcomes sets the resolution of
+every branch comparison, and differences smaller than that band are not
+interpreted. Branches give the objective
+\begin{equation}
+J(a)=\alpha R(a)+\beta L(a)+\gamma C(a),
+\label{eq:obj}
+\end{equation}
+with weights fixed in advance, and hence two measurements unavailable to
+predictive metrics:
+\begin{align}
+\mathrm{CRA}&=\frac{1}{|\mathcal{T}|}\sum_{t\in\mathcal{T}}
+\mathbb{1}\!\left[\arg\min_a \hat{J}(a)=\arg\min_a J(a)\right],
+\label{eq:cra}\\
+\mathrm{Regret}_t&=J(a^{*}_t)-\min_{a\in\Aset} J(a),
+\label{eq:regret}
+\end{align}
+where \eqref{eq:cra} is also reported as $\mathrm{CRA@2}$. Replay-derived
+records are quarantined from every training set and a leakage test fails the
+build if one appears.
+
+\subsection{Metrics and protocol}
+The primary outcome metrics are
+\begin{equation}
+\mathrm{PFR}=\frac{N_{\mathrm{prevented}}}{N_{\mathrm{preventable}}},
+\qquad
+\mathrm{WIR}=\frac{N_{\mathrm{harmful}}}{N_{\mathrm{interventions}}},
+\label{eq:pfr}
+\end{equation}
+where a failure counts as preventable only if it occurred in the replayed
+no-action branch, and an intervention as harmful only if its branch objective is
+worse than the no-action branch by more than the dispersion band --- both
+grounded in executed alternatives rather than in a model's opinion of them.
+Failure lead time, availability, violation rate, mean intervention cost, tail
+latency and abstention rate are reported alongside. Overhead is decomposed as
+\begin{equation}
+T_{\mathrm{dec}}=T_{\mathrm{feat}}+T_{\mathrm{model}}+T_{\mathrm{cf}}+
+T_{\mathrm{gate}},
+\label{eq:overhead}
+\end{equation}
+where $T_{\mathrm{cf}}$ scales with $|\Aset|$ and governs scalability. Area
+under the precision-recall curve and expected calibration error are secondary;
+accuracy is not reported, because the positive class is rare by construction.
+
+Data are split by run, never by row, since telemetry within a run is temporally
+correlated. Training, validation, calibration and identically distributed test
+sets draw disjoint seed blocks from F1--F4 and F6; F5, F7 and combined faults
+are held out and used for no selection decision, which we call scenario-level
+distribution shift rather than anything stronger. Every controller runs against
+the same seed-specific realisation, so all comparisons are paired, with at least
+$20$ paired seeds per configuration. Exclusions are restricted to documented
+technical failures, logged with evidence and reported as counts; the policy was
+fixed before results were examined. Comparisons use $95\%$ bootstrap confidence
+intervals over $10{,}000$ resamples, paired Wilcoxon signed-rank tests, an
+effect size, and Holm correction across the primary family. Configurations,
+hyperparameters and per-seed observations are in the supplementary material.
+
+\input{table_scenarios.tex}
+
+%==============================================================================
 \section{Results}
-TODO --- \input{generated_tables/table_main.tex}
+\label{sec:results}
 
+\TODO{This section is a scaffold. No experiment has been run. Every number
+below is produced by \texttt{analysis/} from \texttt{results\_long.csv} and
+pulled in with \texttt{\textbackslash input}; nothing here is to be typed by
+hand. Do not write the prose until BACKLOG.md phase 16 is complete, and write
+what the data say rather than what H1--H4 predicted.}
+
+\subsection{Determinism and replay resolution}
+\TODO{Report the dispersion band from the same-state/same-action branches
+before any comparison that depends on it. If the band is wide enough to
+swallow the differences between actions, say so and stop: the rest of this
+section is not interpretable without it.}
+
+\subsection{Failure prevention and harmful interventions}
+\TODO{PFR and WIR per controller with confidence intervals; paired tests;
+effect sizes; Holm-corrected. Address H1 and H2 explicitly, including if they
+fail.}
+
+\input{generated_tables/table_main.tex}
+
+\subsection{Counterfactual ranking accuracy and regret}
+\TODO{CRA, CRA@2 and regret against replayed ground truth. This is the
+subsection that distinguishes the paper from prediction-quality reporting;
+give it the space it needs.}
+
+\subsection{Calibration under scenario shift}
+\TODO{Empirical coverage against the nominal level on ID and shifted
+scenarios, with the abstention rate. Report degradation where it occurs ---
+Proposition~\ref{prop:cov} is exactly the claim being tested.}
+
+\begin{figure}[!t]
+\centering
+\TODO{fig3\_timeline.pdf --- cascading-failure timeline: degradation onset,
+predicted no-action counterfactual, intervention point, observed outcome.}
+\caption{Cascading failure (F7): observed degradation, the counterfactual
+no-action trajectory obtained by replay, the intervention point, and the
+realised recovery.}
+\label{fig:timeline}
+\end{figure}
+
+\subsection{Ablations}
+\TODO{A1 no gate, A2 no minimum-necessary intervention, A3 no causal layer.
+A2 is the load-bearing one for H3: it isolates cost reduction from risk
+reduction.}
+
+\input{generated_tables/table_ablation.tex}
+
+\subsection{Overhead and scalability}
+\TODO{Decomposition of \eqref{eq:overhead}, CPU and memory, and the curve from
+100 to 10{,}000 devices. State the largest device count that was actually run;
+do not extrapolate.}
+
+\begin{figure}[!t]
+\centering
+\TODO{fig4\_main.pdf --- 2$\times$2 panel: PFR, WIR, p99 latency, mean
+intervention cost across controllers.}
+\caption{Primary comparison across controllers. Bars show means with $95\%$
+bootstrap confidence intervals over paired seeds.}
+\label{fig:main}
+\end{figure}
+
+%==============================================================================
 \section{Discussion and Limitations}
-% Must cover: causal-model assumptions; emulation vs physical radio;
-% limits of deterministic replay; scenario shift; calibration validity;
-% centralized controller; energy proxy; scaling limits. Negative results stay.
-TODO
+\label{sec:discussion}
+
+The structure in \eqref{eq:scm} is asserted from system semantics, not
+discovered, and identification of \eqref{eq:int} rests on the absence of
+unmeasured common causes and on the invariance of unintervened mechanisms.
+Neither is verifiable from within the system. What is checkable is whether the
+resulting rankings agree with executed alternatives, which is what
+\eqref{eq:cra} and \eqref{eq:regret} measure: a structure wrong in a way that
+matters should surface there as degraded ranking accuracy rather than hide
+behind good predictive scores.
+
+The testbed emulates radio behaviour and mobility, applying impairment at the
+network layer from an abstract link-quality score, so the results characterise
+the controller under controlled degradation rather than a physical cellular
+deployment; energy appears only as a resource proxy in \eqref{eq:cost}.
+Deterministic replay is likewise approximate --- reconstruction from logged state
+does not reproduce every source of nondeterminism in a concurrent distributed
+system, and the residual dispersion floors the differences that can be resolved.
+The counterfactual results hold at the resolution reported in
+Section~\ref{sec:results} and no finer.
+
+Conformal calibration assumes exchangeability that scenario shift violates, so
+Proposition~\ref{prop:cov} describes the identically distributed case and the
+shifted case is settled empirically by measured coverage. The adaptive variant
+restores long-run but not per-decision coverage, so a controller that has just
+entered an unfamiliar regime may be overconfident for a period governed by the
+adaptation rate.
+
+The controller is centralised: it observes a global dependency graph and
+intervenes from one point, which bounds both scale and the failure modes
+considered --- a partitioned control plane, a compromised controller, and
+conflicting concurrent interventions are outside this design. Distributing the
+gate while preserving \eqref{eq:prop} is not a straightforward extension, since
+the guarantee is stated for a single calibrated decision stream. Finally, the
+action set is five priced primitives; larger sets grow $T_{\mathrm{cf}}$ in
+\eqref{eq:overhead} linearly, and while the argument for minimum-necessary
+intervention should strengthen as the set grows, that is not tested here.
 
 \section{Conclusion}
-TODO
 
+Prediction tells a mobile-edge IoT system that failure is likely; it does not
+tell the system what to do, what doing it costs, or whether doing nothing would
+have been better. Counterfactual Shadow Control estimates the failure risk under
+each available intervention, calibrates each estimate into a conservative bound,
+executes the cheapest action that clears a declared safety threshold, and
+abstains when none does. Because the alternatives that were not selected can be
+executed by deterministic replay, the resulting rankings are checked against
+outcomes rather than argued for. \TODO{one sentence of measured outcome, after
+phase 16.} The mechanism is not specific to the actions used here: any runtime
+whose recovery primitives can be priced and executed in a reconstructible
+environment can be controlled this way, and the same machinery reports when it
+should not be.
+
+%==============================================================================
 \bibliographystyle{IEEEtran}
 \bibliography{references}
 

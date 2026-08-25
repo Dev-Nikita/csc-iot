@@ -1,6 +1,6 @@
 # NOVELTY_AUDIT.md
 
-Status: **round 1, 2026-08-25**. Re-run in full before implementation freeze and again before submission.
+Status: **round 1 complete, 2026-08-25** (15/15 rows). Re-run in full before implementation freeze and again before submission.
 Audit owner: N. Tarasov. Method: targeted web/venue search + record-level bibliographic verification (dblp `/rec/`, arXiv abstract pages). No reference is listed here unless its bibliographic identity was checked at the source.
 
 ---
@@ -43,12 +43,25 @@ Columns: **FP** failure prediction · **CG** explicit causal graph/SCM · **ACF*
 | 7 | Gibbs & Candès, arXiv:2106.00170 | N | N | N | Y | **Y** | N | N | N | N | N |
 | 8 | Lindemann et al., arXiv:2409.00536 | N | N | N | Y | **Y** | ~ | ~ | ~ | N | N |
 | 9 | Huang, Park, Paoletti & Simeone, arXiv:2510.17543 | N | N | N | Y | **Y** | **Y** | N | ~ | N | N |
-| 10 | **Proposed CSC** | Y | Y | **Y** | Y | **Y** | Y | **Y** | **Y** | **Y** | **Y** |
+| 10 | Siew et al., FIRE (arXiv:2209.14399) | ~ | N | N | ~ | N | N | ~ | ~ | N | N |
+| 11 | Wu, Dai & Tang, IoT-J 9(12) 2022 | **Y** | ~ | N | N | N | N | N | N | N | N |
+| 12 | Pham, Ha & Zhang, ASE 2024 | N | **Y** | N | N | N | N | N | N | N | N |
+| 13 | Basiri et al., IEEE Software 33(3) 2016 | N | N | N | N | N | N | N | **Y** | ~ | N |
+| 14 | Wu, Zhang & Zhang, IoT-J 8(18) 2021 | ~ | N | N | N | N | N | N | ~ | N | N |
+| 15 | **Proposed CSC** | Y | Y | **Y** | Y | **Y** | Y | **Y** | **Y** | **Y** | **Y** |
 
 Legend: Y = yes · ~ = partial / adjacent · N = no · sim = simulation only.
-Rows 11-15 are **TODO** — the audit is not complete until 15 rows are filled. Candidates queued in `docs/literature.csv` (RL-based MEC recovery, GNN failure prediction in IoT, microservice root-cause analysis, chaos-engineering methodology, digital-twin edge resilience).
+Fifteen rows, all bibliographically verified at the source (see `docs/literature.csv`).
 
-**No row has all ten columns.** No row has the combination {ACF, CAL, MNI, REPLAY}. Novelty gate: **PASS (conditional on completing rows 11-15).**
+**No prior row has all ten columns.** No prior row has even the pair {MNI, REPLAY}; only AURORA has ACF at all, and no prior work has CAL together with ACF. Novelty gate: **PASS.**
+
+### What rows 10-14 add to the argument
+
+- **FIRE (row 10)** is the strongest RL comparator and the reason baseline B4 must exist. It is failure-aware — it importance-samples rare server failures and carries an explicit cost model over delay, migration, failure and backup placement — but the cost sits *inside* the reward, so the trade-off it makes is fixed at training time and invisible at decision time. CSC keeps the same trade-off outside the model, as a constraint that can be inspected, changed without retraining, and refused. FIRE also trains inside an edge-computing **digital twin**, which is the cleanest way to state what CSC is not: a persistent synchronized replica used to *train a policy* versus transient action-conditioned forecasts built at *each decision*.
+- **Wu, Dai & Tang (row 11)** is the canonical graph-learning detector in IoT-J. It defines what baseline B3 must be, and it marks the ceiling of the detection-only framing: a graph model that scores anomalies has no notion of what to do about one.
+- **Pham, Ha & Zhang (row 12)** is the most useful negative result in this literature. Across nine causal discovery methods and twenty-one RCA approaches they find no dominant method and, critically, that synthetic-dataset performance does not predict real-world performance. This is direct empirical support for two CSC design decisions that would otherwise look like shortcuts: fixing causal structure from system topology instead of discovering it, and evaluating on an executing system instead of generated traces. Cite it exactly there.
+- **Basiri et al. (row 13)** is the methodological ancestor of fork-and-replay and must be cited as such rather than quietly absorbed. Chaos engineering asks *what happens if this fault occurs*. Fork-and-replay asks *what would have happened had we responded differently* — the same discipline of controlled perturbation, applied to the response rather than the fault. Stating that lineage strengthens the contribution; concealing it invites a reviewer to point it out.
+- **Wu, Zhang & Zhang (row 14)** is cited once, in a single sentence, to say why the digital-twin label does not apply. The word appears nowhere else in the manuscript.
 
 ---
 
@@ -109,7 +122,8 @@ Forbidden:
 
 ## 6. Open TODOs
 
-- [ ] Fill matrix rows 11-15 (RL-based MEC recovery; GNN failure prediction in IoT; microservice RCA e.g. MicroRCA-class work; chaos engineering as methodology; digital-twin edge resilience).
+- [x] Fill matrix rows 10-14 — done 2026-08-25 (FIRE; GNN IIoT anomaly detection; microservice causal RCA study; chaos engineering; digital twin networks).
+- [ ] Verify Pearl, *Causality*; Peters/Janzing/Schoelkopf, *Elements*; Sutton & Barto — still PENDING in literature.csv, must not be cited until verified.
 - [ ] Locate and verify any prior use of environment forking for counterfactual evaluation in **systems** venues (NSDI/OSDI/SOSP/EuroSys) — currently searched and not found, but the search was not exhaustive.
 - [ ] Verify whether AURORA is published (not just preprint) at submission time.
 - [ ] Confirm no IoT-J paper in the last 12 months uses the term "counterfactual" for runtime intervention selection.

@@ -1,0 +1,60 @@
+% Fig. 1 -- concept, schematic. Bar lengths are illustrative, not measured.
+% Grayscale-safe: encoding by line style, fill level and position, never colour.
+\begin{tikzpicture}[
+  font=\footnotesize, x=0.97mm, y=0.97mm,
+  chain/.style={draw, rounded corners=1pt, minimum height=4.2mm,
+                inner xsep=1.6pt, fill=black!5, font=\scriptsize},
+  lbl/.style={font=\scriptsize\itshape},
+  note/.style={font=\scriptsize},
+  box/.style={draw, rounded corners=1pt, minimum height=4.4mm, inner xsep=3pt,
+              font=\scriptsize},
+  ar/.style={-{Latex[length=1.3mm]}, shorten >=0.4pt},
+  bar/.style={draw, fill=black!25, minimum height=1.9mm, inner sep=0pt, anchor=west},
+  barsel/.style={draw, very thick, fill=black!45, minimum height=1.9mm,
+                 inner sep=0pt, anchor=west}
+]
+%--- degradation chain -------------------------------------------------------
+\node[chain] (c1) at (2,0) {mobility};
+\node[chain, right=1.1mm of c1] (c2) {loss};
+\node[chain, right=1.1mm of c2] (c3) {retries};
+\node[chain, right=1.1mm of c3] (c4) {queue};
+\node[chain, right=1.1mm of c4] (c5) {latency};
+\node[chain, right=1.1mm of c5] (c6) {timeout};
+\node[chain, right=1.1mm of c6, fill=black!16] (c7) {\textbf{SLA}};
+\foreach \s/\d in {c1/c2,c2/c3,c3/c4,c4/c5,c5/c6,c6/c7} \draw[ar] (\s)--(\d);
+\node[lbl, above=0.2mm of c1] {$t$};
+\node[lbl, above=0.2mm of c7] {$t{+}\Delta$};
+
+%--- reactive ----------------------------------------------------------------
+\node[box, dashed] (rec) at (62,-9) {recover};
+\draw[ar, dashed] (c7.south) -- (c7.south|-rec.north);
+\node[lbl, anchor=east] at (52,-9) {reactive: acts after violation};
+
+%--- predictive --------------------------------------------------------------
+\node[box] (fix) at (24,-17) {fixed response};
+\draw[ar] (c3.south) -- (c3.south|-fix.north);
+\node[lbl, anchor=west] at (36,-15.4) {predictive: a score, then a};
+\node[lbl, anchor=west] at (36,-19.0) {response nobody evaluated};
+
+%--- CSC: shadow futures -----------------------------------------------------
+\draw[ar] (c3.south) -- ++(0,-4) -- (8,-24) -- (8,-29);
+\node[lbl, anchor=west] at (16,-27.4) {risk $R^{+}(a)$};
+\node[lbl, anchor=west] at (60,-27.4) {cost $C(a)$};
+\foreach \nm/\yy/\len/\cc in {%
+  0/-32/36/{--}, 1/-36/9/{low}, 2/-40/7/{high},
+  3/-44/15/{low}, 4/-48/5/{high}}{
+  \node[lbl, anchor=east] at (14.6,\yy) {$a_{\nm}$};
+  \node[bar, minimum width=\len mm] at (16,\yy) {};
+  \node[note, anchor=west] at (60,\yy) {\cc};
+}
+\node[barsel, minimum width=9mm] at (16,-36) {};
+\draw[very thick] (27,-30.2) -- (27,-49.8);
+\node[lbl, anchor=north] at (27,-51.8) {$\Rsafe$};
+\node[box, thick] (sel) at (34,-58.5) {execute $a_1$: cheapest feasible action};
+\draw[ar] (20.5,-37.2) -- (20.5,-56.3);
+\node[lbl, anchor=west] at (2,-64.5) {if no action clears $\Rsafe$, CSC abstains};
+\begin{scope}[on background layer]
+  \node[draw, dotted, rounded corners=1.5pt, inner sep=1.6mm,
+        fit={(9,-29.5) (72,-50.5)}] {};
+\end{scope}
+\end{tikzpicture}

@@ -1,0 +1,28 @@
+% Table I -- capability comparison. Derived from NOVELTY_AUDIT.md section 2.
+% A dash means the capability was absent in the work as read, not assumed.
+\begin{table}[!t]
+\caption{Capabilities of Representative Prior Approaches}
+\label{tab:related}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3.2pt}
+\begin{tabular}{@{}lcccccc@{}}
+\toprule
+Approach & Pred. & Causal & Multi-act. & Calib. & Min. & Replay \\
+         &       & model  & $\mathrm{do}(a)$ & UQ & interv. & valid. \\
+\midrule
+Reactive link switching \cite{kumar2023resilientedge} & --        & --        & --        & --        & --        & --\\
+Failure dependencies \cite{aral2021spatiotemporal}    & \checkmark& $\circ$   & --        & --        & --        & --\\
+Graph anomaly detection \cite{wu2022gnniiot}          & \checkmark& $\circ$   & --        & --        & --        & --\\
+RL migration \cite{siew2022fire}                      & $\circ$   & --        & --        & $\circ$   & $\circ$   & --\\
+Causal RCA study \cite{pham2024rca}                   & --        & \checkmark& --        & --        & --        & --\\
+Log-based self-healing \cite{ye2026nesyedge}          & --        & \checkmark& --        & --        & --        & --\\
+Uncertainty-gated agent \cite{desilva2026aurora}      & $\circ$   & \checkmark& $\circ$   & --        & --        & --\\
+Conformal edge cascades \cite{huang2025cascades}      & --        & --        & --        & \checkmark& --        & --\\
+\midrule
+\textbf{CSC (this work)} & \checkmark& \checkmark& \checkmark& \checkmark& \checkmark& \checkmark\\
+\bottomrule
+\end{tabular}
+\\[2pt]
+{\footnotesize \checkmark\ present\quad $\circ$\ partial or implicit\quad --\ absent}
+\end{table}

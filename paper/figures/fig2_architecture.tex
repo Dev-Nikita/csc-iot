@@ -1,0 +1,45 @@
+% Fig. 2 -- prototype architecture.
+% Grayscale-safe. Go plane = single border, Python plane = double border.
+% Control flow solid, telemetry dashed, closed-loop feedback dotted.
+\begin{tikzpicture}[
+  font=\footnotesize, x=0.98mm, y=0.98mm,
+  go/.style={draw, rounded corners=1pt, minimum height=6.2mm,
+             minimum width=33mm, inner xsep=1pt, align=center, fill=black!5,
+             font=\scriptsize},
+  py/.style={draw, double, double distance=0.7pt, rounded corners=1pt, minimum height=6.2mm,
+             minimum width=33mm, inner xsep=1pt, align=center, fill=white,
+             font=\scriptsize},
+  gate/.style={draw, thick, rounded corners=1pt, minimum height=6.6mm,
+               minimum width=33mm, align=center, fill=black!12, font=\scriptsize},
+  ar/.style={-{Latex[length=1.3mm]}},
+  tel/.style={-{Latex[length=1.3mm]}, dashed},
+  fb/.style={-{Latex[length=1.3mm]}, densely dotted},
+  lbl/.style={font=\scriptsize\itshape}
+]
+\node[go] (dev)  at (0,0)    {device-sim\\[-2pt]{\tiny mobility, workload, seed}};
+\node[go] (gw)   at (0,-12)  {gateway\\[-2pt]{\tiny routing, queue, retry, handover}};
+\node[go] (edge) at (0,-24)  {edge-agent $\times M$\\[-2pt]{\tiny service, load, replicas}};
+\node[go] (tel)  at (0,-36)  {telemetry collector};
+
+\node[py]   (intel) at (46,-36) {intelligence service\\[-2pt]{\tiny predictor $\to$ SCM $\to$ conformal}};
+\node[py]   (cf)    at (46,-24) {counterfactual evaluator\\[-2pt]{\tiny $R(a\mid S_t)$ for $a\in\Aset$}};
+\node[gate] (gate)  at (46,-12) {safety gate $+$ MNI selector\\[-2pt]{\tiny $R^{+}(a)\le \Rsafe$,\; $U(a)\le \Umax$}};
+\node[go]   (ctl)   at (46,0)   {runtime controller\\[-2pt]{\tiny NO\_OP $\mid$ REROUTE $\mid$ MIGRATE $\mid\dots$}};
+
+\node[go] (fault) at (0,-50)  {fault-injector\\[-2pt]{\tiny tc/netem, F1--F7}};
+\node[go] (rep)   at (46,-50) {replay orchestrator\\[-2pt]{\tiny fork 5 branches from $S_t$}};
+
+\draw[ar]  (dev)  -- (gw);
+\draw[ar]  (gw)   -- (edge);
+\draw[tel] (edge) -- (tel);
+\draw[tel] (tel)  -- node[lbl, above]{gRPC $S_t$} (intel);
+\draw[ar]  (intel) -- node[lbl, right]{\tiny ranking} (cf);
+\draw[ar]  (cf)   -- (gate);
+\draw[ar]  (gate) -- node[lbl, right]{$a^{*}_t$} (ctl);
+\draw[ar]  (ctl.north) -- ++(0,5) -| node[lbl, above, pos=0.25]{intervention} (dev.north);
+\draw[fb]  (intel.south) -- ++(0,-5.5) -| (tel.south);
+\node[lbl] at (23,-42.6) {observed outcome $\epsilon_t$};
+\draw[ar, dashed] (fault.west) -- ++(-5,0) |- node[lbl, left, pos=0.28]{\tiny impair} (gw.west);
+\draw[ar]  (rep) -- (fault);
+\node[lbl] at (23,-56.5) {single border: Go plane\quad double: Python plane};
+\end{tikzpicture}
