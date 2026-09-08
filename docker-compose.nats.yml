@@ -1,0 +1,146 @@
+# Reportable topology: NATS transport, one process per role, three networks.
+#
+#   docker compose -f docker-compose.nats.yml up --build
+#
+# Standalone, not an overlay on docker-compose.yml: Compose merges depends_on
+# additively, so an overlay could not remove the development broker dependency
+# without relying on !reset and a recent Compose version. Duplication here is
+# cheaper than a topology that silently keeps a service nobody wanted.
+#
+# Core pub/sub only -- `-js=false`. JetStream would add persistence,
+# acknowledgement and redelivery, all of which change the timing eta_J measures,
+# and durability is not part of the research question.
+#
+# Three networks, not one, so that tc/netem on the device sender's egress cannot also
+# degrade the control plane or the bus. A run that impaired the controller
+# alongside the data plane and reported itself as a data-plane fault experiment
+# would be wrong in a way nobody could see in the numbers.
+name: csc-iot-nats
+
+networks:
+  device-gateway:   # impaired by the fault injector
+    name: csc-net-device-gateway
+  gateway-edge:     # bus traffic, never impaired
+    name: csc-net-gateway-edge
+  control:          # RPC and telemetry, never impaired
+    name: csc-net-control
+
+x-go-build: &go-build
+  build:
+    context: .
+    dockerfile: deploy/go.Dockerfile
+
+# edge00 is sized ABOVE the offered load and loses capacity at epoch 8, late
+# enough that anchors taken early -- and their whole horizon -- lie entirely in
+# the healthy regime. With the fault at epoch 4 and a horizon of 3, every
+# outcome was read at or after the fault and the healthy state was never
+# observed at all. Before
+# the fault the system meets its agreement; after it, it does not. A permanently
+# saturated configuration has no healthy state, so a controller that prevents
+# failures has nothing to prevent and every anchor is a point on one ramp.
+#
+# Edge service capacities are DELIBERATELY unequal. With equal capacity every
+# edge is interchangeable, so REROUTE moves work to a node that behaves
+# identically and measures exactly zero effect no matter how many branches are
+# run. Changing these values changes the configuration the results belong to.
+services:
+  nats:
+    image: nats:2-alpine
+    command: ["-js=false", "-m", "8222"]
+    networks: [gateway-edge, control]
+    # Published so the orchestrator, which runs on the host rather than in a
+    # container, can drive epochs against this stack. The data path stays
+    # inside the compose networks; this port carries control traffic only.
+    ports: ["4222:4222", "8222:8222"]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8222/healthz"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+
+  intelligence:
+    build:
+      context: .
+      dockerfile: deploy/go.Dockerfile
+      args: { CMD_NAME: csc-intelligence }
+    command: ["-addr", ":50051", "-delay", "5ms"]
+    networks: [control]
+
+  gateway00:
+    build:
+      context: .
+      dockerfile: deploy/go.Dockerfile
+      args: { CMD_NAME: csc-node, GO_TAGS: nats }
+    command: ["-role", "gateway", "-id", "gw00", "-bus-impl", "nats", "-bus", "nats://nats:4222", "-ingress", ":5000", "-route", "edge00"]
+    depends_on: { nats: { condition: service_healthy } }
+    networks: [device-gateway, gateway-edge]
+
+  gateway01:
+    build:
+      context: .
+      dockerfile: deploy/go.Dockerfile
+      args: { CMD_NAME: csc-node, GO_TAGS: nats }
+    command: ["-role", "gateway", "-id", "gw01", "-bus-impl", "nats", "-bus", "nats://nats:4222", "-ingress", ":5000", "-route", "edge01"]
+    depends_on: { nats: { condition: service_healthy } }
+    networks: [device-gateway, gateway-edge]
+
+  edge00:
+    build:
+      context: .
+      dockerfile: deploy/go.Dockerfile
+      args: { CMD_NAME: csc-node, GO_TAGS: nats }
+    # the loaded path: cannot keep up with 200 events/epoch alone
+    command: ["-role", "edge", "-id", "edge00", "-bus-impl", "nats", "-bus", "nats://nats:4222",
+              "-serve-per-epoch", "150", "-sla-epochs", "1", "-sla-ms", "500",
+              "-degrade-at-epoch", "8", "-degraded-serve-per-epoch", "60"]
+    depends_on: { nats: { condition: service_healthy } }
+    networks: [gateway-edge]
+
+  edge01:
+    build:
+      context: .
+      dockerfile: deploy/go.Dockerfile
+      args: { CMD_NAME: csc-node, GO_TAGS: nats }
+    # the relief path REROUTE moves work to
+    command: ["-role", "edge", "-id", "edge01", "-bus-impl", "nats", "-bus", "nats://nats:4222",
+              "-serve-per-epoch", "300", "-sla-epochs", "1", "-sla-ms", "500"]
+    depends_on: { nats: { condition: service_healthy } }
+    networks: [gateway-edge]
+
+  edge02:
+    build:
+      context: .
+      dockerfile: deploy/go.Dockerfile
+      args: { CMD_NAME: csc-node, GO_TAGS: nats }
+    # matched to the offered load
+    command: ["-role", "edge", "-id", "edge02", "-bus-impl", "nats", "-bus", "nats://nats:4222",
+              "-serve-per-epoch", "200", "-sla-epochs", "1", "-sla-ms", "500"]
+    depends_on: { nats: { condition: service_healthy } }
+    networks: [gateway-edge]
+
+  controller:
+    build:
+      context: .
+      dockerfile: deploy/go.Dockerfile
+      args: { CMD_NAME: csc-node, GO_TAGS: nats }
+    command: ["-role", "controller", "-id", "ctl", "-bus-impl", "nats", "-bus", "nats://nats:4222", "-rpc", "intelligence:50051"]
+    depends_on:
+      nats: { condition: service_healthy }
+      intelligence: { condition: service_started }
+    networks: [gateway-edge, control]
+
+  device-sim:
+    build:
+      context: .
+      dockerfile: deploy/go.Dockerfile
+      args: { CMD_NAME: csc-node, GO_TAGS: nats }
+    command: ["-role", "device-sim", "-id", "dev-sim", "-bus-impl", "nats",
+              "-bus", "nats://nats:4222", "-ingress", "gateway00:5000",
+              "-devices", "100", "-events-per-epoch", "${EVENTS_PER_EPOCH:-100}",
+              "-seed", "${MASTER_SEED:-42}"]
+    depends_on: [gateway00]
+    # control as well as device-gateway: device-sim joins the epoch barrier so
+    # the events it emits per epoch are a property of the epoch rather than of
+    # how fast the machine ran. Only barrier traffic uses this network.
+    networks: [device-gateway, control]
+    cap_add: ["NET_ADMIN"]

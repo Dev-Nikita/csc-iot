@@ -1,6 +1,18 @@
-# FROZEN. J(a) = alpha*R(a) + beta*L(a) + gamma*C(a)
-alpha: 0.6
-beta: 0.2
-gamma: 0.2
-# Non-inferiority margin for the H3 availability claim (absolute).
-availability_equivalence_margin: 0.005
+# FROZEN v2
+# NOTE v2: weights renamed from alpha/beta/gamma. alpha now means nothing here;
+# the calibration level is delta (calibration.yaml) and the replay dispersion
+# band is eta_J (runs.yaml). One symbol, one meaning.
+lambda_F: 0.6      # failure term
+lambda_L: 0.2      # latency term
+lambda_C: 0.2      # intervention-cost term
+
+# Two objectives, never conflated:
+#   J_hat(a) = lF*R_hat(a) + lL*L_hat(a) + lC*C_hat(a)      (model output)
+#   J_obs(a) = lF*Y^a      + lL*L_tilde^a + lC*C_obs^a      (replay outcome)
+# J_obs MUST NOT contain any model prediction. If it did, the reference ranking
+# would contain the prediction it exists to test.
+
+# H3 non-inferiority margin on availability (absolute). Fixed before any
+# comparative result is examined. Tested with a one-sided test / TOST --
+# a non-significant difference is NOT evidence of equivalence.
+availability_noninferiority_margin: 0.005

@@ -47,7 +47,7 @@ def nans_and_impossible_values(df, problems):
             continue
         if df[col].isna().any():
             problems.append(f"NaN in {col} ({int(df[col].isna().sum())} rows)")
-    for col in ("pfr", "wir", "availability", "sla_violation_rate", "cra", "cra2"):
+    for col in ("pfr", "wir", "availability", "sla_violation_rate", "cra_eta", "cra2_eta"):
         if col in df.columns:
             bad = df[(df[col] < 0) | (df[col] > 1)]
             if len(bad):
@@ -61,7 +61,7 @@ def nans_and_impossible_values(df, problems):
 def config_consistency(df, problems):
     """Every controller in a comparison group must share the environment."""
     for (scenario, devices), g in df.groupby(["scenario", "device_count"]):
-        for col in ("impairment_mode", "warmup_s", "measure_s"):
+        for col in ("impairment_mode", "warmup_s", "measure_s", "runtime_stack_id"):
             if col in g.columns and g[col].nunique() > 1:
                 problems.append(
                     f"{scenario}/{devices}: mixed {col} = {sorted(g[col].unique())}")

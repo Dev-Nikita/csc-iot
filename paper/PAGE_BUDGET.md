@@ -7,13 +7,21 @@ the way the real one will be (about 950 words, two figures, two tables) and a
 | Date | State | Measured length |
 |---|---|---|
 | 2026-08-25 | first full draft, Sections I--IV, VI, VII written | ~6.9 pages |
-| 2026-08-25 | after compression pass (II, IV, VI trimmed; III tightened) | **~6.5 pages** |
+| 2026-08-25 | after compression pass (II, IV, VI trimmed; III tightened) | ~6.5 pages |
+| 2026-08-25 | after the methodology correction pass, second compression | **~6.6-6.7 pages** |
 
 With Results still a placeholder the document compiles to 6 pages. That number
 is not the one to plan against: the placeholder is roughly 0.5 pages shorter
 than the real section will be.
 
-## Where the remaining ~0.5 page comes from
+The correction pass removed Proposition 1 and its proof (about 0.25 page, as
+predicted) but added more than it removed: the dynamic SCM, the set-level loss
+and its two-property justification, the separated objectives, the tie-aware
+metrics and the set-theoretic PFR/WIR definitions. That is the right trade --
+those additions are what make the paper defensible -- but it means the page
+target is now met by cutting *presentation*, not mathematics.
+
+## Where the remaining ~0.4 page comes from
 
 Do this **after** Results exist, not before --- until the data are in, there is no
 way to know which argument the Results section will need to lean on, and cutting
@@ -28,8 +36,8 @@ Ordered by cost to the paper, cheapest first:
 2. **Merge Table I into prose** (~0.2 p). Only if the Related Work argument
    survives without the grid; the grid is the fastest way for a reviewer to see
    the gap, so this is a real loss.
-3. **Proposition proof → supplementary** (~0.1 p). Keep the statement and the
-   assumption discussion in the main text; the two-line proof can move.
+3. ~~Proposition proof → supplementary~~ — **spent**. The proposition was removed
+   entirely in the correction pass because it was not valid, not to save space.
 4. **Fig. 2 → supplementary** (~0.25 p). Last resort. The architecture figure is
    what makes the systems contribution legible at a glance.
 5. **Introduction paragraphs 2--3 merged** (~0.1 p). Already trimmed once;

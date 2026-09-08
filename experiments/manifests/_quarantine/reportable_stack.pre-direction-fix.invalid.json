@@ -1,0 +1,29 @@
+{
+  "reportable_stack_validated": true,
+  "runtime_stack_id": "534fdc7b1e1bab8c",
+  "go_version": "go1.27.0",
+  "kernel": "Linux 6.12.76-linuxkit",
+  "bus_type": "nats",
+  "bus_version": "nats-server: v2.14.6",
+  "transport_config_hash": "",
+  "rpc_type": "stdlib-framed-tcp",
+  "impairment_mode": "kernel_netem",
+  "netem_config": "gateway00:eth0 qdisc netem 8005: root refcnt 11 limit 1000 delay 20ms  5ms loss 5% seed 11436730887591974728",
+  "process_topology": "1 broker, 2 gateways, 3 edges, 1 controller, 1 intelligence",
+  "container_images": {
+    "controller": "csc-iot-nats-controller@sha256:674e9918b9184bf93bfb32bb5e9cd0b4b53a3cf55d1c65091c8580671603a4cb",
+    "device-sim": "csc-iot-nats-device-sim@sha256:f042e687b861a7ddeaad028cbdb63f83cf67a21b6992ba416b646225b2d7fb73",
+    "edge00": "csc-iot-nats-edge00@sha256:6c902637273a8fd167aa51fc0d63c0c5ca6ba2568afba4d5f463dc27f3c213dc",
+    "edge01": "csc-iot-nats-edge01@sha256:344d16cd2b5f45f80758637b2763dd1c86b5fff5e8fbfa79d66cc37f9fd1bbbe",
+    "edge02": "csc-iot-nats-edge02@sha256:1144d1d5c5b0229e8f8c5a163b8b86e55d1ab2782ca708d460fb370421a9c70c",
+    "gateway00": "csc-iot-nats-gateway00@sha256:95028cae54c7f70c498e29d171774586a97998da7f22b25e470fb0b8c27213a5",
+    "gateway01": "csc-iot-nats-gateway01@sha256:7d94fefcb69964d5e68110fae14079cddf3dc0d3691c6aee6020f290ff9ca9d7",
+    "intelligence": "csc-iot-nats-intelligence@sha256:2d70e46660b2c22da40936343e77217bbd575cffbb2ab87e1cbddbb0863cca89",
+    "nats": "nats@sha256:ad7a43eb7e3337c3c38ce5d784d1461791f95f730f252d2b25eee699752a0ca3"
+  },
+  "stamped_at": "2026-09-02T21:57:25Z",
+  "blockers": null,
+  "notes": [
+    "rpc_type=stdlib-framed-tcp is the development RPC. It does not block a reportable run while the manuscript claims only a typed RPC boundary, which this adapter is. If a draft ever names gRPC, this must change first."
+  ]
+}

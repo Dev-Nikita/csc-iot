@@ -1,0 +1,273 @@
+%==============================================================================
+% Supplementary material for
+% "Counterfactual Shadow Control: Risk-Calibrated Minimum-Intervention
+%  Self-Healing for Mobile Edge IoT Systems"
+%
+% Everything here is detail the six-to-seven page main text cannot carry but a
+% reviewer or reimplementer needs. Nothing here is a result: sections marked
+% TBD are quantities that will be MEASURED, and leaving them empty is the point.
+%==============================================================================
+\documentclass[journal]{IEEEtran}
+\usepackage{amsmath,amssymb,booktabs,url}
+\newcommand{\Aset}{\mathcal{A}}
+\newcommand{\TBD}{\textbf{[TBD --- to be measured, not estimated]}}
+
+\begin{document}
+\title{Supplementary Material}
+\author{}
+\maketitle
+
+\section{Notation}
+One symbol, one meaning. The symbols \(\alpha,\beta,\gamma\) and \(R_{\mathrm{safe}}\)
+appeared in an earlier draft and are retired.
+
+\begin{table}[!h]\centering\footnotesize
+\begin{tabular}{@{}ll@{}}
+\toprule
+Symbol & Meaning \\
+\midrule
+$\delta$ & conformal risk-control level (target $\mathbb{E}[L]\le\delta$)\\
+$\tau,\hat\tau$ & admissibility threshold; $\hat\tau$ calibrated, then frozen\\
+$U_{\max}$ & bound on predicted uncertainty width\\
+$\eta_J$ & replay dispersion band, a property of one runtime stack\\
+$\lambda_F,\lambda_L,\lambda_C$ & objective weights in $J$\\
+$w_L,w_R,w_B,w_D$ & cost-component weights in $C(a)$\\
+$\Delta_A$ & availability non-inferiority margin\\
+$P_{\mathrm{ID}}$ & the run-generating distribution the guarantee is stated for\\
+$B$ & bootstrap replicas of the structural model\\
+$H$ & rollout steps, $\Delta/\Delta_{\mathrm{tick}}$\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{The CRC procedure, exactly}
+\label{sec:crc}
+Implemented in \texttt{intelligence/conformal/crc.py}; tested in
+\texttt{intelligence/tests/test\_crc.py}.
+
+\begin{enumerate}
+\item For calibration run $i$ and threshold $\tau_j$ from a fixed grid, compute
+the within-run set-level loss
+$L_i(\tau_j)=|\mathcal{T}_i|^{-1}\sum_{t\in\mathcal{T}_i}
+\mathbf{1}[\exists a\in\Aset^{\mathrm{safe}}_{it}(\tau_j): Y^a_{it}=1]$.
+\item $\hat L_n(\tau_j)=n^{-1}\sum_i L_i(\tau_j)$.
+\item Corrected risk $\bigl(n\hat L_n(\tau_j)+B_\ell\bigr)/(n+1)$ with $B_\ell=1$.
+\item $\hat\tau=\max\{\tau_j:\text{corrected}(\tau_j)\le\delta\}$ --- the
+\emph{largest} admissible threshold, since $\Aset^{\mathrm{safe}}$ grows with
+$\tau$ and the widest admissible set leaves the cost rule the most room.
+\item If no $\tau_j$ qualifies, $\hat\tau$ is undefined: the controller abstains
+everywhere and that is reported, rather than the level being relaxed until
+something passes.
+\end{enumerate}
+
+The correction is not optional at the sample sizes used here. At $n=20$
+calibration runs, $B_\ell/(n+1)\approx0.048$ --- the same order as $\delta$
+itself. A unit test pins this value so it cannot quietly shrink, and another
+verifies empirically, over $200$ trials, that the realised loss on held-out runs
+stays at or below $\delta$.
+
+\subsection{Assumptions, and where each one fails}
+\begin{itemize}
+\item \emph{Monotone bounded loss.} $L_i\in[0,1]$ and is non-decreasing in
+$\tau$ because relaxing the threshold only enlarges the admissible set. This is
+the property that makes CRC applicable at all; a loss defined on the
+\emph{selected} action would not have it, since a cheaper admitted action can
+fail where a costlier one would not.
+\item \emph{Exchangeability of runs.} Calibration and identically distributed
+test runs are drawn independently from $P_{\mathrm{ID}}$
+(\S\ref{sec:pid}) with disjoint seed blocks. Independent seeds alone do not
+deliver exchangeability: the runs must come from the same declared generator.
+\item \emph{Scenario shift.} F5--F7 lie outside $P_{\mathrm{ID}}$ by
+construction. There $\hat\tau$ is carried over unchanged, no guarantee is
+claimed, and realised risk is reported empirically.
+\item \emph{The fallback is not covered.} When
+$\Aset^{\mathrm{safe}}(\hat\tau)=\emptyset$ the loss is zero by construction
+whatever the fallback then does. Fallback rate, fallback failure rate and
+fallback agreement-violation rate are reported separately.
+\item \emph{No online recalibration.} Updating the set-level loss needs outcomes
+for actions the running system did not take. A deployed edge system cannot
+observe those; only a reconstructible environment can.
+\end{itemize}
+
+\section{The ID run-generating distribution $P_{\mathrm{ID}}$}
+\label{sec:pid}
+Declared in \texttt{experiments/configs/p\_id.yaml}: scenario uniform over
+\{F1,\dots,F4\}; severity sampled from a per-scenario range; workload device
+count and event rate from declared ranges; seed drawn from a block disjoint by
+split (train, validation, calibration, ID test). Anchors are taken on a
+pre-declared grid \emph{after} the start-up transient --- the first
+\texttt{warmup\_s} plus the first $30$\,s of measurement --- because early
+anchors sit in a queue-fill transient where every action looks alike. That was
+observed during M2 and is a selection rule, never an outcome-dependent choice.
+
+\section{Uncertainty}
+$\hat U(a\mid S_t)=Q_{0.95}\{\hat R_b\}-Q_{0.05}\{\hat R_b\}$ over $B$ bootstrap
+replicas of the structural model: a quantile width rather than a standard
+deviation, so a few divergent replicas do not dominate the filter. A $5$--$95$
+interval from a small ensemble rests on its extreme order statistics, so $B$ is
+selected in the pilot from $\{20,30,50\}$ on the stability of $\hat U$ and of the
+induced action ranking against inference overhead --- on validation data only.
+$U_{\max}$ is likewise validation-only and frozen before calibration begins.
+
+$\hat U$ \emph{filters}; it is not itself calibrated. CRC calibrates $\hat\tau$.
+The correct description of the result is an \emph{uncertainty-filtered,
+risk-calibrated admissible set}.
+
+\section{Cost normalisation}
+$\tilde x=\mathrm{clip}\bigl((x-x^{\mathrm{cal}}_{\min})/
+(x^{\mathrm{cal}}_{\max}-x^{\mathrm{cal}}_{\min}),0,1\bigr)$ per component, with
+ranges taken from the calibration split alone. Two cases need naming rather than
+silent handling:
+\emph{degenerate range} --- if $x^{\mathrm{cal}}_{\max}=x^{\mathrm{cal}}_{\min}$
+the component is constant on calibration and contributes $\tilde x=0$, and the
+occurrence is logged;
+\emph{out-of-range under shift} --- a component may exceed the calibration range
+on F5--F7, and clipping keeps the cost in $[0,1]$. Without it an unclipped value
+above one would silently reweight the objective on exactly the runs where the
+method is under most strain. The clip rate is reported per scenario.
+
+Equal weights $w=0.25$ are a neutral a-priori default, fixed in version control
+before any comparative result is examined. No mathematical conservatism follows
+from equality, and claiming it would be rhetoric. Sensitivity to alternative
+operational preferences is in \S\ref{sec:sens}.
+
+\section{Replay: anchors, fingerprints and quiescence}
+\subsection{Two exact gates}
+A branch set proceeds only when \emph{both} match the anchor exactly.
+
+\emph{StructuralStateFingerprint} --- logical tick; configuration hash; routing
+assignment; rate limits \emph{and} current token-bucket levels; per-queue
+content digest with head and tail event ids; retry pending-set digest, attempt
+counts and backoff deadlines in logical time; timeout deadlines; service
+placement; replica state; pending migrations; edge capacity; per-producer
+sequence positions; processed counters; fault phase; action history.
+
+\emph{TransportQuiescenceFingerprint} --- per-producer end-of-epoch sequence
+declarations and per-consumer drain confirmations.
+
+\emph{RuntimeObservationFingerprint} --- CPU, RSS, wall-clock latency,
+scheduler and socket timings. Expected to vary; recorded as evidence; never a
+gate.
+
+No tolerance is admitted on the first two. Two queues of equal depth holding
+different events have different futures, and a tolerance would let pre-action
+state mismatch enter $\eta_J$, making the resolution band partly a measure of
+its own imprecision.
+
+\subsection{Why local acknowledgement is insufficient}
+On an asynchronous bus a component can truthfully report finishing tick $k-1$
+while a message it published during that tick is still in a socket buffer. Both
+branches would then show identical local counters and differ in what is in
+flight --- invisible to local bookkeeping, and presenting as a valid common
+anchor. Each producer therefore declares
+$\textsc{end\_epoch}(k,p,\mathrm{last\_seq})$ and each consumer confirms
+$\textsc{drained}(k,p,c,\mathrm{consumed\_through})$; the anchor opens only when
+every consumer has consumed every declaring producer through its declared last
+sequence. A timeout never proceeds: it reports which pair is outstanding and by
+how much.
+
+The protocol establishes completeness, not determinism. Within an epoch,
+messages are delivered and processed in real arrival order --- reordering them
+would erase the nondeterminism the audit exists to measure.
+
+\subsection{D0 and the resolution band}
+$\eta_J=Q_{0.95}\bigl(|J^{\mathrm{obs}}_{r_i}(a)-J^{\mathrm{obs}}_{r_j}(a)|\bigr)$
+over repeat pairs of the same anchor under the same action. The
+$\binom{30}{2}=435$ pairwise differences from $30$ repeats are \emph{not}
+independent, so $\eta_J$ is reported as an operational resolution and any
+interval for it is obtained by resampling \emph{anchors}, never by treating
+pairwise differences as independent observations.
+
+D0-lite ($10$ anchors $\times$ $3$ actions $\times$ $20$ repeats) precedes the
+full audit. Its pre-declared criterion is
+\[
+\mathrm{SNR}_J=\frac{\operatorname{median}_{t,a_i\neq a_j}
+\bigl|\operatorname{median}J_t(a_i)-\operatorname{median}J_t(a_j)\bigr|}{\eta_J}
+\ \ge\ 3 ,
+\]
+reported alongside $P_{\mathrm{resolvable}}=\Pr(|\Delta J|>\eta_J)$, because a
+median can hide the shape of the distribution when some action pairs are
+naturally equivalent at some anchors. The threshold is not revised after seeing
+the number. Below it the project stops and repairs replay fidelity rather than
+implementing further actions or training anything.
+
+\emph{$\eta_J$ belongs to one runtime stack.} The manifest records
+\texttt{runtime\_stack\_id} over Go version, kernel, bus type and version,
+transport configuration hash, RPC type, container image digests, netem
+configuration and process topology. Changing the transport invalidates D0.
+
+\section{Experimental protocol}
+\subsection{Scenarios} \TBD{} parameters as declared in
+\texttt{experiments/scenarios/F*.yaml}; F1--F4 constitute $P_{\mathrm{ID}}$;
+F5--F7 are held out entirely.
+
+\subsection{Splits} Training, validation and calibration draw disjoint seed
+blocks from F1--F4. The ID test set uses new seeds \emph{and} new parameter
+values --- new seeds alone would measure only seed variance. Replay-derived
+records are quarantined from every training set and a leakage test fails the
+build if one appears.
+
+\subsection{Interventional training data} At every training anchor all candidate
+actions are executed in their own branches, giving $(S_t,a,S^a_{t+1},Y^a)$ for
+all $a$: assignment is forced rather than sampled, which is a designed
+experiment on the emulator and removes the need for propensity weighting. Each
+branch records whether the action mutated runtime state; a dispatched action
+that changed nothing is a relabelled no-op and is excluded rather than averaged
+in.
+
+\subsection{Baseline fairness} B1 has the same action primitives as CSC --- a
+baseline with a poorer repertoire would let CSC win on options rather than on
+decision quality. What it lacks is a model: it maps observable symptoms to
+responses by fixed priority, with hysteresis on entry and release. It may not
+read the scenario label or fault-injector state. Its thresholds are frozen on
+pilot/validation data before any comparative run. All learned controllers share
+features, observation window, action set, execution mechanism and hyperparameter
+budget; none sees future information or replay outcomes.
+
+\subsection{Statistics} $95\%$ bootstrap intervals over $10{,}000$ resamples;
+paired Wilcoxon signed-rank; Cliff's delta; Holm correction across the primary
+family. H3 is a one-sided non-inferiority claim at $\Delta_A=0.005$, not an
+inference from a non-significant difference; $0.005$ is the largest availability
+reduction treated as practically negligible over the $300$\,s measurement window,
+about $1.5$\,s of additional unavailability. H4 is a tail claim:
+$p_{95}(T_{\mathrm{dec}})<100$\,ms up to $10{,}000$ devices with a deadline-miss
+rate below $1\%$.
+
+\subsection{Exclusions} Documented technical failures only --- out-of-memory
+kills, orchestration crashes before the measurement window closes, a fault
+injector reporting an unapplied schedule. Logged with evidence, reported as
+counts, under a policy fixed before results were examined. No run is excluded on
+the basis of its outcome.
+
+\section{Sensitivity analyses}
+\label{sec:sens}
+All secondary; the pre-registered primary settings are unchanged by them.
+\begin{itemize}
+\item $\delta\in\{0.05,0.10,0.20\}$ --- gate permissiveness against abstention.
+\item $\Delta_A\in\{0.001,0.0025,0.005,0.01\}$ --- primary claim at $0.005$ only.
+\item Non-uniform cost weights.
+\item $B\in\{20,30,50\}$ --- ensemble stability against inference overhead.
+\item Horizon $\Delta\in\{2,5,10\}$\,s --- selected on validation, then frozen.
+\end{itemize}
+
+\section{Hyperparameters and environment}
+\TBD{} Model architecture and training settings, the frozen $\hat\tau$,
+$U_{\max}$, $B$, $\Delta$, $H$ and $\eta_J$ with its
+\texttt{runtime\_stack\_id}, plus software versions and host description, are
+filled from the run manifests once the reportable stack is validated. They are
+left empty rather than guessed.
+
+\section{Reproduction}
+\begin{verbatim}
+make build && ./scripts/topology_smoke.sh   # no Docker needed
+make deps-adapters && make local-validate   # A1b gate, Linux + root
+docker compose up --build                   # full topology
+make replay                                 # branch mechanics
+make reproduce                              # full pipeline
+\end{verbatim}
+Runs produced without kernel-level impairment record
+\texttt{impairment\_mode=application\_layer} and are excluded from reported
+comparisons. \texttt{check\_reportable\_stack.py} refuses to start a reportable
+runner on a development substrate even if the validated flag is set by hand.
+
+\end{document}

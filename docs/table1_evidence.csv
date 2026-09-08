@@ -1,0 +1,9 @@
+bibkey,short_name,prediction,causal_model,multi_action_do,calibrated_uq,min_intervention,replay_validation,evidence
+kumar2023resilientedge,Reactive link switching,--,--,--,--,--,--,"Adaptive transport switching between LPWAN and WiFi; acts after a link degrades. No predictive model, no action comparison, no calibration."
+aral2021spatiotemporal,Failure dependencies,check,circ,--,--,--,--,"Learns spatiotemporal failure dependencies (predictive); dependency structure is correlational and used for placement, not for interventional estimates."
+wu2022gnniiot,Graph anomaly detection,check,circ,--,--,--,--,"GNN over device/process dependency graphs; detection only, output is a score."
+siew2022fire,RL migration,circ,--,--,circ,circ,--,"Importance-sampled RL for rare server failures; delay/migration/failure/backup costs priced INSIDE the reward, so the trade-off is fixed at training time and not exposed per action. Uncertainty enters only via rare-event sampling."
+pham2024rca,Causal RCA study,--,check,--,--,--,--,"Empirical study of 9 causal discovery and 21 RCA methods; diagnosis, not control."
+ye2026nesyedge,Log-based self-healing,--,check,--,--,--,--,"Prior-constrained symbolic causal graph from logs; produces root cause plus recovery RECOMMENDATION; no interventional estimate per candidate, no UQ, evaluated on static log datasets."
+desilva2026aurora,Uncertainty-gated agent,circ,check,circ,--,--,--,"do-calculus within each fault's Markov blanket; selects argmax recovery posterior; gates on variational free energy, which has no coverage or risk semantics; abstains. No cost model, no constrained selection, simulator-only."
+huang2025cascades,Conformal edge cascades,--,--,--,check,--,--,"Conformal alignment decides local vs cloud inference; calibrated, but about inference reliability, not about an intervention."

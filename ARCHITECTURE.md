@@ -28,8 +28,8 @@ That split is not decoration. It is what makes the runtime-overhead measurement 
              | gRPC: ActionRanking [{action, risk, upper_bound, width, cost}]
              v
  Safety gate + MNI selector (Go)     controller
-   feasible = {a : R+(a) <= R_safe and U(a) <= U_max}
-   a* = argmin cost over feasible, else fallback (abstain)
+   admissible = {a : R_hat(a) <= tau_hat and U_hat(a) <= U_max}   # tau_hat: CRC-calibrated offline, frozen
+   a* = argmin cost over admissible, else fallback (abstain; NOT covered by the CRC guarantee)
              |
              v
  Runtime controller (Go)  -> NO_OP | REROUTE | MIGRATE | THROTTLE | REPLICATE
@@ -55,6 +55,16 @@ The gate and the MNI selector are **in Go, in the controller**, not in Python. T
 ## Decision latency budget
 
 `T_decision = T_features + T_model + T_CF + T_gate`, measured separately, reported as a table. `T_CF` scales with |A| = 5 and is the quantity RQ4 is really about. The controller enforces a deadline; a missed deadline is recorded as a fallback, not silently awaited.
+
+## Determinism substrate
+
+Three mechanisms, all in Go, all prerequisites for replay:
+
+- **Experiment clock.** Every event carries `experiment_time`, `sequence_number` and `wall_clock_time`. Ordering and schedules are driven by the first two; wall clock is used only for runtime performance measurement. Code that branches on `time.Now()` is not replayable and is rejected in review.
+- **Per-component RNG streams.** `seed_i = SHA256(master_seed || component)` for `workload`, `mobility`, `network`, `service`, `fault`, `controller` and `behaviour`. A single global stream is forbidden: adding one draw in mobility would otherwise reshuffle the fault schedule, and reproducibility would break on an innocent refactor.
+- **Content-addressed anchors.** `sid = SHA256(config || seed || decision_tick || action_history)`, `bid = (sid, action)`. Branches are identified by what produced them, so two branches can never be silently confused.
+
+Replay reconstructs the run prefix from these and replaces only the action at the anchor. It does not snapshot process or container memory — TCP congestion state, goroutine scheduling, broker buffers and in-flight packets are not capturable, and pretending otherwise is the fastest way to lose a reviewer.
 
 ## Deployment
 

@@ -1,64 +1,119 @@
-# Minimum reproducible environment. `docker compose up` must be enough.
-# Kubernetes is optional and only for the largest scalability points.
+# A1a development topology: one process per role, three networks.
+#
+# The transport here is the stdlib broker, not NATS, and the RPC boundary is
+# stdlib framed TCP, not gRPC. Every run started from this file is a
+# DEVELOPMENT run: check_reportable_stack.py refuses to let a reportable
+# experiment start against it.
+#
+# Three networks, not one, so that tc/netem on the device sender's egress cannot also
+# degrade the control plane or the bus. A run that impaired the controller
+# alongside the data plane and reported itself as a data-plane fault experiment
+# would be wrong in a way nobody could see in the numbers.
 name: csc-iot
 
+networks:
+  device-gateway:   # impaired by the fault injector
+    name: csc-net-device-gateway
+  gateway-edge:     # bus traffic, never impaired
+    name: csc-net-gateway-edge
+  control:          # RPC and telemetry, never impaired
+    name: csc-net-control
+
+x-go-build: &go-build
+  build:
+    context: .
+    dockerfile: deploy/go.Dockerfile
+
 services:
-  nats:
-    image: nats:2-alpine
-    command: ["-js", "-m", "8222"]
-    ports: ["4222:4222", "8222:8222"]
-
-  edge-agent:
-    build: { context: ., dockerfile: deploy/Dockerfile.go, args: { CMD: edge-agent } }
-    depends_on: [nats]
-    environment:
-      CSC_NATS_URL: nats://nats:4222
-      CSC_RUN_ID: ${CSC_RUN_ID:-dev}
-      CSC_SEED: ${CSC_SEED:-42}
-    deploy: { replicas: 3 }
-
-  gateway:
-    build: { context: ., dockerfile: deploy/Dockerfile.go, args: { CMD: gateway } }
-    depends_on: [nats, edge-agent]
-    environment:
-      CSC_NATS_URL: nats://nats:4222
-      CSC_SEED: ${CSC_SEED:-42}
-
-  device-sim:
-    build: { context: ., dockerfile: deploy/Dockerfile.go, args: { CMD: device-sim } }
-    depends_on: [gateway]
-    environment:
-      CSC_DEVICE_COUNT: ${CSC_DEVICE_COUNT:-100}
-      CSC_SEED: ${CSC_SEED:-42}
+  broker:
+    <<: *go-build
+    build:
+      context: .
+      dockerfile: deploy/go.Dockerfile
+      args: { CMD_NAME: csc-broker }
+    command: ["-addr", ":4300"]
+    networks: [gateway-edge, control]
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "4300"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
 
   intelligence:
-    build: { context: ., dockerfile: deploy/Dockerfile.py }
-    ports: ["50051:50051"]
+    build:
+      context: .
+      dockerfile: deploy/go.Dockerfile
+      args: { CMD_NAME: csc-intelligence }
+    command: ["-addr", ":50051", "-delay", "5ms"]
+    networks: [control]
+
+  gateway00:
+    build:
+      context: .
+      dockerfile: deploy/go.Dockerfile
+      args: { CMD_NAME: csc-node }
+    command: ["-role", "gateway", "-id", "gw00", "-bus", "broker:4300", "-ingress", ":5000"]
+    depends_on: { broker: { condition: service_healthy } }
+    networks: [device-gateway, gateway-edge]
+
+  gateway01:
+    build:
+      context: .
+      dockerfile: deploy/go.Dockerfile
+      args: { CMD_NAME: csc-node }
+    command: ["-role", "gateway", "-id", "gw01", "-bus", "broker:4300", "-ingress", ":5000"]
+    depends_on: { broker: { condition: service_healthy } }
+    networks: [device-gateway, gateway-edge]
+
+  edge00:
+    build:
+      context: .
+      dockerfile: deploy/go.Dockerfile
+      args: { CMD_NAME: csc-node }
+    command: ["-role", "edge", "-id", "edge00", "-bus", "broker:4300"]
+    depends_on: { broker: { condition: service_healthy } }
+    networks: [gateway-edge]
+
+  edge01:
+    build:
+      context: .
+      dockerfile: deploy/go.Dockerfile
+      args: { CMD_NAME: csc-node }
+    command: ["-role", "edge", "-id", "edge01", "-bus", "broker:4300"]
+    depends_on: { broker: { condition: service_healthy } }
+    networks: [gateway-edge]
+
+  edge02:
+    build:
+      context: .
+      dockerfile: deploy/go.Dockerfile
+      args: { CMD_NAME: csc-node }
+    command: ["-role", "edge", "-id", "edge02", "-bus", "broker:4300"]
+    depends_on: { broker: { condition: service_healthy } }
+    networks: [gateway-edge]
 
   controller:
-    build: { context: ., dockerfile: deploy/Dockerfile.go, args: { CMD: controller } }
-    depends_on: [intelligence, gateway]
-    environment:
-      CSC_INTELLIGENCE_ADDR: intelligence:50051
-      CSC_CONTROLLER: ${CSC_CONTROLLER:-csc}
+    build:
+      context: .
+      dockerfile: deploy/go.Dockerfile
+      args: { CMD_NAME: csc-node }
+    command: ["-role", "controller", "-id", "ctl", "-bus", "broker:4300", "-rpc", "intelligence:50051"]
+    depends_on:
+      broker: { condition: service_healthy }
+      intelligence: { condition: service_started }
+    networks: [gateway-edge, control]
 
-  fault-injector:
-    build: { context: ., dockerfile: deploy/Dockerfile.go, args: { CMD: fault-injector } }
-    # NET_ADMIN is required for kernel-level tc/netem impairment.
-    # Without it the injector falls back to application-layer impairment and
-    # MUST record that fact in the run manifest.
+  device-sim:
+    build:
+      context: .
+      dockerfile: deploy/go.Dockerfile
+      args: { CMD_NAME: csc-node }
+    command: ["-role", "device-sim", "-id", "dev-sim", "-bus-impl", "tcp",
+              "-bus", "broker:4300", "-ingress", "gateway00:5000",
+              "-devices", "100", "-events-per-epoch", "200", "-seed", "42"]
+    depends_on: [gateway00]
+    # control as well as device-gateway: device-sim joins the epoch barrier so
+    # the events it emits per epoch are a property of the epoch rather than of
+    # how fast the machine ran. Only barrier traffic uses this network.
+    networks: [device-gateway, control]
     cap_add: ["NET_ADMIN"]
-    network_mode: "service:gateway"
-    environment:
-      CSC_SCENARIO: ${CSC_SCENARIO:-F1}
-      CSC_SEED: ${CSC_SEED:-42}
-
-  prometheus:
-    image: prom/prometheus:latest
-    volumes: ["./deploy/prometheus.yml:/etc/prometheus/prometheus.yml:ro"]
-    ports: ["9090:9090"]
-
-  grafana:
-    image: grafana/grafana:latest
-    ports: ["3000:3000"]
-    depends_on: [prometheus]

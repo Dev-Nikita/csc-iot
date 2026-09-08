@@ -17,7 +17,8 @@ __pycache__/
 !/data/processed/.gitkeep
 /experiments/manifests/*.json
 /paper/generated_tables/*.tex
-/paper/figures/*.pdf
+/paper/figures/fig3_timeline.pdf
+/paper/figures/fig4_main.pdf
 !/paper/figures/.gitkeep
 results_long.csv
 summary.csv
@@ -27,3 +28,16 @@ statistical_tests.csv
 .DS_Store
 .env
 _to_delete/
+
+# latex build artifacts
+paper/*.aux
+paper/*.log
+paper/*.blg
+paper/*.bbl
+paper/*.fls
+paper/*.fdb_latexmk
+paper/*.synctex.gz
+paper/main.pdf
+
+# Build output: rebuilt by `make build`, never evidence.
+bin/

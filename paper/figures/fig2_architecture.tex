@@ -21,18 +21,18 @@
 \node[go] (edge) at (0,-24)  {edge-agent $\times M$\\[-2pt]{\tiny service, load, replicas}};
 \node[go] (tel)  at (0,-36)  {telemetry collector};
 
-\node[py]   (intel) at (46,-36) {intelligence service\\[-2pt]{\tiny predictor $\to$ SCM $\to$ conformal}};
-\node[py]   (cf)    at (46,-24) {counterfactual evaluator\\[-2pt]{\tiny $R(a\mid S_t)$ for $a\in\Aset$}};
-\node[gate] (gate)  at (46,-12) {safety gate $+$ MNI selector\\[-2pt]{\tiny $R^{+}(a)\le \Rsafe$,\; $U(a)\le \Umax$}};
+\node[py]   (intel) at (46,-36) {intelligence service\\[-2pt]{\tiny predictor $\to$ SCM $\to$ CRC}};
+\node[py]   (cf)    at (46,-24) {counterfactual evaluator\\[-2pt]{\tiny $\hat{R}(a),\hat{U}(a),\hat{C}(a)$ for $a\in\Aset$}};
+\node[gate] (gate)  at (46,-12) {gate $+$ MNI selector\\[-2pt]{\tiny $\hat{R}(a)\le \Rsafe$ (frozen),\; $\hat{U}(a)\le \Umax$}};
 \node[go]   (ctl)   at (46,0)   {runtime controller\\[-2pt]{\tiny NO\_OP $\mid$ REROUTE $\mid$ MIGRATE $\mid\dots$}};
 
 \node[go] (fault) at (0,-50)  {fault-injector\\[-2pt]{\tiny tc/netem, F1--F7}};
-\node[go] (rep)   at (46,-50) {replay orchestrator\\[-2pt]{\tiny fork 5 branches from $S_t$}};
+\node[go] (rep)   at (46,-50) {replay orchestrator\\[-2pt]{\tiny quiescence $+$ fingerprint $\to$ branch}};
 
 \draw[ar]  (dev)  -- (gw);
 \draw[ar]  (gw)   -- (edge);
 \draw[tel] (edge) -- (tel);
-\draw[tel] (tel)  -- node[lbl, above]{gRPC $S_t$} (intel);
+\draw[tel] (tel)  -- node[lbl, above]{RPC $S_t$} (intel);
 \draw[ar]  (intel) -- node[lbl, right]{\tiny ranking} (cf);
 \draw[ar]  (cf)   -- (gate);
 \draw[ar]  (gate) -- node[lbl, right]{$a^{*}_t$} (ctl);

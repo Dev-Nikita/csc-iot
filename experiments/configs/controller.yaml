@@ -1,7 +1,10 @@
-# FROZEN -- see EXPERIMENT_PROTOCOL.md section 2.
-# Changing any value here after main results are viewed invalidates the run set.
+# FROZEN v2 -- see EXPERIMENT_PROTOCOL.md section 2.
+# NOTE v2: the admissibility threshold is no longer a hand-set R_safe. It is
+# tau_hat, calibrated by conformal risk control against the level delta in
+# calibration.yaml. The value below is the SEARCH GRID, not the threshold.
 tick_ms: 500
-R_safe: 0.20
+tau_grid: [0.02, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.40, 0.50]
 U_max: 0.25
-decision_deadline_ms: 50      # missed deadline => recorded fallback, not a wait
+decision_deadline_ms: 100     # p95 budget; a miss is a recorded fallback
 fallback_action: NO_OP
+rollout_horizon_H: null       # = Delta / tick_ms, set once Delta is frozen

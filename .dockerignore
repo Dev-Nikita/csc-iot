@@ -1,0 +1,15 @@
+# Keep the build context to what the image actually needs. The paper, the raw
+# experiment data and the git history are none of Docker's business, and
+# shipping them slows every build.
+.git
+_to_delete
+paper
+supplementary
+docs
+data
+experiments/manifests
+analysis
+intelligence
+bin
+*.md
+*.pdf

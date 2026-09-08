@@ -1,0 +1,8 @@
+# FROZEN v2 -- randomised intervention on TRAINING scenarios only.
+# Purpose: fit the structural mechanisms partly from randomised rather than
+# purely observational action assignment, which weakens the no-unmeasured-
+# confounding assumption that identification of P(F | do(a)) rests on.
+enabled_on: [F1, F2, F3, F4]     # never on test or shift scenarios
+randomisation_rate: 0.15         # fraction of eligible decision points
+eligibility: predicted_risk_below: 0.5   # do not randomise into a live crisis
+log_propensity: true             # store P(A_t = a | S_t) with every record

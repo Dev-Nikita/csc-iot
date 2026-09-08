@@ -15,8 +15,10 @@ F2 & Latency inflation        & RTT $10\to250$\,ms                 & train / ID 
 F3 & Edge compute overload    & load $0.3\to0.95$                  & train / ID \\
 F4 & Queue congestion         & $\lambda>\mu$, ratio $1.5\times$   & train / ID \\
 F5 & Mobility with handover   & gateway reassociation              & \textbf{shift} \\
-F6 & Abrupt node failure      & edge node terminated               & ID (test) \\
+F6 & Abrupt node failure      & edge node terminated               & \textbf{shift} \\
 F7 & Cascading failure        & F5 $\to$ loss $\to$ retry $\to$ queue & \textbf{shift} \\
 \bottomrule
 \end{tabular}
+\\[2pt]
+{\footnotesize F1--F4 constitute $P_{\mathrm{ID}}$; F5--F7 are held out entirely.}
 \end{table}

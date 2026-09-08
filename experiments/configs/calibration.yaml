@@ -1,5 +1,18 @@
-# FROZEN
-coverage_target: 0.90
-method: adaptive_conformal      # falls back to split conformal on the ID split
-calibration_split: seed_block_C
-report_empirical_coverage: true # including where it degrades under shift
+# FROZEN v2
+# Conformal RISK control, not conformal prediction of a coverage interval.
+# Rationale: R(a|S) is a latent conditional probability, never observed. A
+# replay branch yields a binary outcome, so there is no residual to conformalise
+# and no basis for R + q_{1-alpha}. What IS observable is the set-level loss
+#   l_t(tau) = 1[ exists a in A_safe(tau) : Y^a_t = 1 ]
+# which is bounded and non-decreasing in tau, and which concerns the whole
+# admissible set -- so it is immune to the controller selecting adaptively
+# among the five candidates after seeing their scores.
+method: conformal_risk_control      # Angelopoulos et al., arXiv:2208.02814
+delta: 0.10                         # target E[loss] level
+loss: set_level_failure             # see formula above
+monotone_parameter: tau             # loss non-decreasing in tau
+calibration_split: seed_block_C     # disjoint from train and validation
+online_variant: disabled            # rejected-action outcomes are unavailable online
+report_empirical_risk: true         # measured, ID and shifted, always
+# Under shift, exchangeability fails by construction. The guarantee is then
+# replaced by measured empirical risk. Do not report it as a guarantee.

@@ -14,10 +14,10 @@ What survives, and what the paper must therefore be built and sold on:
 | CSC pillar | Occupied by prior work? | Verdict |
 |---|---|---|
 | P1. Online action-conditioned counterfactual evaluation `P(F \| S, do(a))` over a candidate action set | **Partially** — AURORA computes `argmax_a P(S=1 \| do(a))` | Cannot be claimed alone |
-| P2. Calibrated (conformal) uncertainty gating | **Partially** — AURORA gates on variational free energy, not calibrated coverage | Claimable only in the sharpened form "distribution-free calibrated risk bound with measured coverage" |
+| P2. Risk-calibrated admissibility (CRC) | **Partially** — AURORA gates on variational free energy, which has no risk semantics | Claimable only in the v2.1 form: a CRC-calibrated *set-level* intervention risk at a declared level, with realised risk measured. Not "a calibrated bound on the interventional probability" — that construction was removed as invalid |
 | P3. Safe abstention | **Yes** — AURORA abstains and escalates to fog tier (65.9% abstention rate) | **Do not claim as novel.** Cite AURORA and position CSC's abstention as inherited/comparable |
 | P4. Minimum-necessary intervention (cheapest action subject to a risk constraint) | **No** — AURORA and NeSy-Edge both select by best predicted outcome, no cost model, no constrained selection | **Claimable** |
-| P5. Deterministic fork-and-replay experimental counterfactual ground truth | **No hit found** | **Strongest claim.** This is the paper's spine |
+| P5. Deterministic fork-and-replay empirical reference outcomes for unchosen actions | **No hit found** | **Strongest claim.** This is the paper's spine — and, since v2, it also supplies the `Y^a` the CRC calibration consumes, so it is load-bearing for the method and not only for the evaluation |
 | P6. Real distributed runtime prototype with kernel-level network emulation and mobility | **No** — AURORA is a Python Monte-Carlo simulator; NeSy-Edge replays static log datasets | **Claimable** |
 
 **Reframed one-sentence contribution (supersedes the original):**
@@ -109,13 +109,14 @@ Answered so far: rows 1-9 of the matrix above (Q3=partial only for AURORA; Q6 an
 ## 5. Claims the paper may and may not make
 
 Permitted (after the audit is completed to 15 rows):
-- "To our knowledge, existing approaches do not jointly (i) rank multiple candidate interventions by calibrated interventional risk, (ii) select the cheapest action satisfying a risk constraint, and (iii) validate the resulting counterfactual ranking against executed alternative futures."
-- "We provide experimental counterfactual ground truth by deterministic fork-and-replay."
+- "To our knowledge, existing approaches do not jointly (i) rank multiple candidate interventions, (ii) select the cheapest action admitted by a risk-calibrated safety criterion, and (iii) validate the resulting ranking against alternative futures that were actually executed."
+- "We provide replay-based empirical reference outcomes for alternative interventions, at a measured resolution `η_J`, by deterministic fork-and-replay."
 
 Forbidden:
 - "first causal self-healing framework for edge" — false.
 - "first to use uncertainty gating / abstention in self-healing" — false, see AURORA.
 - "first to apply conformal prediction at the edge" — false, see rows 6-9.
+- "we provide a calibrated bound on the interventional risk of each action" — **false and removed in v2**: that quantity is latent and was never conformalisable. The claim is CRC control of a set-level loss.
 - any "for the first time" formulation not backed by this audit.
 
 ---

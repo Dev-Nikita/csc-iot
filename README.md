@@ -4,7 +4,7 @@ Uncertainty-aware proactive self-healing for mobile edge IoT systems.
 
 Most resilience mechanisms either react to a failure that already happened or predict that one is likely. Neither tells you what a *specific* recovery action would do to *this* system, or whether taking it is worth the disruption. CSC evaluates several action-conditioned futures before touching the running system, executes the **cheapest** action whose conservative risk estimate clears a safety threshold, **abstains** when none does, and then checks the executed action against what actually happened.
 
-The part that makes this checkable rather than merely plausible: a deterministic **fork-and-replay** environment. From the same decision state, with the same seed, workload trace, fault schedule and network state, every candidate action is executed in its own branch. The predicted ranking is then scored against outcomes that were actually observed — not assumed.
+The part that makes this checkable rather than merely plausible: a reconstructible **fork-and-replay** environment with exact, transport-quiescent anchors. From the same decision state and deterministic input specification, every candidate action is executed in its own branch while residual runtime nondeterminism is measured. The predicted ranking is then scored against outcomes that were actually observed — not assumed.
 
 Target venue: IEEE Internet of Things Journal.
 

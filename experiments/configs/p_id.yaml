@@ -1,0 +1,24 @@
+# FROZEN v2.1 -- the ID run-generating distribution.
+#
+# The CRC guarantee is stated with respect to THIS distribution. Independent
+# seeds alone do not deliver exchangeability: calibration and ID test runs must
+# be drawn from the same declared generator, with disjoint seed blocks.
+scenarios: [F1, F2, F3, F4]          # uniform
+severity:
+  F1: {loss_final: [0.10, 0.25]}
+  F2: {rtt_final_ms: [150, 320]}
+  F3: {load_final: [0.85, 0.98]}
+  F4: {lambda_over_mu: [1.2, 1.8]}
+workload:
+  devices: [100, 1000]
+  event_rate_hz: [3, 6]
+seed_blocks:
+  train: [1000, 1999]
+  validation: [2000, 2999]
+  calibration: [3000, 3999]
+  id_test: [4000, 4999]
+# Anchors are drawn on a pre-declared grid AFTER the start-up transient
+# (warmup + first 30 s of measurement). M2 found that earlier anchors sit in a
+# queue-fill transient where every action looks the same.
+anchor_grid: {start_s: 40, every_s: 5}
+# F5-F7 are OUTSIDE P_ID. No guarantee is claimed there -- only measured risk.

@@ -1,7 +1,27 @@
-# FROZEN
+# FROZEN v2
 warmup_s: 120
 measure_s: 300
 cooldown_s: 60
-seeds: 20            # target 30 if compute allows
-device_counts: [100, 500, 1000, 5000, 10000]
+seeds: 20                 # target 30 if compute allows
+device_counts: [100, 500, 1000, 2500, 5000, 10000]
 stretch_device_count: 25000
+
+# D0 replay-repeatability audit. Runs ONCE, before the main experiments.
+# Its output freezes eta_J and decides how many repeats each main-experiment
+# branch needs -- running 30 repeats per state x action in the main experiment
+# would be unaffordable and is not the plan.
+d0_audit:
+  anchors: 20             # representative decision states
+  actions: 5
+  repeats: 30             # => 3000 branches
+  eta_J_quantile: 0.95    # eta_J = Q_0.95(|J_ri(a) - J_rj(a)|) over repeat pairs
+  main_experiment_repeats_default: 3   # revised from D0 variance
+
+# Per-component RNG streams. seed_i = SHA256(master_seed || component).
+# One global stream is forbidden: changing a draw in mobility would otherwise
+# reshuffle the fault schedule and reproducibility would break on any refactor.
+rng_streams: [workload, mobility, network, service, fault, controller, behaviour]
+
+# H4 runtime budget (tail, not median).
+p95_decision_ms_budget: 100
+deadline_miss_rate_budget: 0.01

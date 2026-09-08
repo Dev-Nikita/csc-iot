@@ -2,7 +2,7 @@
 
 Target venue: **IEEE Internet of Things Journal**, regular paper.
 Page target: **6.0 published pages including references** (hard ceiling 8 — beyond that IEEE overlength charges apply; the 2-page headroom is reserved for revision, not for the first submission).
-Status: specification frozen for implementation start, 2026-08-25. Amendments require a dated entry in §12.
+Status: **v2**, frozen for implementation start after the methodology correction pass, 2026-08-25. Amendments require a dated entry in §12.
 
 ---
 
@@ -27,16 +27,16 @@ This section exists because reviewers will pattern-match the paper to five adjac
 ## 3. Research questions
 
 - **RQ1** Does action-conditioned counterfactual inference prevent more failures than reactive, prediction-only, graph-based, and RL controllers under matched conditions?
-- **RQ2** Does calibrated uncertainty gating reduce harmful interventions under scenario-level distribution shift?
-- **RQ3** Does minimum-necessary intervention lower intervention cost without a statistically significant loss of availability?
+- **RQ2** Does the uncertainty-filtered, risk-calibrated admissible set reduce harmful interventions under scenario-level distribution shift? (`Û` filters and is not itself calibrated; CRC calibrates `τ̂`.)
+- **RQ3** Does minimum-necessary intervention lower intervention cost while remaining **non-inferior** in availability within a pre-declared operational margin?
 - **RQ4** What runtime overhead does shadow evaluation add as the device count grows?
 
 ## 4. Hypotheses (registered before any comparative result is examined)
 
-- **H1** CSC achieves a higher Prevented Failure Ratio than B1–B5.
-- **H2** The uncertainty gate lowers Wrong Intervention Rate on OOD scenarios (F5, F7, combined) relative to CSC without the gate (ablation A1).
-- **H3** Minimum-necessary intervention lowers mean intervention cost relative to risk-argmin selection (ablation A2) with no significant availability regression (equivalence margin declared in EXPERIMENT_PROTOCOL.md).
-- **H4** Median decision overhead stays within the budget declared in EXPERIMENT_PROTOCOL.md up to 10,000 virtual devices.
+- **H1** CSC achieves a higher Prevented Failure Ratio than B1–B5, with PFR defined on replayed alternatives (§9).
+- **H2** The calibrated gate lowers Wrong Intervention Rate on shift scenarios relative to CSC without the gate (ablation A1).
+- **H3** Minimum-necessary intervention lowers mean intervention cost relative to risk-argmin selection (ablation A2) and is **non-inferior** on availability against the pre-declared margin `Δ_A = 0.005`. This is a one-sided non-inferiority claim, not "no significant difference" — the latter is not evidence of equivalence and will not be written as if it were.
+- **H4** `p95(T_dec) < 100 ms` at up to 10,000 devices with a deadline-miss rate below 1%. Median latency is not the criterion.
 
 **A hypothesis that fails is reported as failed.** H1–H4 are predictions, not targets. No experiment is re-run, re-tuned, or re-seeded because its outcome was unwelcome.
 
@@ -50,34 +50,47 @@ Candidate actions, deliberately five:
 
 ## 6. Method
 
-1. **Temporal predictor.** GRU or TCN over graph-aggregated node features → `P(F_{t+Δ})`. Horizon Δ selected on the validation split before any test evaluation; the choice and its justification are recorded. Architecture is deliberately unremarkable — it is not the contribution.
-2. **Topology-informed SCM.** Structure fixed by system semantics, parameters learned:
-   `Mobility → LinkQuality → PacketLoss → RetryRate → QueueDepth → Latency → TimeoutRate → ServiceFailure`, with `EventRate → QueueDepth` and `Load → ProcessingTime → QueueDepth`.
-   Unrestricted causal discovery is not used and not claimed. Identification assumptions are stated explicitly in the paper.
-3. **Counterfactual evaluation.** For each `a ∈ A`, estimate `R_a = P(F_{t+Δ} = 1 | S_t, do(A = a))`. The implementation must keep `P(F|S)` and `P(F|S, do(a))` as distinct code paths and distinct log fields — a reviewer will look for exactly this.
-4. **Cost model.** `C(a) = w_L·L_a + w_R·E_a + w_B·B_a + w_D·D_a`, each term normalized to [0,1]. **Weights are fixed in version control before the main experiments and are never tuned against results.**
-5. **Calibration.** Conformal / adaptive-conformal upper risk bound `R⁺(a)`. Empirical coverage is measured and reported, including where it degrades.
+1. **Temporal predictor.** GRU or TCN over graph-aggregated node features → `P(F_{t+Δ})`. Horizon Δ selected on validation before any test evaluation. Architecture is deliberately unremarkable — it is not the contribution. A temporal graph model is baseline B3, not the method.
+2. **Dynamic topology-informed SCM.** Structure fixed by system semantics, parameters learned, and **temporal**:
+   `X_{j,t+1} = g_j(Pa_j(X_t), A_t, u_{j,t})`
+   over `Mob → LinkQ → Loss → Retry → Queue → Lat → Timeout → F`, with `EvRate → Queue` and `Load → ProcTime → Queue`. Each `g_j` starts as a GAM or gradient-boosted model, not a large network — interpretability is worth more here than capacity. A static DAG is a picture; the rollout is what produces `P(F | do(a))`.
+3. **Counterfactual evaluation.** For each `a`, apply `do(A_t = a)` — replacing exactly the mechanisms that action controls — and roll the SCM forward `H = Δ/tick` steps, averaging over sampled exogenous noise. Which mechanism each action replaces is documented per action, in code and in the paper. `P(F|S)` and `P(F|S, do(a))` stay distinct code paths and distinct log fields.
+4. **Cost model.** `C(a) = w_L·L_a + w_R·E_a + w_B·B_a + w_D·D_a`, normalized, weights fixed in version control before the main experiments and never tuned against results.
+5. **Risk-calibrated gate — corrected in v2.** CSC does *not* form `R̂(a) + q̂_{1-α}` and does not claim a per-decision bound on the true interventional risk. `R(a|S)` is latent; a replay branch yields a binary outcome, not that probability; and the controller selects adaptively after seeing all five scores, so per-action marginal coverage would not transfer to the selected action anyway. Instead the **gate itself** is calibrated. With
+   `A_safe(τ) = { a : R̂(a|S_t) ≤ τ ∧ Û(a) ≤ U_max }`
+   and the set-level loss
+   `ℓ_t(τ) = 1[ ∃ a ∈ A_safe(τ) : Y^a_t = 1 ]`,
+   conformal risk control calibrates `τ̂` such that `E[ℓ(τ̂)] ≤ δ`. The loss is bounded and non-decreasing in `τ` (relaxing the threshold only grows the set), which is what CRC requires; and because it constrains the whole admissible set, it bounds the failure probability of *whatever* rule selects from that set — which is exactly what the adaptive-selection objection demanded.
 6. **Minimum-necessary intervention.**
-   `a* = argmin_a C(a)` subject to `R⁺(a) ≤ R_safe` and `U(a) ≤ U_max`.
-   If the feasible set is empty → `a_fallback` (safe abstention).
-   The controller must **never** silently fall back to `argmin_a R_a`; that path is ablation A2, not the method.
-7. **Closed-loop verification.** After executing `a*`, observe `S_{t+Δ}`, record `e = |Ŷ^{a*} − Y|`, feed it to calibration and drift monitoring.
+   `a* = argmin_a C(a)` over `A_safe(τ̂)`; if empty → `a_fallback` (guarded abstention; fallback outside the CRC guarantee).
+   The controller must **never** silently fall back to `argmin_a R̂(a)`; that is ablation A2.
+7. **Closed-loop verification.** After executing `a*`, observe `S_{t+Δ}`, record the error and feed it to drift monitoring. The frozen `τ̂` is not recalibrated online because outcomes of rejected actions are unavailable.
 
-## 7. The methodological contribution: deterministic fork-and-replay
+## 7. The methodological contribution: reconstructible fork-and-replay
 
-At selected decision states `S_t`, the environment is reconstructed deterministically (same seed, same workload trace, same fault schedule, same network and service state) and **each** candidate action is executed in its own branch. The observed branch outcomes are the experimental counterfactual ground truth against which the predicted ranking is scored.
+At selected decision points the run is reconstructed **from its own prefix** — master seed, per-component RNG streams, scenario config, workload and fault schedules, and the action history up to `t` — and re-executed with only the action at `t` replaced. Reconstruction, not snapshotting: congestion windows, goroutine schedules, broker buffers and in-flight packets cannot be captured faithfully, and a claim to have done so would not survive review.
 
-This answers the question that sinks most counterfactual systems papers — *how do you know the unchosen futures?* — and it enables two metrics no prediction-quality metric can substitute for:
-- **Counterfactual Ranking Accuracy** (CRA, and CRA@2): how often the model's best action is the actually-best action.
-- **Action regret**: `J(a_selected) − J(a_optimal)`, with `J(a) = α·R(a) + β·L(a) + γ·C(a)` and α, β, γ fixed in advance.
+The results are **replay-based empirical reference outcomes**, not counterfactual ground truth. That wording is deliberate and is used consistently in the manuscript.
 
-Determinism will be imperfect. The paper must quantify residual nondeterminism (branch-to-branch outcome variance under the *same* action and seed) and report it as a limitation, not hide it. Implementation is by deterministic environment reconstruction from logged state and configuration — **not** by pretending to snapshot container memory.
+**The predicted and observed objectives are separate quantities**, and conflating them was a real defect in v1:
+
+- predicted: `Ĵ(a) = λ_F·R̂(a) + λ_L·L̂(a) + λ_C·Ĉ(a)`
+- observed: `J_obs(a) = λ_F·Y^a + λ_L·L̃^a + λ_C·C_obs^a`
+
+`J_obs` contains no model output. If it did, the reference ranking would contain the very prediction it exists to test, and the ranking metric would be measuring the model against itself.
+
+Metrics, with ties resolved by the measured dispersion band `η_J` (§10 of the protocol):
+
+- **CRA_η**: fraction of decisions where `J_obs(a*) ≤ min_a J_obs(a) + η_J`
+- **Regret_η**: `max(0, J_obs(a*) − min_a J_obs(a) − η_J)`
+
+Exact-argmin CRA is not used: under residual nondeterminism it would penalise the controller for picking between two actions the environment cannot distinguish.
 
 ## 8. Contributions (as they will appear in the Introduction)
 
 1. Counterfactual Shadow Control: online comparison of multiple intervention-conditioned futures before modifying a running mobile-edge IoT system.
-2. Minimum-necessary intervention as constrained selection over calibrated counterfactual risk and intervention cost, with safe abstention when no action is reliably sufficient.
-3. A deterministic fork-and-replay methodology yielding experimental ground truth for alternative recovery actions, and the ranking/regret metrics it makes possible.
+2. Minimum-necessary intervention as cost-minimal selection from an admissible set whose *set-level* risk is calibrated at a declared level — a formulation that is unaffected by the controller choosing adaptively among candidates — with guarded abstention and a predetermined fallback outside the guarantee.
+3. A reconstructible fork-and-replay methodology with transport-quiescent exact anchors, yielding empirical reference outcomes for alternative recovery actions, a measured resolution `η_J`, and tie-aware ranking and regret.
 4. A distributed Go/Python prototype and a systematic evaluation against reactive, predictive, graph-based, and RL controllers under degradation, mobility, overload, node failure, cascading faults, and scenario shift.
 
 ## 9. Evaluation design (summary; authoritative version in EXPERIMENT_PROTOCOL.md)
@@ -91,7 +104,7 @@ Determinism will be imperfect. The paper must quantify residual nondeterminism (
 
 ## 10. Definition of done
 
-Submission is not considered until all of: real distributed Go prototype; kernel-level network emulation (with the fallback path clearly labelled where unprivileged); fork-and-replay counterfactual ground truth; ≥4 fair baselines; ≥20 paired seeds; CIs and effect sizes; scenario-shift evaluation; three ablations; runtime overhead table; scalability curve; public code and configs; zero unverified references; zero manually typed numbers in the Results section.
+Submission is not considered until all of: real distributed Go prototype; kernel-level network emulation (with the fallback path clearly labelled where unprivileged); fork-and-replay empirical reference outcomes with a measured resolution `η_J`; ≥4 fair baselines; ≥20 paired seeds; CIs and effect sizes; scenario-shift evaluation; three ablations; runtime overhead table; scalability curve; public code and configs; zero unverified references; zero manually typed numbers in the Results section.
 
 ## 11. Explicit non-goals
 
@@ -102,3 +115,4 @@ No blockchain, no LLM component, no federated learning, no 6G branding, no quant
 | Date | Change | Reason |
 |---|---|---|
 | 2026-08-25 | Initial freeze. Novelty reframed away from "causal self-healing" toward MNI + fork-and-replay after AURORA (arXiv:2605.10718) was found. | NOVELTY_AUDIT.md §3.1 |
+| 2026-08-25 | **v2 methodology correction.** Conformal prediction bound → conformal risk control; Proposition 1 removed; SCM made dynamic; `Ĵ`/`J_obs` separated; `η_J` and tie-aware metrics; H3 non-inferiority; H4 tail; B5 redefined. | `METHODOLOGY_CORRECTION_REPORT.md` |
