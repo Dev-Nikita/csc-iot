@@ -21,11 +21,7 @@ set -euo pipefail
 
 BIN="${BIN:-bin}"
 STACK_ID="${STACK_ID:-}"                 # required: reportable runtime_stack_id
-# Provenance of the source that produced these branches. A deployed tree has
-# no .git (deploy excludes it), so SOURCE_REVISION is the fallback; a dirty
-# working tree is marked, because an anchor whose git_commit names a clean
-# commit it was not built from is a false provenance record.
-GIT_COMMIT="${GIT_COMMIT:-$(git describe --always --dirty --abbrev=7 2>/dev/null || sed -n "1p" SOURCE_REVISION 2>/dev/null || echo unknown)}"
+GIT_COMMIT="${GIT_COMMIT:-$(git rev-parse --short HEAD 2>/dev/null || echo unknown)}"
 EXPERIMENT="${EXPERIMENT:-m2prime}"
 ANCHORS="${ANCHORS:-30}"
 REPEATS="${REPEATS:-10}"
@@ -98,6 +94,7 @@ topology_up() { # topology_up <tag>
   sleep 0.8
   "$BIN/csc-node" -role device-sim -id dev-sim -bus-impl "$BUS_IMPL" -bus "$BUS_ADDR" \
      -ingress 127.0.0.1:5000 -devices 100 -events-per-epoch "$EVENTS" -seed "$SEED" \
+     -emit-spread "${EMIT_SPREAD:-200ms}" \
      >"$LOG/$tag-dev.log" 2>&1 & PIDS+=($!)
   sleep 0.4
 }

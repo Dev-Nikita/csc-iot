@@ -137,6 +137,7 @@ services:
     command: ["-role", "device-sim", "-id", "dev-sim", "-bus-impl", "nats",
               "-bus", "nats://nats:4222", "-ingress", "gateway00:5000",
               "-devices", "100", "-events-per-epoch", "${EVENTS_PER_EPOCH:-100}",
+              "-emit-spread", "${EMIT_SPREAD:-200ms}",
               "-seed", "${MASTER_SEED:-42}"]
     depends_on: [gateway00]
     # control as well as device-gateway: device-sim joins the epoch barrier so

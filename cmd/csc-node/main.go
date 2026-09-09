@@ -74,6 +74,8 @@ func main() {
 	devices := flag.Int("devices", 100, "virtual devices (device-sim only)")
 	rateHz := flag.Float64("rate-hz", 4, "per-device event rate")
 	seed := flag.Uint64("seed", 42, "master seed")
+	emitSpread := flag.Duration("emit-spread", 200*time.Millisecond,
+		"device-sim: wall-clock window over which one epoch's events are emitted (0 = burst)")
 	perEpoch := flag.Int("events-per-epoch", 200, "device-sim: events emitted per epoch (epoch-driven mode)")
 	// Heterogeneous by configuration, not by accident: with equal capacity every
 	// edge is interchangeable and REROUTE cannot change any outcome.
@@ -133,7 +135,7 @@ func main() {
 
 	switch *role {
 	case "device-sim":
-		runDeviceSim(ctx, *id, *ingress, *devices, *rateHz, *seed, *perEpoch, b, sig)
+		runDeviceSim(ctx, *id, *ingress, *devices, *rateHz, *seed, *perEpoch, *emitSpread, b, sig)
 	case "gateway":
 		runGateway(ctx, *id, b, *ingress, *route, sig)
 	case "edge":
@@ -157,7 +159,7 @@ func joinEpochs(ctx context.Context, b bus.Bus, id string, work func(string, int
 // --- device-sim: direct TCP ingress, the only impaired path ------------------
 
 func runDeviceSim(ctx context.Context, id, ingress string, devices int, rateHz float64,
-	seed uint64, perEpoch int, b bus.Bus, sig chan os.Signal) {
+	seed uint64, perEpoch int, emitSpread time.Duration, b bus.Bus, sig chan os.Signal) {
 	if ingress == "" {
 		log.Fatal("device-sim needs -ingress")
 	}
@@ -191,6 +193,25 @@ func runDeviceSim(ctx context.Context, id, ingress string, devices int, rateHz f
 	// so the event count at epoch k is a property of k.
 	if b != nil {
 		joinEpochs(ctx, b, id, func(_ string, k int64) {
+			// Events are PACED across the epoch, not fired as one burst.
+			//
+			// A burst gives every event of an epoch almost the same end-to-end
+			// latency, so the whole batch crosses the latency budget together
+			// and the violated fraction moves in steps of one epoch's worth of
+			// events. Measured on the pilot: within a cell nothing varied except
+			// the violation count, which flipped between exactly 400 and 500 --
+			// one batch of 100 sitting on the threshold. That step, not the
+			// system, was the replay dispersion.
+			//
+			// Devices in a real deployment do not emit simultaneously either, so
+			// pacing is the more faithful workload as well as the better
+			// instrument. The COUNT per epoch is unchanged and still exact, so
+			// the prefix stays reproducible; only the arrival times within the
+			// epoch spread out.
+			var gap time.Duration
+			if emitSpread > 0 && perEpoch > 1 {
+				gap = emitSpread / time.Duration(perEpoch)
+			}
 			for i := 0; i < perEpoch; i++ {
 				seq++
 				if err := enc.Encode(ingressEvent{
@@ -200,6 +221,9 @@ func runDeviceSim(ctx context.Context, id, ingress string, devices int, rateHz f
 				}); err != nil {
 					log.Printf("%s: ingress write failed at epoch %d: %v", id, k, err)
 					return
+				}
+				if gap > 0 {
+					time.Sleep(gap)
 				}
 			}
 			// The marker rides the same socket behind the epoch's events, so a

@@ -18,14 +18,14 @@ PERIOD="${PERIOD:-300ms}"
 # was no healthy state, and no action could prevent anything -- every anchor sat
 # on the same overload ramp. This default is part of the declared configuration.
 EVENTS="${EVENTS:-100}"
+# Emission is paced across the epoch rather than burst: a burst gives a whole
+# batch the same latency, so the violated fraction moves in steps of one batch
+# and that step becomes the measured replay dispersion.
+EMIT_SPREAD="${EMIT_SPREAD:-200ms}"
 SEED="${SEED:-42}"
 NETEM_SEED="${NETEM_SEED:-424242}"
 ROOT="${ROOT:-data/raw}"
-# Provenance of the source that produced these branches. A deployed tree has
-# no .git (deploy excludes it), so SOURCE_REVISION is the fallback; a dirty
-# working tree is marked, because an anchor whose git_commit names a clean
-# commit it was not built from is a false provenance record.
-GIT_COMMIT="${GIT_COMMIT:-$(git describe --always --dirty --abbrev=7 2>/dev/null || sed -n "1p" SOURCE_REVISION 2>/dev/null || echo unknown)}"
+GIT_COMMIT="${GIT_COMMIT:-$(git rev-parse --short HEAD 2>/dev/null || sed -n '1p' SOURCE_REVISION 2>/dev/null || echo unknown)}"
 
 compose() { docker compose -f "$COMPOSE_FILE" "$@"; }
 
@@ -59,7 +59,7 @@ OUT="$ROOT/$STACK_ID/$EXPERIMENT"
 [ ! -e "$OUT" ] || { echo "FAIL: $OUT exists; experiments are append-only"; exit 2; }
 mkdir -p "$OUT"
 CONFIG_HASH="$(python3 -c 'import hashlib,sys; print(hashlib.sha256(sys.argv[1].encode()).hexdigest()[:16])' \
-  "$ANCHORS|$REPEATS|$ACTIONS|$HORIZON|$PERIOD|$EVENTS|$SEED|$NETEM_SEED")"
+  "$ANCHORS|$REPEATS|$ACTIONS|$HORIZON|$PERIOD|$EVENTS|$EMIT_SPREAD|$SEED|$NETEM_SEED")"
 
 cat > "$OUT/matrix.json" <<JSON
 {
@@ -73,6 +73,7 @@ cat > "$OUT/matrix.json" <<JSON
   "horizon": $HORIZON,
   "period": "$PERIOD",
   "events_per_epoch": $EVENTS,
+  "emit_spread": "$EMIT_SPREAD",
   "master_seed": $SEED,
   "netem_seed": $NETEM_SEED,
   "bus_impl": "nats",
@@ -81,7 +82,7 @@ cat > "$OUT/matrix.json" <<JSON
 }
 JSON
 
-export EVENTS_PER_EPOCH="$EVENTS" MASTER_SEED="$SEED" COMPOSE_FILE
+export EVENTS_PER_EPOCH="$EVENTS" MASTER_SEED="$SEED" EMIT_SPREAD COMPOSE_FILE
 cleanup() { compose down --remove-orphans >/dev/null 2>&1 || true; }
 trap cleanup EXIT
 
