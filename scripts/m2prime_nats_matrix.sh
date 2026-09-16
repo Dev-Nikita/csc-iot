@@ -22,6 +22,10 @@ EVENTS="${EVENTS:-100}"
 # batch the same latency, so the violated fraction moves in steps of one batch
 # and that step becomes the measured replay dispersion.
 EMIT_SPREAD="${EMIT_SPREAD:-200ms}"
+# The latency budget is a declared parameter: it must sit ABOVE the healthy
+# distribution, and it is recorded in the matrix manifest so a run can never be
+# compared with one that promised something else.
+SLA_MS="${SLA_MS:-500}"
 SEED="${SEED:-42}"
 NETEM_SEED="${NETEM_SEED:-424242}"
 ROOT="${ROOT:-data/raw}"
@@ -59,7 +63,7 @@ OUT="$ROOT/$STACK_ID/$EXPERIMENT"
 [ ! -e "$OUT" ] || { echo "FAIL: $OUT exists; experiments are append-only"; exit 2; }
 mkdir -p "$OUT"
 CONFIG_HASH="$(python3 -c 'import hashlib,sys; print(hashlib.sha256(sys.argv[1].encode()).hexdigest()[:16])' \
-  "$ANCHORS|$REPEATS|$ACTIONS|$HORIZON|$PERIOD|$EVENTS|$EMIT_SPREAD|$SEED|$NETEM_SEED")"
+  "$ANCHORS|$REPEATS|$ACTIONS|$HORIZON|$PERIOD|$EVENTS|$EMIT_SPREAD|$SLA_MS|$SEED|$NETEM_SEED")"
 
 cat > "$OUT/matrix.json" <<JSON
 {
@@ -74,6 +78,7 @@ cat > "$OUT/matrix.json" <<JSON
   "period": "$PERIOD",
   "events_per_epoch": $EVENTS,
   "emit_spread": "$EMIT_SPREAD",
+  "sla_ms": $SLA_MS,
   "master_seed": $SEED,
   "netem_seed": $NETEM_SEED,
   "bus_impl": "nats",
@@ -82,7 +87,7 @@ cat > "$OUT/matrix.json" <<JSON
 }
 JSON
 
-export EVENTS_PER_EPOCH="$EVENTS" MASTER_SEED="$SEED" EMIT_SPREAD COMPOSE_FILE
+export EVENTS_PER_EPOCH="$EVENTS" MASTER_SEED="$SEED" EMIT_SPREAD SLA_MS COMPOSE_FILE
 cleanup() { compose down --remove-orphans >/dev/null 2>&1 || true; }
 trap cleanup EXIT
 

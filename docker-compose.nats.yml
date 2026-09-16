@@ -30,9 +30,18 @@ x-go-build: &go-build
     context: .
     dockerfile: deploy/go.Dockerfile
 
-# edge00 is sized ABOVE the offered load and loses capacity at epoch 8, late
-# enough that anchors taken early -- and their whole horizon -- lie entirely in
-# the healthy regime. With the fault at epoch 4 and a horizon of 3, every
+# The latency budget is 600 ms: the p95 of branch mean latency measured on the
+# pilot while the system was healthy, rounded up. An agreement is a promise the
+# system keeps while healthy, so a budget inside the healthy distribution -- 500
+# ms was at its median -- is violated by a working system and makes the failure
+# term measure the budget instead of the failure.
+#
+# edge00 is sized ABOVE the offered load and loses capacity at epoch 12, late
+# enough that anchors taken early -- and their whole horizon of 8 epochs -- lie
+# entirely in the healthy regime, and late anchors leave the fault up to a dozen
+# epochs to develop. With a horizon of 3 the degraded state overlapped the
+# healthy one in 66% of branches: the fault had not developed, and no choice of
+# threshold could separate states that had not yet diverged. With the fault at epoch 4 and a horizon of 3, every
 # outcome was read at or after the fault and the healthy state was never
 # observed at all. Before
 # the fault the system meets its agreement; after it, it does not. A permanently
@@ -91,8 +100,8 @@ services:
       args: { CMD_NAME: csc-node, GO_TAGS: nats }
     # the loaded path: cannot keep up with 200 events/epoch alone
     command: ["-role", "edge", "-id", "edge00", "-bus-impl", "nats", "-bus", "nats://nats:4222",
-              "-serve-per-epoch", "150", "-sla-epochs", "1", "-sla-ms", "500",
-              "-degrade-at-epoch", "8", "-degraded-serve-per-epoch", "60"]
+              "-serve-per-epoch", "150", "-sla-epochs", "1", "-sla-ms", "${SLA_MS:-500}",
+              "-degrade-at-epoch", "12", "-degraded-serve-per-epoch", "60"]
     depends_on: { nats: { condition: service_healthy } }
     networks: [gateway-edge]
 

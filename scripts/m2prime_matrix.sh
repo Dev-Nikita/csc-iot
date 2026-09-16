@@ -84,7 +84,7 @@ topology_up() { # topology_up <tag>
     esac
     "$BIN/csc-node" -role edge -id "$e" -bus-impl "$BUS_IMPL" -bus "$BUS_ADDR" \
       -serve-per-epoch "$CAP" -sla-epochs "${SLA_EPOCHS:-1}" -sla-ms "${SLA_MS:-500}" \
-      $( [ "$e" = edge00 ] && echo "-degrade-at-epoch ${DEGRADE_AT:-4} -degraded-serve-per-epoch ${DEGRADED_SERVE:-60}" ) \
+      $( [ "$e" = edge00 ] && echo "-degrade-at-epoch ${DEGRADE_AT:-12} -degraded-serve-per-epoch ${DEGRADED_SERVE:-60}" ) \
       >"$LOG/$tag-$e.log" 2>&1 & PIDS+=($!)
   done
   "$BIN/csc-node" -role gateway -id gw00 -bus-impl "$BUS_IMPL" -bus "$BUS_ADDR" -ingress 127.0.0.1:5000 -route edge00 >"$LOG/$tag-gw00.log" 2>&1 & PIDS+=($!)

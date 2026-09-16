@@ -2,7 +2,7 @@
 
 Pre-registered protocol for CSC. **Everything in §2–§9 is frozen before the main experiments are run.** Changing a frozen value after seeing comparative results invalidates the run set; the correct response is a dated amendment in §12 plus a full re-run.
 
-Protocol version: **0.3** (distributed replay repair, 2026-09-05). Becomes 1.0 at implementation freeze, after the pilot in §11.
+Protocol version: **0.4** (testbed configuration frozen, 2026-09-15). Becomes 1.0 at implementation freeze, after the pilot in §11.
 
 ---
 
@@ -50,6 +50,66 @@ Protocol version: **0.3** (distributed replay repair, 2026-09-05). Becomes 1.0 a
 Equal cost weights are fixed a priori as a **neutral default** — no mathematical conservatism follows from `w_i = 0.25`, and claiming it would be rhetoric. Sensitivity to alternative operational preferences (non-uniform weights) and to `δ ∈ {0.05, 0.10, 0.20}` goes in the supplement.
 
 **`Δ_A = 0.005` — operational rationale.** Half a percentage point of availability is the largest reduction treated as practically negligible over the 300 s measurement window: at the declared SLA it corresponds to roughly one and a half seconds of additional unavailability per run, below the granularity at which the agreement is enforced. This is the pre-registered primary margin. A sensitivity analysis over `Δ_A ∈ {0.001, 0.0025, 0.005, 0.01}` is reported in the supplement; the primary claim is made at 0.005 only.
+
+---
+
+## 2a. Frozen testbed configuration
+
+Frozen 2026-09-15 from the pilot series on reportable stack `afbcb298cb97ee18`
+(NATS 2.14.6, kernel netem on the device simulator's device-network egress,
+loss 5%, delay 20 ms ± 5 ms, seed 424242). Every value below was **derived from
+measurement, not chosen**, and the derivation is stated so a reader can check
+that it was not fitted to a desired comparison. No controller existed while
+these were set: the pilots compared primitive actions only, so this is
+instrument calibration and not result selection. **After this freeze none of
+these values changes.** A change requires a dated §12 amendment and a full
+re-run of everything that depended on it.
+
+| Parameter | Value | How it was derived |
+|---|---|---|
+| Offered load | 100 events/epoch | Below `edge00` capacity, so the healthy system meets its agreement. At 200 the system was saturated from the first epoch: there was no healthy state and no failure to prevent. |
+| Emission shape | paced over 200 ms | A burst gives every event of an epoch the same latency, so the violated fraction moved in steps of one whole batch and that step *was* the measured dispersion. Devices in a deployment do not emit simultaneously either. |
+| `edge00 / edge01 / edge02` capacity | 150 / 300 / 200 per epoch | Unequal by construction. With equal capacity `REROUTE` moves work to an identical node and measures exactly zero effect however many branches are run. |
+| Fault | `edge00` 150 → 60 at epoch 12 | Late enough that an anchor at `a ≤ 3` and its whole horizon lie in the healthy regime, and late anchors leave the fault up to a dozen epochs to develop. |
+| Horizon `H` | 8 epochs | At `H = 3` the degraded state overlapped the healthy one in 66% of branches: the fault had not developed, and no threshold could separate states that had not yet diverged. At `H = 8` the overlap is 5%. |
+| Healthy / degraded anchors | healthy `a ≤ 3`; degraded `a ≥ 5` | `a + H < 12` is the arithmetic condition for a branch to lie entirely before the fault. `a = 4` is the transition and is excluded from both. |
+| Latency budget (SLA) | **500 ms** | The smallest 50 ms multiple strictly above the healthy maximum. Measured on `NO_OP` branches: p50 454, p95 474, max 474 ms. An agreement is a promise the system keeps *while healthy*; the earlier 500 ms budget sat at the median of the whole distribution and was violated by a working system, which made the failure term measure the budget rather than the failure. |
+| `Y` denominator | offered work that had a service opportunity | Work arriving during the epoch being read is served at the next boundary. Counting it as unserved charged a branch for the run having ended — a property of the horizon, not of the action. |
+| Repeats | 10 per cell | Bootstrap CI half-width of the `NO_OP`–`REROUTE` contrast: 0.041 at N=3, 0.037 at N=5, 0.031 at N=8, 0.030 at N=10. Past 10 the interval stops narrowing, so 30 repeats could not be defended. |
+
+### Calibration is measured on `NO_OP` branches only
+
+`η_J`, the healthy latency distribution and therefore the agreement itself are
+estimated from no-action branches alone. This is not a convenience: an action
+changes the state, so including it confuses the system's condition with the
+consequence of intervening in it. Measured directly — a `THROTTLE` applied at a
+pre-fault anchor caps admission below the offered load for the whole horizon and
+produced higher latency than the fault did, which made the "healthy" set show a
+p95 of 1197 ms against the degraded set's 1057 ms. A healthy system cannot be
+slower than a broken one; the comparison was wrong, not the system.
+
+### What the pilot showed, and what it did not
+
+At healthy anchors both interventions make the objective **worse** (`NO_OP`
+0.119 against `REROUTE` 0.248 and `THROTTLE` 0.520 at `a01`); at degraded
+anchors both make it **better** (`NO_OP` 0.302 against `REROUTE` 0.150 at
+`a09`), with the sign reversing between `a05` and `a06`. An action is therefore
+not good or bad in itself, and a controller with a fixed response to an alarm is
+harmful before the fault and helpful after it. This is the premise the method
+rests on, observed rather than assumed.
+
+Measured dispersion at the pilot's 600 ms budget was `η_J = 0.0708`, of which
+98.7% came from the failure term. Against effects of 0.15–0.20 at the deepest
+anchors this gives `SNR_J ≈ 2.5–2.9`: **below the preregistered gate of 3**, on
+29 of 32 contrasts. That is a result, not a failure to be tuned away — at this
+impairment a single primitive action is only marginally separable from replay
+dispersion, which is precisely why ranking accuracy and regret are defined
+tie-aware and why `η_J` is reported before any comparison that depends on it.
+Whether the frozen 500 ms budget moves `SNR_J` above the gate is measured by the
+next run and reported either way.
+
+Pilot numbers are diagnostics. They are not findings, they are not reported as
+results, and no branch produced before this freeze is evidence for any claim.
 
 ## 3. Scenarios
 
@@ -185,3 +245,4 @@ A reduced pilot (100 devices, F1/F3/F7, 5 seeds, B1/B2/B6) runs before protocol 
 | 2026-08-25 | Draft 0.1 created. | Project start |
 | 2026-08-25 | **0.2 methodology correction.** Conformal *prediction* upper bound replaced by conformal *risk control* on a set-level loss; `α` collision removed; `Ĵ` separated from `J_obs`; `η_J`, tie-aware CRA and regret introduced; PFR/WIR given set-theoretic definitions; H3 made a non-inferiority test; H4 moved from median to p95 and deadline-miss rate; F6 split contradiction resolved; B5 redefined as an action-conditioned associative predictor; randomised behaviour policy added on training scenarios; D0 audit replaces per-branch 30× replication. | External review; see `METHODOLOGY_CORRECTION_REPORT.md` |
 | 2026-09-05 | **0.3 distributed replay repair.** All expected producers must close an epoch; action application requires a run-scoped acknowledgement; every branch starts from a recreated topology; fingerprint coverage is enumerated; D0-lite fixes `SNR_J ≥ 3` and the `η_J=0` edge case; `J_m2_diag` is quarantined from `J_obs`; netem direction and seed are fixed. | 48-run prefix burn-in and 108-branch mechanics pilot; diagnostics only, never reused as findings. |
+| 2026-09-15 | **0.4 testbed configuration frozen.** §2a added: offered load, emission pacing, edge capacities, fault depth and timing, horizon, healthy/degraded anchor partition, latency budget, `Y` denominator and repeat count, each with its derivation. Calibration restricted to `NO_OP` branches. | Pilot series v1–v5 on stack `afbcb298cb97ee18`; diagnostics only, never reused as findings. |
