@@ -48,11 +48,20 @@ fi
 STACK_ID="${STACK_ID:-$(python3 check_reportable_stack.py --print-stack-id 2>/dev/null)}"
 [ -n "$STACK_ID" ] || { echo "FAIL: no reportable stack. Run make stack-nats first."; exit 2; }
 
+# Each VAR=value is re-quoted individually. Passing them through unquoted split
+# ACTIONS="NO_OP THROTTLE REROUTE" into three words, and env took the second one
+# as the command to run: "env: 'THROTTLE': No such file or directory".
+ENVARGS=""
+for kv in "$@"; do
+  ENVARGS="$ENVARGS $(printf '%q' "$kv")"
+done
+
 # setsid detaches from the terminal's session entirely: closing the SSH
 # connection sends no signal the run can die from, with or without tmux.
 setsid bash -c "
   { echo '=== $NAME started' \$(date -u +%FT%TZ) 'on stack $STACK_ID'
-    env STACK_ID='$STACK_ID' $* EXPERIMENT='$NAME' bash scripts/m2prime_nats_matrix.sh
+    echo '=== env:$ENVARGS EXPERIMENT=$NAME'
+    env STACK_ID='$STACK_ID'$ENVARGS EXPERIMENT='$NAME' bash scripts/m2prime_nats_matrix.sh
     rc=\$?
     echo '=== matrix finished, exit' \$rc \$(date -u +%FT%TZ)
     if [ \$rc -eq 0 ]; then
