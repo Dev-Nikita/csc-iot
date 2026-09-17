@@ -74,20 +74,43 @@ def terms(observed, latency_max_epochs, latency_max_ms):
         unserved = sum(v for k, v in observed.items() if k.endswith("/unserved"))
     violations = sum(v for k, v in observed.items() if k.endswith("/sla_violations"))
     wait_sum = sum(v for k, v in observed.items() if k.endswith("/wait_sum_epochs"))
-    offered = served + unserved
+
+    # The denominator is the work the SYSTEM was offered, measured at the
+    # gateway, not the work that happened to reach an edge. Under THROTTLE the
+    # two differ by construction: refused work never reaches an edge at all, so
+    # an edge-side denominator shrinks exactly in proportion to how much the
+    # action refused, and the action is scored on the subset it let through.
+    accepted = sum(v for k, v in observed.items() if k.endswith("/ingress_accepted"))
+    residual = sum(v for k, v in observed.items() if k.endswith("/admission_backlog_depth"))
+    deferred = sum(v for k, v in observed.items() if k.endswith("/admission_deferred_total"))
+    gateway_denominator = accepted > 0
+    if gateway_denominator:
+        offered = accepted
+    else:
+        # Branches recorded before the gateway reported its outcomes. Say so
+        # rather than mixing two denominators inside one comparison.
+        offered = served + unserved
+        residual = 0.0
+        deferred = 0.0
     if offered == 0:
         raise ValueError("no work was offered in this branch; J_obs is undefined")
 
-    # Unserved work is counted as violating: it has already waited past the
+    # Work the branch accepted and never delivered: queued at the edge, or
+    # still sitting in the gateway's admission backlog when the run ended.
+    undelivered = unserved + residual
+
+    # Undelivered work is counted as violating: it has already waited past the
     # budget and nothing in the branch will serve it.
-    y = (violations + unserved) / offered
+    y = (violations + undelivered) / offered
     mean_wait = (wait_sum / served) if served else float(latency_max_epochs)
     l_tilde = min(max(mean_wait / latency_max_epochs, 0.0), 1.0)
 
     # Disruption: the share of offered work the action displaced -- deferred at
-    # the gateway, or left queued at the edge it was moved to.
-    deferred = sum(v for k, v in observed.items() if k.endswith("/admission_backlog"))
-    disruption = min(max((deferred + unserved) / offered, 0.0), 1.0)
+    # the gateway at any point during the branch, or left queued at the edge it
+    # was moved to. Deferral is counted cumulatively: work delayed and later
+    # drained was still displaced, and a residual-only reading charged nothing
+    # for it.
+    disruption = min(max((deferred + undelivered) / offered, 0.0), 1.0)
     # The measured variant. Epoch-quantised waiting is exactly reproducible,
     # which is what makes it useless as an outcome: quantising to logical time
     # erases the timing variation that impairment actually causes, so replay
@@ -95,12 +118,14 @@ def terms(observed, latency_max_epochs, latency_max_ms):
     lat_sum = sum(v for k, v in observed.items() if k.endswith("/lat_ms_sum"))
     lat_violations = sum(v for k, v in observed.items() if k.endswith("/lat_ms_violations"))
     mean_lat_ms = (lat_sum / served) if served else float(latency_max_ms)
-    y_ms = (lat_violations + unserved) / offered
+    y_ms = (lat_violations + undelivered) / offered
     l_tilde_ms = min(max(mean_lat_ms / latency_max_ms, 0.0), 1.0)
 
     return {"Y": y, "L_tilde": l_tilde, "disruption": disruption,
             "mean_wait_epochs": mean_wait, "offered": offered,
             "served": served, "unserved": unserved, "violations": violations,
+            "residual": residual, "deferred": deferred,
+            "gateway_denominator": 1.0 if gateway_denominator else 0.0,
             "Y_ms": y_ms, "L_tilde_ms": l_tilde_ms, "mean_lat_ms": mean_lat_ms}
 
 
@@ -153,13 +178,31 @@ def main():
         print(f"no branches with outcomes under {args.root}", file=sys.stderr)
         return 2
 
+    # A comparison whose branches do not share a denominator is not a
+    # comparison. Mixing gateway-measured offered work with edge-measured
+    # offered work would put NO_OP and THROTTLE on different scales, which is
+    # precisely the defect this denominator was changed to remove.
+    gw = {r["gateway_denominator"] for r in rows}
+    if len(gw) > 1:
+        n_old = sum(1 for r in rows if r["gateway_denominator"] == 0.0)
+        print(f"REFUSED: {n_old} of {len(rows)} branches predate the gateway-measured "
+              "denominator; the set mixes two definitions of offered work. Re-run "
+              "the whole matrix on one binary.", file=sys.stderr)
+        return 2
+    if 0.0 in gw:
+        print("WARNING: offered work is measured at the edge, not the gateway. Work "
+              "refused admission is invisible, so actions that refuse work are "
+              "scored only on what they let through. These numbers are not "
+              "comparable across actions.", file=sys.stderr)
+
     width = max(len(r["branch"]) for r in rows)
     print(f"{'branch':{width}s}  {'J_obs':>7s}  {'Y':>6s}  {'L~':>6s}  {'lat ms':>7s}"
-          f"  {'disr':>6s}  {'served':>7s} {'unserv':>7s} {'offered':>8s}")
+          f"  {'disr':>6s}  {'served':>7s} {'unserv':>7s} {'defer':>7s} {'offered':>8s}")
     for r in rows:
         print(f"{r['branch']:{width}s}  {r['J_obs']:7.4f}  {r['Y_ms']:6.3f}  "
               f"{r['L_tilde_ms']:6.3f}  {r['mean_lat_ms']:7.1f}  {r['disruption']:6.3f}  "
-              f"{r['served']:7.0f} {r['unserved']:7.0f} {r['offered']:8.0f}")
+              f"{r['served']:7.0f} {r['unserved']:7.0f} {r['deferred']:7.0f} "
+              f"{r['offered']:8.0f}")
 
     # Replay dispersion, the frozen definition: Q0.95 of ALL pairwise absolute
     # differences between repeats of the same (anchor, action) cell, pooled.

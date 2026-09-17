@@ -302,6 +302,13 @@ func runGateway(ctx context.Context, id string, b bus.Bus, ingress, route string
 	var admitMu sync.Mutex
 	var admittedThisEpoch int64
 	var backlog []ingressEvent
+	// Measured outcomes, not structural state. The gateway is the only place
+	// that knows how much work the system was ASKED to handle: work refused
+	// admission never reaches an edge, so an edge-side denominator silently
+	// shrinks under THROTTLE and flatters exactly the action under test.
+	// These counters are reported in Observed and are never hashed.
+	var ingressAccepted atomic.Int64
+	var deferredTotal atomic.Int64
 	var currentRun atomic.Value
 	currentRun.Store("")
 	// Assigned below, once the sequence counter it advances exists; every call
@@ -441,6 +448,7 @@ func runGateway(ctx context.Context, id string, b bus.Bus, ingress, route string
 		for _, ev := range backlog {
 			ids = append(ids, ev.EventID)
 		}
+		depth := float64(len(backlog))
 		admitMu.Unlock()
 		limit := float64(admitCap.Load())
 		return nodestate.Report{
@@ -455,6 +463,13 @@ func runGateway(ctx context.Context, id string, b bus.Bus, ingress, route string
 			RateLimits:   map[string]float64{"admit": limit},
 			Queues:       map[string]fingerprint.Queue{"admission_backlog": fingerprint.HashQueue(ids)},
 			SeqPositions: map[string]uint64{"published": atomic.LoadUint64(&seq)},
+			// Never hashed. admission_backlog_depth is the residual at report
+			// time -- work the branch accepted and never delivered.
+			Observed: map[string]float64{
+				"ingress_accepted":         float64(ingressAccepted.Load()),
+				"admission_deferred_total": float64(deferredTotal.Load()),
+				"admission_backlog_depth":  depth,
+			},
 		}
 	}); err != nil {
 		log.Fatalf("%s: fingerprint service: %v", id, err)
@@ -495,6 +510,7 @@ func runGateway(ctx context.Context, id string, b bus.Bus, ingress, route string
 						}
 						continue
 					}
+					ingressAccepted.Add(1)
 					cap := admitCap.Load()
 					admitMu.Lock()
 					deferred := cap >= 0 && admittedThisEpoch >= cap
@@ -504,6 +520,9 @@ func runGateway(ctx context.Context, id string, b bus.Bus, ingress, route string
 						admittedThisEpoch++
 					}
 					admitMu.Unlock()
+					if deferred {
+						deferredTotal.Add(1)
+					}
 					if deferred {
 						continue
 					}
