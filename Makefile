@@ -137,8 +137,17 @@ up-nats: ## Bring up the reportable topology (NATS transport)
 netem-nats: ## Verify impairment on the NATS stack, then remove it
 	COMPOSE="docker compose -f docker-compose.nats.yml" scripts/netem_smoke.sh
 
+.PHONY: topology-up-check
+topology-up-check:
+	@docker compose -f docker-compose.nats.yml ps --services --filter status=running \
+	  | grep -qx device-sim || { \
+	  echo "FAIL: the reportable topology is not running."; \
+	  echo "      Impairment is applied to a live container, so the stack cannot"; \
+	  echo "      be stamped before it exists. Run: make up-nats"; \
+	  exit 2; }
+
 .PHONY: netem-apply
-netem-apply: ## Apply impairment and LEAVE it in place for the stack stamp
+netem-apply: topology-up-check ## Apply impairment and LEAVE it in place for the stack stamp
 	KEEP=1 COMPOSE="docker compose -f docker-compose.nats.yml" scripts/netem_smoke.sh
 
 .PHONY: deploy
