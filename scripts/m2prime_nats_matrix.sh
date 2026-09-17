@@ -152,6 +152,17 @@ run_branch() {
     return 1
   fi
   compose logs --no-color >"$dir/compose.log" 2>&1 || true
+
+  # The objective is computed over work accepted at the GATEWAY. A gateway
+  # binary that does not report it sends the analysis silently back to the
+  # edge-side denominator, which scores an action that refuses work only on the
+  # part it let through. Checked on the first branch, not after 900.
+  if ! python3 -c "import json,sys; o=json.load(open(sys.argv[1])).get('observed') or {}; sys.exit(0 if any(k.endswith('/ingress_accepted') for k in o) else 1)" "$dir/outcome.json"; then
+    echo "FAIL: $branch recorded no gateway ingress_accepted."
+    echo "      bin/csc-node predates protocol 0.5. Run: make build TAGS=nats"
+    echo "no gateway denominator in observed" >"$dir/REFUSED.txt"
+    return 1
+  fi
   echo "ok $branch"
 }
 

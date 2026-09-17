@@ -307,8 +307,13 @@ func runGateway(ctx context.Context, id string, b bus.Bus, ingress, route string
 	// admission never reaches an edge, so an edge-side denominator silently
 	// shrinks under THROTTLE and flatters exactly the action under test.
 	// These counters are reported in Observed and are never hashed.
-	var ingressAccepted atomic.Int64
-	var deferredTotal atomic.Int64
+	//
+	// They are kept per epoch so that the eligibility rule of the edge can be
+	// applied here unchanged: work belonging to the epoch being read has not
+	// yet had a service opportunity, and counting it charges the branch for the
+	// run having ended.
+	acceptedByEpoch := map[int64]int64{}
+	deferredByEpoch := map[int64]int64{}
 	var currentRun atomic.Value
 	currentRun.Store("")
 	// Assigned below, once the sequence counter it advances exists; every call
@@ -442,13 +447,27 @@ func runGateway(ctx context.Context, id string, b bus.Bus, ingress, route string
 		}
 	})
 
-	if err := nodestate.Serve(ctx, b, id, "gateway", func(int64) nodestate.Report {
+	if err := nodestate.Serve(ctx, b, id, "gateway", func(readEpoch int64) nodestate.Report {
 		admitMu.Lock()
 		ids := make([]string, 0, len(backlog))
+		var residual float64
 		for _, ev := range backlog {
 			ids = append(ids, ev.EventID)
+			if ev.Tick < readEpoch {
+				residual++
+			}
 		}
-		depth := float64(len(backlog))
+		var accepted, deferred float64
+		for k, n := range acceptedByEpoch {
+			if k < readEpoch {
+				accepted += float64(n)
+			}
+		}
+		for k, n := range deferredByEpoch {
+			if k < readEpoch {
+				deferred += float64(n)
+			}
+		}
 		admitMu.Unlock()
 		limit := float64(admitCap.Load())
 		return nodestate.Report{
@@ -463,12 +482,13 @@ func runGateway(ctx context.Context, id string, b bus.Bus, ingress, route string
 			RateLimits:   map[string]float64{"admit": limit},
 			Queues:       map[string]fingerprint.Queue{"admission_backlog": fingerprint.HashQueue(ids)},
 			SeqPositions: map[string]uint64{"published": atomic.LoadUint64(&seq)},
-			// Never hashed. admission_backlog_depth is the residual at report
-			// time -- work the branch accepted and never delivered.
+			// Never hashed. Each is restricted to work that belonged to an
+			// epoch before the one being read, matching the edge's eligibility
+			// rule exactly, so the two sides of the objective share a horizon.
 			Observed: map[string]float64{
-				"ingress_accepted":         float64(ingressAccepted.Load()),
-				"admission_deferred_total": float64(deferredTotal.Load()),
-				"admission_backlog_depth":  depth,
+				"ingress_accepted":         accepted,
+				"admission_deferred_total": deferred,
+				"admission_backlog_depth":  residual,
 			},
 		}
 	}); err != nil {
@@ -510,19 +530,17 @@ func runGateway(ctx context.Context, id string, b bus.Bus, ingress, route string
 						}
 						continue
 					}
-					ingressAccepted.Add(1)
 					cap := admitCap.Load()
 					admitMu.Lock()
+					acceptedByEpoch[ev.Tick]++
 					deferred := cap >= 0 && admittedThisEpoch >= cap
 					if deferred {
 						backlog = append(backlog, ev)
+						deferredByEpoch[ev.Tick]++
 					} else {
 						admittedThisEpoch++
 					}
 					admitMu.Unlock()
-					if deferred {
-						deferredTotal.Add(1)
-					}
 					if deferred {
 						continue
 					}
