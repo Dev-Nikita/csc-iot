@@ -579,6 +579,12 @@ func runGateway(ctx context.Context, id string, b bus.Bus, ingress, route string
 // number of epoch boundaries between its arrival and its service. Wall-clock
 // latency would vary with machine load and would put a nondeterministic
 // quantity next to state that must match exactly.
+// Histogram geometry for per-event latency. The last bin is open-ended.
+const (
+	latHistBinMs = 25
+	latHistMaxMs = 10000
+)
+
 func runEdge(ctx context.Context, id string, b bus.Bus, servePerEpoch int, slaEpochs, slaMs int64,
 	degradeAt int64, degradedServe int, sig chan os.Signal) {
 	wm, err := epoch.NewWatermark(ctx, b, "", []string{id}) // follower
@@ -598,6 +604,13 @@ func runEdge(ctx context.Context, id string, b bus.Bus, servePerEpoch int, slaEp
 	var currentEpoch int64
 	var served, violations, waitSum, waitMax float64
 	var latSum, latMax, latViolations float64
+	// Per-event latency histogram, 25 ms bins. The budget is a per-EVENT
+	// promise, so it has to be calibrated against the per-event distribution;
+	// the sum and maximum above cannot say what fraction of a healthy system's
+	// events a given budget would already call failures. Observed only, never
+	// hashed, and never used to choose the budget used in a comparison: it is
+	// read on healthy NO_OP calibration branches alone.
+	latHist := map[int]float64{}
 
 	if err := b.Subscribe(ctx, bus.EdgeWorkSubject(id), func(e bus.Envelope) {
 		var ev ingressEvent
@@ -710,6 +723,11 @@ func runEdge(ctx context.Context, id string, b bus.Bus, servePerEpoch int, slaEp
 				if ms > float64(slaMs) {
 					latViolations++
 				}
+				bin := int(ms/latHistBinMs) * latHistBinMs
+				if bin > latHistMaxMs {
+					bin = latHistMaxMs
+				}
+				latHist[bin]++
 			}
 			atomic.AddUint64(&processed, 1)
 			if budget > 0 {
@@ -752,6 +770,9 @@ func runEdge(ctx context.Context, id string, b bus.Bus, servePerEpoch int, slaEp
 			"lat_ms_sum":        latSum,
 			"lat_ms_max":        latMax,
 			"lat_ms_violations": latViolations,
+		}
+		for bin, n := range latHist {
+			obs[fmt.Sprintf("lat_hist_ms_%05d", bin)] = n
 		}
 		mu.Unlock()
 		// The inbox is reported BY CONTENT. Two edges holding the same number of
