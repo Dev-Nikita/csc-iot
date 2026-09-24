@@ -25,7 +25,7 @@ EMIT_SPREAD="${EMIT_SPREAD:-200ms}"
 # The latency budget is a declared parameter: it must sit ABOVE the healthy
 # distribution, and it is recorded in the matrix manifest so a run can never be
 # compared with one that promised something else.
-SLA_MS="${SLA_MS:-500}"
+SLA_MS="${SLA_MS:-750}"
 SEED="${SEED:-42}"
 NETEM_SEED="${NETEM_SEED:-424242}"
 ROOT="${ROOT:-data/raw}"
@@ -56,6 +56,22 @@ if ! grep -q 'serve-per-epoch' "$COMPOSE_FILE"; then
   exit 2
 fi
 [ "$GIT_COMMIT" != unknown ] || { echo "FAIL: GIT_COMMIT or SOURCE_REVISION is required"; exit 2; }
+
+# The latency budget is frozen in EXPERIMENT_PROTOCOL.md section 2a and is the
+# same promise on every edge. It was not: edge01 and edge02 carried a hardcoded
+# 500 while only edge00 read the variable, so an action that moves work between
+# edges would have been scored against a different budget than the baseline.
+PROTOCOL_SLA_MS=750
+if [ "$SLA_MS" != "$PROTOCOL_SLA_MS" ]; then
+  echo "FAIL: SLA_MS=$SLA_MS but the protocol freezes the budget at ${PROTOCOL_SLA_MS} ms."
+  echo "      Changing it requires a dated amendment, not an environment variable."
+  exit 2
+fi
+if grep -o '\-sla-ms", "[^"]*"' "$COMPOSE_FILE" | sort -u | grep -qv "SLA_MS"; then
+  echo "FAIL: $COMPOSE_FILE hardcodes a latency budget on some edge."
+  echo "      Every edge must read \${SLA_MS}, or the budget differs by path."
+  exit 2
+fi
 
 python3 check_reportable_stack.py --expect-stack-id "$STACK_ID" >/dev/null
 
