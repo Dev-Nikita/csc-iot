@@ -35,6 +35,7 @@ rsync -e "ssh -o IdentitiesOnly=yes -i $SSH_IDENTITY" -avz --delete \
   --exclude 'bin/' \
   --exclude 'data/raw/' \
   --exclude 'data/processed/' \
+  --exclude 'logs/' \
   --exclude '_to_delete/' \
   --exclude 'experiments/manifests/reportable_stack.json' \
   --exclude 'paper/main.pdf' \
