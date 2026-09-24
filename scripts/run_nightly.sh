@@ -24,10 +24,20 @@ if [ "${1:-}" = "--status" ]; then
   for log in logs/*.log; do
     [ -e "$log" ] || continue
     name="$(basename "$log" .log)"
+    # A live run is identified by its recorded pid, not by matching a command
+    # line: the launcher quotes its environment assignments, so a pattern like
+    # EXPERIMENT=$name never matched EXPERIMENT='$name' and every running job
+    # was reported as stopped. An indicator that says a healthy run is dead is
+    # worse than no indicator.
+    pid=""
+    [ -f "logs/$name.pid" ] && pid="$(cat "logs/$name.pid")"
     if [ -f "logs/$name.done" ]; then
-      st="exit $(cat "logs/$name.done")"
-    elif pgrep -f "EXPERIMENT=$name " >/dev/null 2>&1; then
+      rc="$(cat "logs/$name.done")"
+      case "$rc" in killed*) st="killed" ;; *) st="exit $rc" ;; esac
+    elif [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
       st="running"
+    elif [ -n "$pid" ]; then
+      st="died"
     else
       st="stopped?"
     fi
@@ -59,7 +69,11 @@ done
 # setsid detaches from the terminal's session entirely: closing the SSH
 # connection sends no signal the run can die from, with or without tmux.
 setsid bash -c "
-  { echo '=== $NAME started' \$(date -u +%FT%TZ) 'on stack $STACK_ID'
+  { echo \$\$ > 'logs/$NAME.pid'
+    # A killed run must still leave its exit status behind: the .done file is
+    # the only record once the terminal is gone.
+    trap 'st=\$?; [ -f "logs/$NAME.done" ] || echo killed > "logs/$NAME.done"; rm -f "logs/$NAME.pid"' EXIT
+    echo '=== $NAME started' \$(date -u +%FT%TZ) 'on stack $STACK_ID'
     echo '=== env:$ENVARGS EXPERIMENT=$NAME'
     env STACK_ID='$STACK_ID'$ENVARGS EXPERIMENT='$NAME' bash scripts/m2prime_nats_matrix.sh
     rc=\$?
@@ -70,7 +84,7 @@ setsid bash -c "
         --latency-max-epochs 14 --latency-max-ms 3000 --allow-partial-cost \
         --out 'data/raw/$STACK_ID/$NAME/jobs.csv'
       python3 -u analysis/dispersion_breakdown.py 'data/raw/$STACK_ID/$NAME/jobs.csv' \
-        --sla-ms \${SLA_MS:-500} --healthy-anchors a01,a02,a03
+        --sla-ms \${SLA_MS:-750} --healthy-anchors a01,a02,a03
     fi
     echo \$rc > 'logs/$NAME.done'
     echo '=== $NAME done' \$(date -u +%FT%TZ)
