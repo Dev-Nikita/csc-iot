@@ -276,8 +276,11 @@ comparable at all.
 Each branch then falls in one of three regimes, determined by the branch's own
 numbers rather than by its anchor index:
 
-- **pre-fault**: `anchor + H <= T`. Nothing is wrong and nothing will go wrong
-  inside the horizon.
+- **pre-fault**: `T > anchor + H`. Nothing is wrong and nothing will go wrong
+  inside the horizon. The inequality is strict because the branch covers epochs
+  `anchor` through `anchor + H` inclusive: written as `anchor + H <= T` it
+  labelled a branch whose final epoch carried the fault as fault-free, and the
+  accounting audit caught that on ten cells of anchor 4.
 - **spanning**: `anchor < T < anchor + H`. The fault arrives during the horizon.
 - **post-onset**: `T <= anchor`. The fault is already running at the anchor.
 

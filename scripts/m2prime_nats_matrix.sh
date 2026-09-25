@@ -25,7 +25,17 @@ EMIT_SPREAD="${EMIT_SPREAD:-200ms}"
 # The latency budget is a declared parameter: it must sit ABOVE the healthy
 # distribution, and it is recorded in the matrix manifest so a run can never be
 # compared with one that promised something else.
-SLA_MS="${SLA_MS:-750}"
+# The budget is no longer a runner parameter. It is looked up per workload level
+# from configs/budgets.json, because the healthy per-event latency distribution
+# depends on load and one budget across levels would make Y measure the load.
+if [ -n "${SLA_MS:-}" ]; then
+  echo "FAIL: SLA_MS is set in the environment."
+  echo "      The budget comes from configs/budgets.json for the scenario's"
+  echo "      workload level, not from a variable. Changing it needs an amendment."
+  exit 2
+fi
+# The scenario set is declared before the run by scripts/gen_scenarios.py.
+SCENARIOS="${SCENARIOS:-}"
 SEED="${SEED:-42}"
 NETEM_SEED="${NETEM_SEED:-424242}"
 ROOT="${ROOT:-data/raw}"
@@ -36,6 +46,30 @@ compose() { docker compose -f "$COMPOSE_FILE" "$@"; }
 [ -x "$BIN/csc-orchestrator" ] || { echo "FAIL: build bin/ with -tags=nats first"; exit 2; }
 [ -x "$BIN/csc-stackstamp" ] || { echo "FAIL: build bin/csc-stackstamp first"; exit 2; }
 [ -n "$STACK_ID" ] || { echo "FAIL: STACK_ID is required (run make stack-nats first)"; exit 2; }
+
+[ -n "$SCENARIOS" ] || {
+  echo "FAIL: SCENARIOS=<file> is required."
+  echo "      Generate it first, e.g.:"
+  echo "        python3 scripts/gen_scenarios.py --n 3 --master-seed 20260926 \\"
+  echo "          --mechanisms D1 --workloads 100 --out configs/scenarios-pilot.json"
+  echo "      A run with one fixed fault cannot support a generalisation claim."
+  exit 2
+}
+[ -f "$SCENARIOS" ] || { echo "FAIL: $SCENARIOS not found"; exit 2; }
+[ -f configs/budgets.json ] || { echo "FAIL: configs/budgets.json not found"; exit 2; }
+# Every workload level in the scenario set must have a calibrated budget.
+python3 - "$SCENARIOS" <<'GUARD' || exit 2
+import json, sys
+sc = json.load(open(sys.argv[1]))
+budgets = json.load(open("configs/budgets.json"))["budgets_ms"]
+missing = sorted({str(s["workload_level"]) for s in sc["scenarios"]} - set(budgets))
+if missing:
+    print("FAIL: no calibrated latency budget for workload level(s) "
+          + ", ".join(missing), file=sys.stderr)
+    print("      Run the calibration first; borrowing another level's budget "
+          "would make Y measure the load.", file=sys.stderr)
+    raise SystemExit(2)
+GUARD
 
 # A stale binary produces a plausible-looking matrix that is missing whatever
 # the newest code records. It happened: 27 branches completed cleanly and every
@@ -61,12 +95,6 @@ fi
 # same promise on every edge. It was not: edge01 and edge02 carried a hardcoded
 # 500 while only edge00 read the variable, so an action that moves work between
 # edges would have been scored against a different budget than the baseline.
-PROTOCOL_SLA_MS=750
-if [ "$SLA_MS" != "$PROTOCOL_SLA_MS" ]; then
-  echo "FAIL: SLA_MS=$SLA_MS but the protocol freezes the budget at ${PROTOCOL_SLA_MS} ms."
-  echo "      Changing it requires a dated amendment, not an environment variable."
-  exit 2
-fi
 if grep -o '\-sla-ms", "[^"]*"' "$COMPOSE_FILE" | sort -u | grep -qv "SLA_MS"; then
   echo "FAIL: $COMPOSE_FILE hardcodes a latency budget on some edge."
   echo "      Every edge must read \${SLA_MS}, or the budget differs by path."
@@ -75,11 +103,13 @@ fi
 
 python3 check_reportable_stack.py --expect-stack-id "$STACK_ID" >/dev/null
 
+SCENARIOS_HASH="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["scenarios_hash"])' "$SCENARIOS")"
+SCENARIO_COUNT="$(python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))["scenarios"]))' "$SCENARIOS")"
 OUT="$ROOT/$STACK_ID/$EXPERIMENT"
 [ ! -e "$OUT" ] || { echo "FAIL: $OUT exists; experiments are append-only"; exit 2; }
 mkdir -p "$OUT"
 CONFIG_HASH="$(python3 -c 'import hashlib,sys; print(hashlib.sha256(sys.argv[1].encode()).hexdigest()[:16])' \
-  "$ANCHORS|$REPEATS|$ACTIONS|$HORIZON|$PERIOD|$EVENTS|$EMIT_SPREAD|$SLA_MS|$SEED|$NETEM_SEED")"
+  "$ANCHORS|$REPEATS|$ACTIONS|$HORIZON|$PERIOD|$EMIT_SPREAD|$SEED|$NETEM_SEED|$SCENARIOS_HASH")"
 
 cat > "$OUT/matrix.json" <<JSON
 {
@@ -92,9 +122,10 @@ cat > "$OUT/matrix.json" <<JSON
   "actions": "$ACTIONS",
   "horizon": $HORIZON,
   "period": "$PERIOD",
-  "events_per_epoch": $EVENTS,
   "emit_spread": "$EMIT_SPREAD",
-  "sla_ms": $SLA_MS,
+  "scenarios_file": "$SCENARIOS",
+  "scenarios_hash": "$SCENARIOS_HASH",
+  "scenario_count": $SCENARIO_COUNT,
   "master_seed": $SEED,
   "netem_seed": $NETEM_SEED,
   "bus_impl": "nats",
@@ -103,15 +134,57 @@ cat > "$OUT/matrix.json" <<JSON
 }
 JSON
 
-export EVENTS_PER_EPOCH="$EVENTS" MASTER_SEED="$SEED" EMIT_SPREAD SLA_MS COMPOSE_FILE
+cp "$SCENARIOS" "$OUT/scenarios.json"
+export EMIT_SPREAD COMPOSE_FILE
 cleanup() { compose down --remove-orphans >/dev/null 2>&1 || true; }
 trap cleanup EXIT
 
 run_branch() {
-  local anchor="$1" action="$2" repeat="$3" branch dir version transport_hash
-  branch="a$(printf %02d "$anchor")-$action-r$(printf %02d "$repeat")"
+  local sidx="$1" anchor="$2" action="$3" repeat="$4" branch dir version transport_hash
+  # Every factor of the scenario is read from the declared set, never inferred
+  # from the branch name, and every one is written into the branch's own
+  # manifest so no analysis has to parse a name to know what it ran.
+  local sid mech onset sev load sseed sla
+  eval "$(python3 - "$SCENARIOS" "$sidx" <<'ENV'
+import json, sys
+sc = json.load(open(sys.argv[1]))["scenarios"][int(sys.argv[2]) - 1]
+budgets = json.load(open("configs/budgets.json"))["budgets_ms"]
+print(f"sid={sc['scenario_id']}")
+print(f"mech={sc['fault_type']}")
+print(f"onset={sc['fault_onset']}")
+print(f"sev={sc['fault_severity']}")
+print(f"load={sc['workload_level']}")
+print(f"sseed={sc['seed']}")
+print(f"sla={budgets[str(sc['workload_level'])]['sla_ms']}")
+ENV
+)"
+  branch="$sid-a$(printf %02d "$anchor")-$action-r$(printf %02d "$repeat")"
   dir="$OUT/$branch"
   mkdir -p "$dir"
+  # The scenario is fixed within a cell and across the actions compared at an
+  # anchor: repeats are replays of one prefix, and actions must share that
+  # prefix to be comparable at all.
+  export DEGRADE_AT="$onset" DEGRADED_SERVE="$sev" \
+         EVENTS_PER_EPOCH="$load" MASTER_SEED="$sseed" SLA_MS="$sla"
+  python3 - "$dir/scenario.json" "$sid" "$mech" "$onset" "$sev" "$load" \
+           "$sseed" "$sla" "$anchor" "$action" "$repeat" "$HORIZON" <<'MANIFEST'
+import json, sys
+(out, sid, mech, onset, sev, load, seed, sla, anchor, action, repeat, horizon) = sys.argv[1:]
+onset, anchor, horizon = int(onset), int(anchor), int(horizon)
+# The regime is a property of the branch's own numbers, not of its anchor index.
+if onset > anchor + horizon:
+    regime = "pre-fault"
+elif onset <= anchor:
+    regime = "post-onset"
+else:
+    regime = "spanning"
+json.dump({
+    "scenario_id": sid, "fault_type": mech, "fault_onset": onset,
+    "fault_severity": int(sev), "workload_level": int(load), "seed": int(seed),
+    "sla_ms": int(sla), "anchor": anchor, "action": action,
+    "repeat": int(repeat), "horizon": horizon, "regime": regime,
+}, open(out, "w"), indent=2, sort_keys=True)
+MANIFEST
   cleanup
   # Bringing nine containers up occasionally fails transiently: a node exits
   # before the bus accepts it and --wait gives up. On a 900-branch matrix a
@@ -189,14 +262,16 @@ print(' '.join(s.lstrip('/') for s in need
   echo "ok $branch"
 }
 
-for anchor in $(seq 1 "$ANCHORS"); do
-  for action in $ACTIONS; do
-    for repeat in $(seq 1 "$REPEATS"); do
-      if ! run_branch "$anchor" "$action" "$repeat"; then
-        echo "REFUSED a$(printf %02d "$anchor")-$action-r$(printf %02d "$repeat")"
-        echo "FAIL FAST: the incomplete matrix remains on disk for diagnosis"
-        exit 1
-      fi
+for sidx in $(seq 1 "$SCENARIO_COUNT"); do
+  for anchor in $(seq 1 "$ANCHORS"); do
+    for action in $ACTIONS; do
+      for repeat in $(seq 1 "$REPEATS"); do
+        if ! run_branch "$sidx" "$anchor" "$action" "$repeat"; then
+          echo "REFUSED scenario $sidx a$(printf %02d "$anchor")-$action-r$(printf %02d "$repeat")"
+          echo "FAIL FAST: the incomplete matrix remains on disk for diagnosis"
+          exit 1
+        fi
+      done
     done
   done
 done

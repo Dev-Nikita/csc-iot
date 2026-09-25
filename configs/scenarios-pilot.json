@@ -1,0 +1,49 @@
+{
+  "master_seed": 20260926,
+  "declared_levels": {
+    "onset_range": [
+      8,
+      24
+    ],
+    "severity_levels": [
+      40,
+      60,
+      90
+    ],
+    "workload_levels": [
+      60,
+      100,
+      140
+    ],
+    "mechanisms": [
+      "D1"
+    ]
+  },
+  "scenarios": [
+    {
+      "scenario_id": "s01",
+      "fault_type": "D1",
+      "fault_onset": 10,
+      "fault_severity": 40,
+      "workload_level": 100,
+      "seed": 1259043746
+    },
+    {
+      "scenario_id": "s02",
+      "fault_type": "D1",
+      "fault_onset": 15,
+      "fault_severity": 90,
+      "workload_level": 100,
+      "seed": 1346842750
+    },
+    {
+      "scenario_id": "s03",
+      "fault_type": "D1",
+      "fault_onset": 9,
+      "fault_severity": 40,
+      "workload_level": 100,
+      "seed": 1063662932
+    }
+  ],
+  "scenarios_hash": "f7fee5f0813e2f81"
+}

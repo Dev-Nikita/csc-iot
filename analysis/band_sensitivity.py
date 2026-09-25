@@ -64,7 +64,8 @@ def main():
     rows = list(csv.DictReader(open(args.jobs_csv)))
     cells = {}
     for r in rows:
-        cells.setdefault((r["anchor"], r["action"]), []).append(float(r["J_obs"]))
+        cells.setdefault((r.get("scenario", "s00"), r["anchor"], r["action"]),
+                         []).append(float(r["J_obs"]))
 
     eta = {k: dispersion(v) for k, v in cells.items()}
     pooled = quantile([abs(a - b) for v in cells.values()
@@ -86,25 +87,25 @@ def main():
         print("  and pulls the pooled band DOWN. The pooled band is therefore not")
         print("  conservative for the cells that do vary.")
 
-    anchors = sorted({a for a, _ in cells})
-    actions = sorted({b for _, b in cells} - {"NO_OP"})
+    keys = sorted({(sc, a) for sc, a, _ in cells})
+    actions = sorted({c for _, _, c in cells} - {"NO_OP"})
     print(f"\nGATE SNR_J >= {args.gate:g} UNDER THREE BANDS, and the bootstrap CI")
     print(f"{'contrast':18s} {'delta':>8s} {'pooled':>8s} {'worst':>8s} {'local':>8s}"
           f" {'local band':>11s}   95% CI of delta        survives")
     counts = {"pooled": 0, "worst": 0, "local": 0, "all": 0, "ci": 0}
     total = 0
     surviving = []
-    for a in anchors:
-        base = cells.get((a, "NO_OP"))
+    for sc, a in keys:
+        base = cells.get((sc, a, "NO_OP"))
         if not base:
             continue
         for act in actions:
-            v = cells.get((a, act))
+            v = cells.get((sc, a, act))
             if not v:
                 continue
             total += 1
             delta = abs(median(base) - median(v))
-            local = max(eta[(a, "NO_OP")], eta[(a, act)])
+            local = max(eta[(sc, a, "NO_OP")], eta[(sc, a, act)])
             s_pool = delta / pooled if pooled else float("inf")
             s_worst = delta / worst if worst else float("inf")
             s_local = delta / local if local else float("inf")
@@ -118,8 +119,8 @@ def main():
             all_ok = all(ok.values()) and ci_excl
             counts["all"] += all_ok
             if all_ok:
-                surviving.append(f"{a}-{act}")
-            print(f"{a + '-' + act:18s} {delta:8.3f} {s_pool:8.2f} {s_worst:8.2f}"
+                surviving.append(f"{sc}-{a}-{act}")
+            print(f"{sc + '-' + a + '-' + act:18s} {delta:8.3f} {s_pool:8.2f} {s_worst:8.2f}"
                   f" {s_local:8.2f} {local:11.4f}   "
                   f"[{lo:+.3f}, {hi:+.3f}]   {'yes' if all_ok else 'no'}")
 
