@@ -2,7 +2,7 @@
 
 Pre-registered protocol for CSC. **Everything in §2–§9 is frozen before the main experiments are run.** Changing a frozen value after seeing comparative results invalidates the run set; the correct response is a dated amendment in §12 plus a full re-run.
 
-Protocol version: **0.7** (service-opportunity rule actually reported, 2026-09-25). Becomes 1.0 at implementation freeze, after the pilot in §11.
+Protocol version: **0.8** (the fault is a factor, not a constant, 2026-09-26). Becomes 1.0 at implementation freeze, after the pilot in §11.
 
 ---
 
@@ -240,6 +240,64 @@ Every reportable branch recreates the complete process topology before replay; `
 
 A reduced pilot (100 devices, F1/F3/F7, 5 seeds, B1/B2/B6) runs before protocol 1.0 in order to expose methodological problems while changing them is still legitimate. Pilot results are **never** reported as findings and never re-used as evidence.
 
+## 11a. The fault is a declared factor
+
+Through protocol 0.7 every branch carried one fault: `edge00` capacity
+150 -> 60 at epoch 12, identical in all 900 branches of every matrix. That
+makes the anchor index an exact proxy for how long the fault has been running,
+and it invalidates two things the paper needs.
+
+A predictor trained across anchors can reach low error by memorising the
+schedule. Nothing in such a result says whether it learned the state. And a
+controller evaluated at one onset and one severity has no evidence of
+generalisation at all -- the strongest reading available would be "it works on
+this one scenario", which is not the claim the paper makes.
+
+From 0.8 a **scenario** is a declared factor:
+
+| Factor | Levels | Rule |
+|---|---|---|
+| Onset `T` | epochs 8-24 | drawn per scenario from the declared range, seeded |
+| Severity `S` | serve-per-epoch 40, 60, 90 after onset (from 150) | drawn per scenario |
+
+A branch is `(scenario, anchor, action, repeat)`. The scenario is fixed within a
+cell and across the actions compared at an anchor: repeats are replays of one
+prefix, so a scenario that varied by repeat would make the replay band measure
+the scenario rather than the replay. Actions must share the prefix to be
+comparable at all.
+
+Each branch then falls in one of three regimes, determined by the branch's own
+numbers rather than by its anchor index:
+
+- **pre-fault**: `anchor + H <= T`. Nothing is wrong and nothing will go wrong
+  inside the horizon.
+- **spanning**: `anchor < T < anchor + H`. The fault arrives during the horizon.
+- **post-onset**: `T <= anchor`. The fault is already running at the anchor.
+
+The healthy/degraded partition of 0.4 is replaced by this regime label, which is
+a property of the branch.
+
+### What this means for what can be claimed
+
+In the spanning regime the state at the anchor carries no information about a
+fault that has not happened. No predictor can know it, and the paper does not
+claim otherwise. The correct behaviour there is abstention, and the fact that
+the safety gate abstains when the state carries no signal is a result to
+measure, not a limitation to excuse.
+
+Fault onset and severity appear in the node's reported capacity, and therefore
+in the structural state. They are **excluded from the predictor's features**: a
+controller in a running system does not know when its future fault will arrive,
+and a model given the schedule would be reporting the schedule. The exclusion
+is enforced in the feature extractor and tested.
+
+### Status of earlier runs
+
+m2prime-903 remains valid and reportable for what it measured: replay
+dispersion and action resolvability on one scenario, on an audited objective.
+It is superseded only as a basis for the predictor comparison and the
+controller evaluation, both of which require the factor.
+
 ## 12. Amendment log
 
 | Date | Change | Reason |
@@ -247,6 +305,7 @@ A reduced pilot (100 devices, F1/F3/F7, 5 seeds, B1/B2/B6) runs before protocol 
 | 2026-08-25 | Draft 0.1 created. | Project start |
 | 2026-08-25 | **0.2 methodology correction.** Conformal *prediction* upper bound replaced by conformal *risk control* on a set-level loss; `α` collision removed; `Ĵ` separated from `J_obs`; `η_J`, tie-aware CRA and regret introduced; PFR/WIR given set-theoretic definitions; H3 made a non-inferiority test; H4 moved from median to p95 and deadline-miss rate; F6 split contradiction resolved; B5 redefined as an action-conditioned associative predictor; randomised behaviour policy added on training scenarios; D0 audit replaces per-branch 30× replication. | External review; see `METHODOLOGY_CORRECTION_REPORT.md` |
 | 2026-09-05 | **0.3 distributed replay repair.** All expected producers must close an epoch; action application requires a run-scoped acknowledgement; every branch starts from a recreated topology; fingerprint coverage is enumerated; D0-lite fixes `SNR_J ≥ 3` and the `η_J=0` edge case; `J_m2_diag` is quarantined from `J_obs`; netem direction and seed are fixed. | 48-run prefix burn-in and 108-branch mechanics pilot; diagnostics only, never reused as findings. |
+| 2026-09-26 | **0.8 the fault becomes a declared factor.** Onset and severity are drawn per scenario (onset epochs 8-24; post-onset serve 40, 60 or 90 from 150) and held fixed within a cell and across the actions compared at an anchor. Section 11a adds the pre-fault / spanning / post-onset regime labels, which replace the anchor-index healthy/degraded partition. Fault parameters are excluded from predictor features by construction. m2prime-903 stays valid for replay dispersion and resolvability on a single scenario; it is superseded as a basis for B5 and for the controller evaluation. | All 900 branches of every matrix to date carried `degrade_at_epoch = 12` and `150 -> 60`. With one onset the anchor index is an exact proxy for fault age, so a learned predictor can score well by memorising the schedule, and a controller measured at one onset and one severity has no evidence of generalisation -- the first question a reviewer asks. |
 | 2026-09-25 | **0.7 the service-opportunity rule is reported, not just computed.** The edge computed its eligible-unserved count and never put it in `observed`, so `analysis/jobs.py` took a silent fallback to the raw inbox length. The numerator then charged the final epoch's arrivals as failures while the gateway excluded those same events from the denominator: a healthy branch with **zero SLA violations scored `Y` = 100/800 = 0.125**, and the whole healthy `J_obs` floor of 0.13 was that artefact. Eligibility is now defined on the event's own epoch on both sides, not on arrival, so a deferred event is scored by the epoch it belongs to. `jobs.py` refuses a branch without `unserved_eligible` instead of substituting, and refuses any branch where served plus undelivered exceeds the work the gateway accepted; the runner checks every observable the objective reads on the first branch. **`J_obs` from m2prime-901 and m2prime-902 is superseded and must not be reported.** Neither can be corrected after the fact: how much work arrived in the final epoch was never recorded, and under `THROTTLE` it is not a constant. What still stands in both: branch admissibility, prefix equivalence, and the per-event latency calibration, which does not depend on the objective. | Found by reading `jobs.csv`: `a01-NO_OP-r01` reported offered 800, served 800, unserved 100, violations 0 — served plus unserved exceeded offered, so the two sides of every ratio covered different event sets. `go vet` could not see it: the variable was used by its own increment. |
 | 2026-09-22 | **0.6 latency budget calibrated per event and frozen at 750 ms.** Edges report a 25 ms per-event latency histogram as an observed outcome. The budget is derived by a declared rule on a dedicated calibration run of healthy `NO_OP` branches, then frozen and applied to a new confirmatory matrix with the analysis unchanged; `budget-cal` gives 750 ms. `docker-compose.nats.yml` hardcoded 500 ms on `edge01` and `edge02` while only `edge00` read `SLA_MS`, so an action that moves work between edges would have been scored against a stricter budget than its own baseline; all three now read the same variable, and the runner refuses a budget other than the frozen one or a compose file that hardcodes one. **m2prime-901 at 500 ms remains the preregistered result and is reported as run**; it is not re-scored, and it is unaffected by the edge defect because every edge used 500 ms. | m2prime-901: healthy `NO_OP` `J_obs` 0.28-0.32 with no unserved work implied that a large share of a working system's events were over budget; `budget-cal` measured the share at 31%. The 0.4 rule had been applied to the wrong distribution. |
 | 2026-09-17 | **0.5 objective denominator corrected.** `Y`, `L̃` and the cost term are computed over work accepted at the gateway ingress, not over work that reached an edge. The gateway now reports `ingress_accepted`, `admission_deferred_total` and `admission_backlog_depth` as observed outcomes; deferral is charged cumulatively; a gateway backlog standing at the horizon counts as undelivered. `analysis/jobs.py` refuses a set that mixes the two denominators. **Every `J_obs` figure produced before this date is superseded and must not be reported**, including the m2prime-900 series; its integrity and dispersion results (branch admissibility, prefix equivalence, `η_J` mechanics) stand, its action comparisons do not. | Defect found in the m2prime-900 analysis: `analysis/jobs.py` read `admission_backlog` from the observed block, but the gateway wrote it to the structural `Queues` map, so the deferred term was identically zero; and `offered` differed per action (a01 `NO_OP` 900 vs `THROTTLE` 500). Both errors flattered `THROTTLE`, the action under test. |
