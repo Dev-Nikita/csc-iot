@@ -93,11 +93,14 @@ def main():
     print(f"  mean latency across branches: min {lats[0]:.0f}  "
           f"median {lats[len(lats)//2]:.0f}  max {lats[-1]:.0f} ms")
     print(f"  branches whose MEAN latency is below the budget: {below}/{len(lats)}")
-    if 0 < below < len(lats):
-        print("  The budget sits inside the range the branches actually produce, so")
-        print("  a small timing shift moves a large share of events across it. A")
-        print("  budget chosen away from that mass makes Y stable without making")
-        print("  the effect larger -- it changes the instrument, not the system.")
+    # This count mixes healthy and degraded branches, and a degraded branch is
+    # SUPPOSED to exceed the budget -- that is the failure being measured. Only
+    # the healthy branches can say whether the instrument is mis-set, and they
+    # are examined below. The earlier wording here read as a warning about the
+    # budget whatever the branches were doing.
+    print("  Degraded branches are expected above the budget: that is the failure")
+    print("  being measured. Whether the budget is mis-set is decided on healthy")
+    print("  NO_OP branches only, below.")
     if args.healthy_anchors:
         healthy = set(args.healthy_anchors.split(","))
         # NO_OP only. "Healthy" and "degraded" describe the SYSTEM, and the
@@ -125,8 +128,18 @@ def main():
             print("\n  An agreement is a promise the system keeps WHILE HEALTHY. A budget")
             print("  below the healthy distribution is violated by a working system, which")
             print("  makes the failure term measure the budget rather than the failure.")
-            print(f"  Budget implied by this pilot (healthy p95, rounded up to 50 ms):"
-                  f" {50 * (int(pct(hv, .95) / 50) + 1):.0f} ms")
+            # The budget rule is NOT this. Protocol 0.6 replaced the branch-mean
+            # p95 rule with the healthy per-event p99, because the agreement is a
+            # promise about each event and branch means understate the per-event
+            # spread by roughly the emission window. Printing the superseded rule
+            # beside the frozen budget invited reading it as a recommendation to
+            # lower the budget, which is the one move the integrity rules forbid
+            # after results are in view.
+            superseded = 50 * (int(pct(hv, .95) / 50) + 1)
+            print(f"  For reference only, the SUPERSEDED 0.4 rule (healthy branch-mean")
+            print(f"  p95) would give {superseded:.0f} ms. It is not the rule: the budget is")
+            print(f"  frozen at {args.sla_ms:.0f} ms by the healthy per-event p99 of protocol 0.6,")
+            print(f"  measured on a dedicated calibration run. Use analysis/calibrate_budget.py.")
             if overlap > 0.3:
                 print("\n  WARNING: the degraded state largely overlaps the healthy one. No")
                 print("  choice of threshold separates them. The fault has not developed")
