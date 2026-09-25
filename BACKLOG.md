@@ -1,4 +1,7 @@
-# BACKLOG.md
+# BACKLOG
+
+The submission scope and sequence now live in PAPER_PLAN_TCC.md.
+This file tracks the work items under that plan.
 
 Ordered. Each phase has an exit criterion; a phase is not done until its criterion is demonstrably met. Phases 1–4 contain no machine learning at all, on purpose: if the environment is not deterministic and the replay does not reproduce, no amount of modelling saves the paper.
 
