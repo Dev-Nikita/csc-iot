@@ -101,7 +101,7 @@ services:
     # the loaded path: cannot keep up with 200 events/epoch alone
     command: ["-role", "edge", "-id", "edge00", "-bus-impl", "nats", "-bus", "nats://nats:4222",
               "-serve-per-epoch", "150", "-sla-epochs", "1", "-sla-ms", "${SLA_MS:-750}",
-              "-degrade-at-epoch", "12", "-degraded-serve-per-epoch", "60"]
+              "-degrade-at-epoch", "${DEGRADE_AT:-12}", "-degraded-serve-per-epoch", "${DEGRADED_SERVE:-60}"]
     depends_on: { nats: { condition: service_healthy } }
     networks: [gateway-edge]
 

@@ -101,8 +101,10 @@ def main():
     print("  Degraded branches are expected above the budget: that is the failure")
     print("  being measured. Whether the budget is mis-set is decided on healthy")
     print("  NO_OP branches only, below.")
-    if args.healthy_anchors:
-        healthy = set(args.healthy_anchors.split(","))
+    # The pre-fault set is a property of each branch (protocol 0.9), recorded in
+    # jobs.csv. --healthy-anchors remains only for runs written before that.
+    healthy = set(args.healthy_anchors.split(",")) if args.healthy_anchors else set()
+    if True:
         # NO_OP only. "Healthy" and "degraded" describe the SYSTEM, and the
         # only branches that show the system without intervention are the
         # no-action ones. Including THROTTLE here compared the fault against
@@ -113,18 +115,24 @@ def main():
         # which is impossible for states of the system and was a defect in this
         # comparison, not in the design.
         noop = [r for r in rows if r["action"] == "NO_OP"]
-        hv = sorted(float(r["mean_lat_ms"]) for r in noop if r["anchor"] in healthy)
-        dv = sorted(float(r["mean_lat_ms"]) for r in noop if r["anchor"] not in healthy)
+
+        def is_prefault(r):
+            if r.get("regime"):
+                return r["regime"] == "pre-fault"
+            return r["anchor"] in (healthy or set())
+
+        hv = sorted(float(r["mean_lat_ms"]) for r in noop if is_prefault(r))
+        dv = sorted(float(r["mean_lat_ms"]) for r in noop if not is_prefault(r))
         if hv and dv:
             def pct(v, p):
                 return v[min(int(p * (len(v) - 1) + 0.5), len(v) - 1)]
-            print("\nHEALTHY vs DEGRADED LATENCY (NO_OP branches only, branch mean, ms)")
-            print(f"  healthy  n={len(hv):3d}  p50 {pct(hv,.5):6.0f}  p95 {pct(hv,.95):6.0f}"
+            print("\nPRE-FAULT vs FAULTED LATENCY (NO_OP branches only, branch mean, ms)")
+            print(f"  pre-fault n={len(hv):3d}  p50 {pct(hv,.5):6.0f}  p95 {pct(hv,.95):6.0f}"
                   f"  max {hv[-1]:6.0f}")
-            print(f"  degraded n={len(dv):3d}  p50 {pct(dv,.5):6.0f}  p95 {pct(dv,.95):6.0f}"
+            print(f"  faulted   n={len(dv):3d}  p50 {pct(dv,.5):6.0f}  p95 {pct(dv,.95):6.0f}"
                   f"  max {dv[-1]:6.0f}")
             overlap = sum(1 for x in dv if x <= hv[-1]) / len(dv)
-            print(f"  degraded branches inside the healthy range: {overlap:.0%}")
+            print(f"  faulted branches inside the pre-fault range: {overlap:.0%}")
             print("\n  An agreement is a promise the system keeps WHILE HEALTHY. A budget")
             print("  below the healthy distribution is violated by a working system, which")
             print("  makes the failure term measure the budget rather than the failure.")

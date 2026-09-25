@@ -17,6 +17,8 @@ import json
 import os
 import sys
 
+import branches
+
 HIST = "lat_hist_ms_"
 
 
@@ -24,13 +26,15 @@ def suffix_sum(observed, suffix):
     return sum(v for k, v in observed.items() if k.endswith(suffix))
 
 
-def audit(path, healthy, sla_ms):
+def audit(path, rec):
     with open(os.path.join(path, "outcome.json")) as fh:
         doc = json.load(fh)
     obs = doc.get("observed") or {}
-    name = os.path.basename(path)
-    anchor, action, _ = name.split("-")
+    action = rec["action"]
+    sla_ms = rec["sla_ms"]
     bad = []
+    if not sla_ms:
+        return ["no latency budget recorded for this branch"]
 
     required = ("/ingress_accepted", "/served", "/unserved_eligible",
                 "/sla_violations", "/lat_ms_violations", "/lat_ms_sum",
@@ -76,24 +80,25 @@ def audit(path, healthy, sla_ms):
         bad.append(f"{action} deferred {deferred:.0f} events at the gateway")
     # 7. A healthy no-action branch is not allowed to fail. If it does, the
     #    budget or the accounting is wrong, not the system.
-    if anchor in healthy and action == "NO_OP":
+    # A pre-fault branch spans no fault at all: nothing is wrong and nothing
+    # will go wrong inside its horizon. The regime is computed from the
+    # branch's own onset and horizon, not from its anchor index.
+    if rec["regime"] == "pre-fault" and action == "NO_OP":
         if eligible + residual > 0:
-            bad.append(f"healthy NO_OP left {eligible + residual:.0f} events undelivered")
+            bad.append(f"pre-fault NO_OP left {eligible + residual:.0f} events undelivered")
         if sla_viol > 0:
-            bad.append(f"healthy NO_OP missed the epoch deadline {sla_viol:.0f} times")
+            bad.append(f"pre-fault NO_OP missed the epoch deadline {sla_viol:.0f} times")
     return bad
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("root")
-    ap.add_argument("--healthy-anchors", required=True)
-    ap.add_argument("--sla-ms", type=int, required=True,
-                    help="the budget frozen in the protocol, not a choice made here")
     args = ap.parse_args()
-    healthy = set(args.healthy_anchors.split(","))
 
-    dirs = sorted(glob.glob(os.path.join(args.root, "a*")))
+    matrix = branches.read_matrix(args.root)
+    pattern = "s*-a*" if glob.glob(os.path.join(args.root, "s*-a*")) else "a*"
+    dirs = sorted(glob.glob(os.path.join(args.root, pattern)))
     if not dirs:
         print(f"no branches under {args.root}", file=sys.stderr)
         return 2
@@ -102,20 +107,26 @@ def main():
         if not os.path.exists(os.path.join(d, "outcome.json")):
             failed[os.path.basename(d)] = ["no outcome.json"]
             continue
-        bad = audit(d, healthy, args.sla_ms)
+        try:
+            rec = branches.read(d, matrix)
+        except ValueError as exc:
+            failed[os.path.basename(d)] = [str(exc)]
+            continue
+        bad = audit(d, rec)
         if bad:
             failed[os.path.basename(d)] = bad
 
     print(f"ACCOUNTING AUDIT: {len(dirs)} branches, {len(failed)} with violations")
     if not failed:
-        print("  every branch: one event set, histogram complete, healthy NO_OP clean")
+        print("  every branch: one event set, histogram complete, "
+              "pre-fault NO_OP clean")
         return 0
     kinds = {}
     for branch, bad in failed.items():
         for b in bad:
             kinds.setdefault(b.split(" ")[0] + " " + b.split(" ")[1], []).append(branch)
-    for kind, branches in sorted(kinds.items()):
-        print(f"  {len(branches):4d}x {kind} ... e.g. {branches[0]}")
+    for kind, hits in sorted(kinds.items()):
+        print(f"  {len(hits):4d}x {kind} ... e.g. {hits[0]}")
     print("\nFirst five in full:")
     for branch in sorted(failed)[:5]:
         print(f"  {branch}: {'; '.join(failed[branch])}")

@@ -1,0 +1,23 @@
+{
+  "_comment": [
+    "Latency budget per declared workload level, in milliseconds.",
+    "The rule (protocol 0.6, unchanged): healthy NO_OP per-event p99, rounded up",
+    "to the next 50 ms, measured on a dedicated calibration run at that level.",
+    "The healthy per-event latency distribution depends on offered load, so one",
+    "budget across levels would make Y measure the load rather than the failure.",
+    "A level with no entry here cannot be run: the runner refuses it rather than",
+    "borrowing another level's promise."
+  ],
+  "budgets_ms": {
+    "100": {
+      "sla_ms": 750,
+      "calibration_run": "budget-cal",
+      "runtime_stack_id": "5bc49e1c2750002a",
+      "branches": 30,
+      "events": 27000,
+      "per_event_p99_ms": 750,
+      "healthy_fraction_over_budget": 0.009,
+      "dated": "2026-09-22"
+    }
+  }
+}

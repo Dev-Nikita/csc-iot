@@ -32,6 +32,8 @@ import json
 import os
 import sys
 
+import branches
+
 
 def median(values):
     """Local, because analysis/statistics.py shadows the stdlib module here."""
@@ -171,7 +173,9 @@ def main():
         return 2
 
     rows = []
-    for d in sorted(glob.glob(os.path.join(args.root, "a*"))):
+    matrix = branches.read_matrix(args.root)
+    pattern = "s*-a*" if glob.glob(os.path.join(args.root, "s*-a*")) else "a*"
+    for d in sorted(glob.glob(os.path.join(args.root, pattern))):
         path = os.path.join(d, "outcome.json")
         if not os.path.exists(path):
             continue
@@ -186,12 +190,31 @@ def main():
         j = W_FAILURE * t["Y_ms"] + W_LATENCY * t["L_tilde_ms"] + W_COST * t["disruption"]
         j_q = W_FAILURE * t["Y"] + W_LATENCY * t["L_tilde"] + W_COST * t["disruption"]
         name = os.path.basename(d)
-        anchor, action, repeat = name.split("-")
-        rows.append({"branch": name, "anchor": anchor, "action": action,
-                     "repeat": repeat, "J_obs": j, "J_obs_quantised": j_q, **t})
+        # The factors come from the branch's own manifest, never from its name.
+        rec = branches.read(d, matrix)
+        rows.append({"branch": name,
+                     "scenario": rec["scenario_id"],
+                     "anchor": f"a{rec['anchor']:02d}",
+                     "action": rec["action"],
+                     "repeat": f"r{rec['repeat']:02d}",
+                     "regime": rec["regime"],
+                     "fault_type": rec["fault_type"],
+                     "fault_onset": rec["fault_onset"],
+                     "fault_severity": rec["fault_severity"],
+                     "workload_level": rec["workload_level"],
+                     "legacy": int(rec["legacy"]),
+                     "J_obs": j, "J_obs_quantised": j_q, **t})
 
     if not rows:
         print(f"no branches with outcomes under {args.root}", file=sys.stderr)
+        return 2
+
+    # A set that mixes reconstructed legacy factors with recorded ones is not a
+    # set: the legacy reconstruction assumes the single fault of protocol 0.7.
+    if len({r["legacy"] for r in rows}) > 1:
+        print("REFUSED: this root mixes branches with recorded scenario "
+              "manifests and branches whose factors were reconstructed from a "
+              "pre-0.9 matrix. Analyse them separately.", file=sys.stderr)
         return 2
 
     # A comparison whose branches do not share a denominator is not a
@@ -227,10 +250,11 @@ def main():
     import itertools
     cells = {}
     for r in rows:
-        cells.setdefault((r["anchor"], r["action"]), []).append(r["J_obs"])
+        cells.setdefault((r["scenario"], r["anchor"], r["action"]), []).append(r["J_obs"])
     cells_q = {}
     for r in rows:
-        cells_q.setdefault((r["anchor"], r["action"]), []).append(r["J_obs_quantised"])
+        cells_q.setdefault((r["scenario"], r["anchor"], r["action"]),
+                           []).append(r["J_obs_quantised"])
     pooled = [abs(a - b) for v in cells.values() for a, b in itertools.combinations(v, 2)]
     pooled_q = [abs(a - b) for v in cells_q.values() for a, b in itertools.combinations(v, 2)]
     eta = quantile(pooled, 0.95)
@@ -247,21 +271,21 @@ def main():
         print("  is a property of the units, not of the system.")
 
     # The preregistered gate, applied as written and not adjusted afterwards.
-    anchors = sorted({a for a, _ in cells})
-    actions = sorted({b for _, b in cells} - {"NO_OP"})
+    keys = sorted({(sc, a) for sc, a, _ in cells})
+    actions = sorted({c for _, _, c in cells} - {"NO_OP"})
     print(f"\nPREREGISTERED GATE  SNR_J >= {SNR_GATE:g}   (eta_J = {eta:.4f})")
-    header = "  anchor  " + "".join(f"{a:>12s}" for a in ["NO_OP"] + actions)
+    header = "  cell        " + "".join(f"{a:>12s}" for a in ["NO_OP"] + actions)
     print(header + "   " + "  ".join(f"SNR({a[:4]})" for a in actions))
     resolvable = total = 0
-    for a in anchors:
-        base = cells.get((a, "NO_OP"))
+    for sc, a in keys:
+        base = cells.get((sc, a, "NO_OP"))
         if not base:
             continue
         med = median(base)
-        line = f"  {a:6s}  {med:12.3f}"
+        line = f"  {sc + '-' + a:10s}  {med:12.3f}"
         snrs = []
         for act in actions:
-            v = cells.get((a, act))
+            v = cells.get((sc, a, act))
             if not v:
                 line += f"{'-':>12s}"
                 snrs.append("-")
