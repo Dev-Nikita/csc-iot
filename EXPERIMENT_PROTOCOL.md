@@ -2,7 +2,7 @@
 
 Pre-registered protocol for CSC. **Everything in §2–§9 is frozen before the main experiments are run.** Changing a frozen value after seeing comparative results invalidates the run set; the correct response is a dated amendment in §12 plus a full re-run.
 
-Protocol version: **0.8** (the fault is a factor, not a constant, 2026-09-26). Becomes 1.0 at implementation freeze, after the pilot in §11.
+Protocol version: **0.9** (scenario factor, leakage tests, SCM retention rule, 2026-09-26). Becomes 1.0 at implementation freeze, after the pilot in §11.
 
 ---
 
@@ -257,10 +257,17 @@ From 0.8 a **scenario** is a declared factor:
 
 | Factor | Levels | Rule |
 |---|---|---|
+| Mechanism | `D1` edge capacity degradation · `D2` ingress impairment ramp · `D3` edge stall | declared per scenario |
 | Onset `T` | epochs 8-24 | drawn per scenario from the declared range, seeded |
-| Severity `S` | serve-per-epoch 40, 60, 90 after onset (from 150) | drawn per scenario |
+| Severity `S` | serve-per-epoch 40, 60, 90 after onset (from 150); for `D2`, the declared impairment step | drawn per scenario |
+| Workload `L` | 60, 100, 140 events per epoch | drawn per scenario |
+| Seed | per scenario | fixes emission, netem and every RNG stream |
 
-A branch is `(scenario, anchor, action, repeat)`. The scenario is fixed within a
+A branch is `(scenario, anchor, action, repeat)`, named `sNN-aNN-ACTION-rNN`.
+The branch manifest records each factor as a **separate field** —
+`scenario_id`, `fault_type`, `fault_onset`, `fault_severity`, `workload_level`,
+`seed`, `anchor`, `action`, `repeat` — rather than only inside a composite
+identifier, so that no analysis has to parse a name to know what it ran. The scenario is fixed within a
 cell and across the actions compared at an anchor: repeats are replays of one
 prefix, so a scenario that varied by repeat would make the replay band measure
 the scenario rather than the replay. Actions must share the prefix to be
@@ -281,15 +288,65 @@ a property of the branch.
 
 In the spanning regime the state at the anchor carries no information about a
 fault that has not happened. No predictor can know it, and the paper does not
-claim otherwise. The correct behaviour there is abstention, and the fact that
-the safety gate abstains when the state carries no signal is a result to
-measure, not a limitation to excuse.
+claim otherwise.
+
+It is tempting to add that abstention is therefore the correct behaviour and to
+count that as a result. It is not, unless the abstention is produced by
+something the controller can measure. Otherwise the claim reduces to "the system
+correctly predicted unpredictability", which is not a claim. Two situations are
+evaluated and reported **separately**:
+
+- **unknowable future event** — nothing in the observed state carries the coming
+  fault. A low predicted risk is correct here and the controller may be
+  surprised. Conformal risk control bounds a risk defined over the observed
+  distribution; it gives no protection against an event absent from the
+  observations, and the paper states this rather than implying otherwise.
+- **uncertain current state** — the observations do carry signal and the
+  ensemble spread or the conformal width says the evidence does not justify a
+  specific action. Abstention here is the mechanism working, and is the only
+  case counted as such.
+
+An abstention rate is therefore never reported as a single number. It is
+reported per regime, beside the ensemble disagreement and conformal width that
+produced it.
 
 Fault onset and severity appear in the node's reported capacity, and therefore
 in the structural state. They are **excluded from the predictor's features**: a
 controller in a running system does not know when its future fault will arrive,
-and a model given the schedule would be reporting the schedule. The exclusion
-is enforced in the feature extractor and tested.
+and a model given the schedule would be reporting the schedule.
+
+Exclusion by intention is not enough, because leakage returns through side
+doors. Three tests are required before any model result is reported, and all
+three are part of the artifact:
+
+| Test | Passes when |
+|---|---|
+| Feature schema | the feature set provably excludes `scenario_id`, `fault_type`, `fault_onset`, `fault_severity`, the absolute anchor index, and any future schedule. Enforced in the extractor and unit-tested against the recorded manifests. |
+| Permutation | telemetry permuted between scenarios destroys performance. If performance survives, the model is reading something other than telemetry. |
+| Time-only baseline | a predictor `f(t, a)` given only elapsed time and the candidate action is materially worse than the telemetry model. If time alone does nearly as well, the confound is not fixed. |
+
+The time-only baseline is retained permanently, whether or not it appears in a
+main table.
+
+### The workload factor changes the latency budget
+
+The budget is calibrated by the §2a rule on healthy `NO_OP` branches, and the
+healthy per-event latency distribution depends on offered load. A single budget
+across workload levels would make `Y` measure the load rather than the failure —
+the same error as calibrating on branch means (0.6) and as counting the
+denominator at the edge (0.5). The budget is therefore calibrated **per declared
+workload level**, by the unchanged rule, on healthy `NO_OP` branches at that
+level, before any comparative result at that level is examined. The frozen
+750 ms applies to `L = 100` only.
+
+### Pilot before the full design
+
+Two or three scenarios first: early onset with moderate severity, late onset
+with strong severity, and if cheap an unseen workload level. The pilot checks
+replay accounting, branch identity, `η_J`, action effects, and that the
+extractor hands the model telemetry rather than timing. It also measures
+per-branch wall-clock cost, which is what sets the size of the full design
+rather than an assumption about it.
 
 ### Status of earlier runs
 
@@ -298,6 +355,49 @@ dispersion and action resolvability on one scenario, on an audited objective.
 It is superseded only as a basis for the predictor comparison and the
 controller evaluation, both of which require the factor.
 
+## 11b. Retaining the explicit structural layer — rule fixed in advance
+
+`B5` is the action-conditioned associative challenger defined in 0.2. This
+section fixes what would make the explicit structural layer worth keeping, and
+it is written before the `B5` test sets are inspected.
+
+Two tie-aware quantities, both using the measured replay band `η_J` as the tie
+width, because a difference smaller than the band is not a difference:
+
+- **`CRA_η`** — correct ranking accuracy. Over decision points, the fraction
+  where the action the predictor ranks first has a reference `J_obs` within
+  `η_J` of the best action's. Any action inside the band counts as correct.
+- **`Reg_η`** — band-adjusted regret, in `J` units:
+  `mean( max(0, J_obs(chosen) − min_a J_obs(a) − η_J) )`. Differences inside
+  the band are not charged.
+
+**The rule.** The explicit structural layer is retained only if, on the
+parameter-shift or the mechanism-shift regime (not on in-distribution, where
+dense interventional branch data already suffice), it achieves either
+
+- `CRA_η(structural) − CRA_η(challenger) ≥ 0.05`, with the lower bound of the
+  95% bootstrap CI of that difference above zero, **or**
+- `Reg_η(structural) ≤ 0.90 · Reg_η(challenger)`, with the upper bound of the
+  95% bootstrap CI of the difference below zero.
+
+Anything else is reported as a tie and the architecture drops the explicit
+layer. A margin is used rather than a p-value because a statistically
+detectable difference of 0.005 in ranking accuracy would not justify the
+complexity it buys.
+
+Three outcomes, three honest papers, and the architecture survives all three:
+
+| Outcome | What is claimed | Architecture |
+|---|---|---|
+| structural passes the margin | structural inductive bias improves intervention ranking under shift | predictor → SCM → ensemble → CRC → MNI |
+| tie | with dense interventional branch data, explicit causal structure adds little | predictor → ensemble → CRC → MNI |
+| challenger passes it in reverse | the explicit structure introduced misspecification error | predictor → ensemble → CRC → MNI |
+
+`B5` therefore selects the final architecture. It is not a test of whether the
+work survives, and an earlier plan of mine that treated it as one was wrong in
+the direction that abandons viable work. 0.2 already said a null result must be
+reported; this section says what will be done with it.
+
 ## 12. Amendment log
 
 | Date | Change | Reason |
@@ -305,6 +405,7 @@ controller evaluation, both of which require the factor.
 | 2026-08-25 | Draft 0.1 created. | Project start |
 | 2026-08-25 | **0.2 methodology correction.** Conformal *prediction* upper bound replaced by conformal *risk control* on a set-level loss; `α` collision removed; `Ĵ` separated from `J_obs`; `η_J`, tie-aware CRA and regret introduced; PFR/WIR given set-theoretic definitions; H3 made a non-inferiority test; H4 moved from median to p95 and deadline-miss rate; F6 split contradiction resolved; B5 redefined as an action-conditioned associative predictor; randomised behaviour policy added on training scenarios; D0 audit replaces per-branch 30× replication. | External review; see `METHODOLOGY_CORRECTION_REPORT.md` |
 | 2026-09-05 | **0.3 distributed replay repair.** All expected producers must close an epoch; action application requires a run-scoped acknowledgement; every branch starts from a recreated topology; fingerprint coverage is enumerated; D0-lite fixes `SNR_J ≥ 3` and the `η_J=0` edge case; `J_m2_diag` is quarantined from `J_obs`; netem direction and seed are fixed. | 48-run prefix burn-in and 108-branch mechanics pilot; diagnostics only, never reused as findings. |
+| 2026-09-26 | **0.9 scenario factor completed, leakage tests required, SCM retention rule fixed.** The scenario becomes `(mechanism, onset, severity, workload, seed)` with mechanisms D1-D3 and workload levels 60/100/140; every factor is a separate manifest field, not a substring of a branch name. Three leakage tests are mandatory before any model result: feature schema, permutation across scenarios, and a permanently retained time-only baseline `f(t,a)`. Abstention is split into unknowable future event and uncertain current state and reported per regime beside the ensemble spread that produced it; CRC is stated not to bound events absent from the observations. The budget is calibrated per workload level, so the frozen 750 ms applies to `L=100` only. Section 11b fixes the structural-layer retention rule on a practical margin before the test sets are seen. | External review, accepted on three points. The scenario needed workload and mechanism, not only onset and severity, or leakage returns through load. My own framing of B5 as a verdict on the paper was wrong and pessimistic; 0.2 had it right. And my claim that abstention is correct in the spanning regime was 'the system correctly predicted unpredictability' — abstention counts only when a measurable signal produces it. Added independently: with workload as a factor, one budget across loads makes `Y` measure the load. |
 | 2026-09-26 | **0.8 the fault becomes a declared factor.** Onset and severity are drawn per scenario (onset epochs 8-24; post-onset serve 40, 60 or 90 from 150) and held fixed within a cell and across the actions compared at an anchor. Section 11a adds the pre-fault / spanning / post-onset regime labels, which replace the anchor-index healthy/degraded partition. Fault parameters are excluded from predictor features by construction. m2prime-903 stays valid for replay dispersion and resolvability on a single scenario; it is superseded as a basis for B5 and for the controller evaluation. | All 900 branches of every matrix to date carried `degrade_at_epoch = 12` and `150 -> 60`. With one onset the anchor index is an exact proxy for fault age, so a learned predictor can score well by memorising the schedule, and a controller measured at one onset and one severity has no evidence of generalisation -- the first question a reviewer asks. |
 | 2026-09-25 | **0.7 the service-opportunity rule is reported, not just computed.** The edge computed its eligible-unserved count and never put it in `observed`, so `analysis/jobs.py` took a silent fallback to the raw inbox length. The numerator then charged the final epoch's arrivals as failures while the gateway excluded those same events from the denominator: a healthy branch with **zero SLA violations scored `Y` = 100/800 = 0.125**, and the whole healthy `J_obs` floor of 0.13 was that artefact. Eligibility is now defined on the event's own epoch on both sides, not on arrival, so a deferred event is scored by the epoch it belongs to. `jobs.py` refuses a branch without `unserved_eligible` instead of substituting, and refuses any branch where served plus undelivered exceeds the work the gateway accepted; the runner checks every observable the objective reads on the first branch. **`J_obs` from m2prime-901 and m2prime-902 is superseded and must not be reported.** Neither can be corrected after the fact: how much work arrived in the final epoch was never recorded, and under `THROTTLE` it is not a constant. What still stands in both: branch admissibility, prefix equivalence, and the per-event latency calibration, which does not depend on the objective. | Found by reading `jobs.csv`: `a01-NO_OP-r01` reported offered 800, served 800, unserved 100, violations 0 — served plus unserved exceeded offered, so the two sides of every ratio covered different event sets. `go vet` could not see it: the variable was used by its own increment. |
 | 2026-09-22 | **0.6 latency budget calibrated per event and frozen at 750 ms.** Edges report a 25 ms per-event latency histogram as an observed outcome. The budget is derived by a declared rule on a dedicated calibration run of healthy `NO_OP` branches, then frozen and applied to a new confirmatory matrix with the analysis unchanged; `budget-cal` gives 750 ms. `docker-compose.nats.yml` hardcoded 500 ms on `edge01` and `edge02` while only `edge00` read `SLA_MS`, so an action that moves work between edges would have been scored against a stricter budget than its own baseline; all three now read the same variable, and the runner refuses a budget other than the frozen one or a compose file that hardcodes one. **m2prime-901 at 500 ms remains the preregistered result and is reported as run**; it is not re-scored, and it is unaffected by the edge defect because every edge used 500 ms. | m2prime-901: healthy `NO_OP` `J_obs` 0.28-0.32 with no unserved work implied that a large share of a working system's events were over budget; `budget-cal` measured the share at 31%. The 0.4 rule had been applied to the wrong distribution. |
