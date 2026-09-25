@@ -598,7 +598,12 @@ func runEdge(ctx context.Context, id string, b bus.Bus, servePerEpoch int, slaEp
 	type queued struct {
 		eventID  string
 		arrivedK int64
-		emitNs   int64
+		// tick is the event's OWN epoch, which is what eligibility is defined
+		// on. Arrival is not it: a deferred event arrives later than the epoch
+		// it belongs to, so counting by arrival made the edge and the gateway
+		// score different sets of events.
+		tick   int64
+		emitNs int64
 	}
 	var inbox []queued
 	var currentEpoch int64
@@ -619,7 +624,8 @@ func runEdge(ctx context.Context, id string, b bus.Bus, servePerEpoch int, slaEp
 		// Arrival is not service. The drain watermark still advances on arrival,
 		// because it answers "has the transport delivered everything", which is
 		// a different question from "has this node finished the work".
-		inbox = append(inbox, queued{eventID: e.EventID, arrivedK: currentEpoch, emitNs: ev.EmitUnixNanos})
+		inbox = append(inbox, queued{eventID: e.EventID, arrivedK: currentEpoch,
+			tick: ev.Tick, emitNs: ev.EmitUnixNanos})
 		if e.Seq > through[e.ProducerID] {
 			through[e.ProducerID] = e.Seq
 		}
@@ -754,19 +760,26 @@ func runEdge(ctx context.Context, id string, b bus.Bus, servePerEpoch int, slaEp
 		var eligible float64
 		for _, q := range inbox {
 			ids = append(ids, q.eventID)
-			// Work that arrived during the epoch being read has not yet had a
-			// service opportunity: the next boundary is where it would be
-			// served. Counting it as unserved charges the branch for the fact
-			// that the run ended, which is a property of the horizon and not of
-			// the action.
-			if q.arrivedK < currentEpoch {
+			// Work belonging to the epoch being read has not yet had a service
+			// opportunity: the next boundary is where it would be served.
+			// Counting it as unserved charges the branch for the fact that the
+			// run ended, which is a property of the horizon and not of the
+			// action. The gateway excludes the same events from the
+			// denominator, by the same rule on the same field.
+			if q.tick < currentEpoch {
 				eligible++
 			}
 		}
 		obs := map[string]float64{
 			"served": served, "sla_violations": violations,
 			"wait_sum_epochs": waitSum, "wait_max_epochs": waitMax,
-			"unserved":          float64(len(inbox)),
+			"unserved": float64(len(inbox)),
+			// The eligible count was computed and never reported: the objective
+			// silently fell back to the raw inbox length, which charged the
+			// final epoch's arrivals as failures while the gateway excluded
+			// them from the denominator. A healthy branch scored Y = 0.125 with
+			// zero SLA violations.
+			"unserved_eligible": eligible,
 			"lat_ms_sum":        latSum,
 			"lat_ms_max":        latMax,
 			"lat_ms_violations": latViolations,

@@ -173,10 +173,17 @@ run_branch() {
   # binary that does not report it sends the analysis silently back to the
   # edge-side denominator, which scores an action that refuses work only on the
   # part it let through. Checked on the first branch, not after 900.
-  if ! python3 -c "import json,sys; o=json.load(open(sys.argv[1])).get('observed') or {}; sys.exit(0 if any(k.endswith('/ingress_accepted') for k in o) else 1)" "$dir/outcome.json"; then
-    echo "FAIL: $branch recorded no gateway ingress_accepted."
-    echo "      bin/csc-node predates protocol 0.5. Run: make build TAGS=nats"
-    echo "no gateway denominator in observed" >"$dir/REFUSED.txt"
+  missing="$(python3 -c "
+import json,sys
+o = json.load(open(sys.argv[1])).get('observed') or {}
+need = ('/ingress_accepted', '/unserved_eligible', '/served', '/lat_ms_violations')
+print(' '.join(s.lstrip('/') for s in need
+                if not any(k.endswith(s) for k in o)))" "$dir/outcome.json")"
+  if [ -n "$missing" ]; then
+    echo "FAIL: $branch records no $missing."
+    echo "      Every observable the objective reads must be present, or the"
+    echo "      analysis substitutes a different one. Run: make build TAGS=nats"
+    echo "missing observables: $missing" >"$dir/REFUSED.txt"
     return 1
   fi
   echo "ok $branch"

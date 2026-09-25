@@ -67,11 +67,18 @@ def dispersion(values):
 
 def terms(observed, latency_max_epochs, latency_max_ms):
     served = sum(v for k, v in observed.items() if k.endswith("/served"))
-    unserved = sum(v for k, v in observed.items() if k.endswith("/unserved_eligible"))
     if not any(k.endswith("/unserved_eligible") for k in observed):
-        # Older branches: fall back, and say so rather than silently mixing two
-        # definitions of the denominator.
-        unserved = sum(v for k, v in observed.items() if k.endswith("/unserved"))
+        # This fallback used to exist and was silent. It cost two full 900-branch
+        # runs: the edge computed the eligible count and never reported it, so
+        # every branch was scored on the raw inbox length while the gateway
+        # excluded the same events from the denominator. A healthy branch with
+        # zero SLA violations scored Y = 0.125. A missing observable is now a
+        # refusal, not a substitution.
+        raise ValueError(
+            "no unserved_eligible in observed: the edge binary does not report "
+            "the service-opportunity rule, so the numerator and the denominator "
+            "would cover different sets of events. Rebuild with protocol 0.7.")
+    unserved = sum(v for k, v in observed.items() if k.endswith("/unserved_eligible"))
     violations = sum(v for k, v in observed.items() if k.endswith("/sla_violations"))
     wait_sum = sum(v for k, v in observed.items() if k.endswith("/wait_sum_epochs"))
 
@@ -98,6 +105,15 @@ def terms(observed, latency_max_epochs, latency_max_ms):
     # Work the branch accepted and never delivered: queued at the edge, or
     # still sitting in the gateway's admission backlog when the run ended.
     undelivered = unserved + residual
+
+    # The numerator and the denominator must cover the same events. If served
+    # plus undelivered exceeds what the gateway says it accepted, they do not,
+    # and every ratio built on them is meaningless.
+    if gateway_denominator and served + undelivered > offered + 1e-9:
+        raise ValueError(
+            f"accounting is inconsistent: served {served:.0f} + undelivered "
+            f"{undelivered:.0f} exceeds offered {offered:.0f}. The edge and the "
+            "gateway are scoring different sets of events.")
 
     # Undelivered work is counted as violating: it has already waited past the
     # budget and nothing in the branch will serve it.
