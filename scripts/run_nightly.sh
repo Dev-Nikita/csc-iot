@@ -79,6 +79,13 @@ setsid bash -c "
     rc=\$?
     echo '=== matrix finished, exit' \$rc \$(date -u +%FT%TZ)
     if [ \$rc -eq 0 ]; then
+      # The measurement is audited before it is interpreted. Three matrices
+      # were discarded to defects that were visible in the recorded numbers
+      # and that nothing looked at.
+      echo '=== accounting audit'
+      python3 -u analysis/audit_accounting.py 'data/raw/$STACK_ID/$NAME' \
+        --healthy-anchors a01,a02,a03 --sla-ms \${SLA_MS:-750} || \
+        echo '=== AUDIT FAILED: the numbers below are not reportable'
       echo '=== analysis'
       python3 -u analysis/jobs.py 'data/raw/$STACK_ID/$NAME' \
         --latency-max-epochs 14 --latency-max-ms 3000 --allow-partial-cost \
