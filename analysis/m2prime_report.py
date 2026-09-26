@@ -246,12 +246,16 @@ def main():
         return 1
     eta = quantile(within, 0.95)
 
+    # Contrasts are formed inside a scenario. Across scenarios they would
+    # compare two different systems.
+    cell_keys = sorted({(sc, a) for sc, a, _ in medians})
     contrasts = []
-    for anchor in sorted(by_anchor):
+    for sc, anchor in cell_keys:
         for i in range(len(actions)):
             for j in range(i + 1, len(actions)):
-                contrasts.append(abs(medians[(anchor, actions[i])] -
-                                     medians[(anchor, actions[j])]))
+                left, right = (sc, anchor, actions[i]), (sc, anchor, actions[j])
+                if left in medians and right in medians:
+                    contrasts.append(abs(medians[left] - medians[right]))
     signal = quantile(contrasts, 0.5) if contrasts else 0.0
     p_resolvable = (sum(x > eta for x in contrasts) / len(contrasts)) if contrasts else 0.0
     if eta == 0 and signal > 0:
@@ -270,8 +274,9 @@ def main():
     for action in actions:
         if action == "NO_OP":
             continue
-        effects = [medians[(a, action)] - medians[(a, "NO_OP")]
-                   for a in sorted(by_anchor) if (a, "NO_OP") in medians]
+        effects = [medians[(sc, a, action)] - medians[(sc, a, "NO_OP")]
+                   for sc, a in cell_keys
+                   if (sc, a, "NO_OP") in medians and (sc, a, action) in medians]
         if effects:
             print(f"  {action} - NO_OP median effect = {quantile(effects, 0.5):+.6g}")
     print("\nNOTE: J_m2_diag = processed - admission_backlog is a branch-mechanics")

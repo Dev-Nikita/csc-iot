@@ -48,7 +48,7 @@ def main():
         return 2
     cells = collections.defaultdict(list)
     for r in rows:
-        cells[(r["anchor"], r["action"])].append(r)
+        cells[(r.get("scenario", "s00"), r["anchor"], r["action"])].append(r)
 
     print(f"{len(rows)} branches, {len(cells)} cells\n")
     print("DISPERSION BY TERM (Q0.95 of within-cell pairwise |delta|, in J units)")

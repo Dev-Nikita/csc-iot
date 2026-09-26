@@ -17,6 +17,8 @@ import math
 import os
 import sys
 
+import branches
+
 PREFIX = "lat_hist_ms_"
 RULE_QUANTILE = 0.99
 ROUND_MS = 50
@@ -25,16 +27,33 @@ ROUND_MS = 50
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("root", help="data/raw/<stack>/<experiment>")
-    ap.add_argument("--healthy-anchors", required=True,
-                    help="comma list, e.g. a01,a02,a03 -- the declared partition")
+    ap.add_argument("--healthy-anchors", default="",
+                    help="pre-0.9 runs only: the declared anchor partition. From "
+                         "0.9 the pre-fault regime is a property of each branch "
+                         "and this is ignored.")
+    ap.add_argument("--workload", type=int,
+                    help="refuse any branch whose workload level differs; the "
+                         "budget is calibrated per level")
     args = ap.parse_args()
-    healthy = set(args.healthy_anchors.split(","))
+    legacy_healthy = set(args.healthy_anchors.split(",")) if args.healthy_anchors else set()
 
+    matrix = branches.read_matrix(args.root)
+    pattern = "s*-a*" if glob.glob(os.path.join(args.root, "s*-a*")) else "a*"
     hist = {}
-    branches = 0
-    for d in sorted(glob.glob(os.path.join(args.root, "a*"))):
-        anchor, action, _ = os.path.basename(d).split("-")
-        if action != "NO_OP" or anchor not in healthy:
+    count = 0
+    loads = set()
+    for d in sorted(glob.glob(os.path.join(args.root, pattern))):
+        rec = branches.read(d, matrix)
+        if rec["action"] != "NO_OP":
+            continue
+        # "Healthy" means the branch spans no fault at all, which the regime says.
+        if rec.get("legacy") and legacy_healthy:
+            if f"a{rec['anchor']:02d}" not in legacy_healthy:
+                continue
+        elif rec["regime"] != "pre-fault":
+            continue
+        loads.add(rec["workload_level"])
+        if args.workload is not None and rec["workload_level"] != args.workload:
             continue
         with open(os.path.join(d, "outcome.json")) as fh:
             obs = json.load(fh).get("observed") or {}
@@ -49,10 +68,14 @@ def main():
             print(f"REFUSED: {d} has no per-event latency histogram; the "
                   "binary predates it", file=sys.stderr)
             return 2
-        branches += 1
+        count += 1
 
-    if not branches:
-        print("REFUSED: no healthy NO_OP branches under this root", file=sys.stderr)
+    if not count:
+        print("REFUSED: no pre-fault NO_OP branches under this root", file=sys.stderr)
+        return 2
+    if args.workload is None and len(loads) > 1:
+        print(f"REFUSED: this root mixes workload levels {sorted(loads)}. The "
+              "budget is calibrated per level; pass --workload.", file=sys.stderr)
         return 2
 
     total = sum(hist.values())
@@ -69,7 +92,9 @@ def main():
     def above(ms):
         return sum(v for b, v in hist.items() if b >= ms) / total
 
-    print(f"HEALTHY NO_OP per-event latency: {branches} branches, {total:.0f} events")
+    lvl = args.workload if args.workload is not None else (sorted(loads)[0] if loads else "?")
+    print(f"PRE-FAULT NO_OP per-event latency at workload {lvl}: "
+          f"{count} branches, {total:.0f} events")
     for q in (0.50, 0.90, 0.95, 0.99, 0.999):
         print(f"  p{q*100:g}  <= {quantile(q):5d} ms")
     print(f"  max bin     {bins[-1]}-{bins[-1]+25} ms")
