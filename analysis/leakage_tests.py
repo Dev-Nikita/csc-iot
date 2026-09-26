@@ -133,8 +133,17 @@ def main():
         print("  training mean. Held out this way the task is not learnable at all,")
         print("  so the comparison below says nothing about the telemetry itself.")
 
+    # A model with no skill cannot be shown to be reading the wrong thing.
+    # Reporting FAIL here would announce leakage when the real finding is that
+    # there is no signal to leak, which is a different problem with a different
+    # fix: more scenarios, not fewer features.
+    no_skill = full >= constant
     print("\nTEST: time-only baseline")
-    if time_only <= 0:
+    if no_skill:
+        print("  INCONCLUSIVE: the telemetry model does not beat the training")
+        print("  mean, so there is no skill whose source could be attributed.")
+        ok_time = None
+    elif time_only <= 0:
         print("  INCONCLUSIVE: the time-only model has zero error")
         ok_time = False
     else:
@@ -147,7 +156,12 @@ def main():
               "being made to read the system's state")
 
     print("\nTEST: permutation across scenarios")
-    if len(scenarios) < 2:
+    if no_skill:
+        print("  INCONCLUSIVE: permuting the inputs of a model that has no skill")
+        print("  cannot make it worse. This test needs a model that predicts")
+        print("  something first.")
+        ok_perm = None
+    elif len(scenarios) < 2:
         print("  REFUSED: one scenario. There is nothing to permute between, and")
         print("  a test that cannot fail must not report success. Re-run this on")
         print("  a multi-scenario matrix.")
@@ -165,10 +179,15 @@ def main():
               "not coming from the telemetry")
 
     failed = (ok_time is False) or (ok_perm is False)
-    if ok_perm is None:
-        print("\nOne test refused. The run is not cleared for modelling.")
+    if failed:
+        print("\nLeakage detected. The dataset is not cleared for modelling.")
+        return 1
+    if ok_time is None or ok_perm is None:
+        print("\nNot cleared, and not because of leakage: a test could not be")
+        print("run. Fix what the message above names before training anything.")
         return 2
-    return 1 if failed else 0
+    print("\nBoth tests pass: skill exists and comes from the telemetry.")
+    return 0
 
 
 if __name__ == "__main__":

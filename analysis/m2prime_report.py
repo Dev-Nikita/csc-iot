@@ -180,16 +180,44 @@ def main():
         print("\n".join("  " + x for x in anchor_errors[:30]), file=sys.stderr)
         return 1
 
-    by_anchor = collections.defaultdict(list)
+    # Prefix identity is a claim about ONE cell: the repeats of an action at an
+    # anchor within a scenario must reconstruct the same state. Grouped by anchor
+    # alone it also demanded that different scenarios agree, which they must not
+    # -- a different fault produces a different prefix by design. On the
+    # three-scenario pilot that showed up as "distinct=3" and failed a correct
+    # run. The grouping is per (scenario, anchor).
+    by_cell = collections.defaultdict(list)
     for rec in records:
-        by_anchor[rec["anchor_name"]].append(rec["anchor"]["hash"])
-    print("PREFIX REPRODUCIBILITY")
+        by_cell[(rec["scenario"], rec["anchor_name"])].append(rec["anchor"]["hash"])
+    print("PREFIX REPRODUCIBILITY (per scenario and anchor)")
     bad_prefix = False
-    for anchor in sorted(by_anchor):
-        hashes = by_anchor[anchor]
+    for key in sorted(by_cell):
+        hashes = by_cell[key]
         distinct = len(set(hashes))
-        print(f"  {anchor}: n={len(hashes)} distinct={distinct}")
+        label = "-".join(key) if key[0] != "s00" else key[1]
+        print(f"  {label}: n={len(hashes)} distinct={distinct}")
         bad_prefix = bad_prefix or distinct != 1
+    # Different scenarios at the same anchor MUST differ, or the factor did not
+    # reach the system. Checked explicitly rather than assumed.
+    scenarios = {k[0] for k in by_cell}
+    if len(scenarios) > 1:
+        collisions = []
+        for anchor in sorted({k[1] for k in by_cell}):
+            per = {sc: set(by_cell[(sc, anchor)]) for sc in scenarios
+                   if (sc, anchor) in by_cell}
+            seen = {}
+            for sc, hs in per.items():
+                for h in hs:
+                    if h in seen:
+                        collisions.append(f"{anchor}: {seen[h]} and {sc} share a prefix hash")
+                    seen[h] = sc
+        if collisions:
+            print("FAIL: scenarios produced identical prefixes, so the fault "
+                  "factor did not reach the system", file=sys.stderr)
+            print("\n".join("  " + c for c in collisions[:10]), file=sys.stderr)
+            return 1
+        print(f"  {len(scenarios)} scenarios, and no two share a prefix at any "
+              f"anchor: the factor reached the system")
     if bad_prefix:
         print("FAIL: branches did not start from exact common anchors", file=sys.stderr)
         return 1
@@ -207,7 +235,8 @@ def main():
 
     cells = collections.defaultdict(list)
     for rec in records:
-        cells[(rec["anchor_name"], rec["action"])].append(j_m2_diag(rec["outcome"]))
+        cells[(rec["scenario"], rec["anchor_name"], rec["action"])].append(
+            j_m2_diag(rec["outcome"]))
     within, medians = [], {}
     for cell, values in sorted(cells.items()):
         within.extend(pairwise_abs(values))
