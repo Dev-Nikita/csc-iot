@@ -95,9 +95,16 @@ def expected_cells(root):
     if os.path.exists(path):
         scenarios = [s["scenario_id"] for s in read_json(path)["scenarios"]]
     prefixes = [f"{sid}-" for sid in scenarios] or [""]
+    # The anchors come from the recorded spec, which may be a list rather than a
+    # range: the design needs anchors reaching past the fault onsets.
+    spec = str(meta.get("anchor_spec", ""))
+    if "," in spec:
+        anchor_nums = [int(x) for x in spec.split(",") if x.strip()]
+    else:
+        anchor_nums = list(range(1, int(meta["anchors"]) + 1))
     expected = {f"{pre}a{a:02d}-{action}-r{repeat:02d}"
                 for pre in prefixes
-                for a in range(1, int(meta["anchors"]) + 1)
+                for a in anchor_nums
                 for action in actions
                 for repeat in range(1, int(meta["repeats"]) + 1)}
     return meta, expected, actions

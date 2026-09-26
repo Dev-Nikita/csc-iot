@@ -1,0 +1,217 @@
+{
+  "master_seed": 20260927,
+  "declared_levels": {
+    "onset_range": [
+      8,
+      24
+    ],
+    "severity_levels": [
+      40,
+      60,
+      90
+    ],
+    "workload_levels": [
+      60,
+      100,
+      140
+    ],
+    "mechanisms": [
+      "D1"
+    ]
+  },
+  "scenarios": [
+    {
+      "scenario_id": "s01",
+      "fault_type": "D1",
+      "fault_onset": 15,
+      "fault_severity": 40,
+      "workload_level": 100,
+      "seed": 1044777460
+    },
+    {
+      "scenario_id": "s02",
+      "fault_type": "D1",
+      "fault_onset": 18,
+      "fault_severity": 60,
+      "workload_level": 100,
+      "seed": 2130833767
+    },
+    {
+      "scenario_id": "s03",
+      "fault_type": "D1",
+      "fault_onset": 11,
+      "fault_severity": 90,
+      "workload_level": 100,
+      "seed": 153108603
+    },
+    {
+      "scenario_id": "s04",
+      "fault_type": "D1",
+      "fault_onset": 10,
+      "fault_severity": 40,
+      "workload_level": 100,
+      "seed": 1063248887
+    },
+    {
+      "scenario_id": "s05",
+      "fault_type": "D1",
+      "fault_onset": 20,
+      "fault_severity": 60,
+      "workload_level": 100,
+      "seed": 2072179735
+    },
+    {
+      "scenario_id": "s06",
+      "fault_type": "D1",
+      "fault_onset": 19,
+      "fault_severity": 90,
+      "workload_level": 100,
+      "seed": 1463757145
+    },
+    {
+      "scenario_id": "s07",
+      "fault_type": "D1",
+      "fault_onset": 11,
+      "fault_severity": 40,
+      "workload_level": 100,
+      "seed": 667828937
+    },
+    {
+      "scenario_id": "s08",
+      "fault_type": "D1",
+      "fault_onset": 10,
+      "fault_severity": 60,
+      "workload_level": 100,
+      "seed": 397369364
+    },
+    {
+      "scenario_id": "s09",
+      "fault_type": "D1",
+      "fault_onset": 22,
+      "fault_severity": 90,
+      "workload_level": 100,
+      "seed": 628129818
+    },
+    {
+      "scenario_id": "s10",
+      "fault_type": "D1",
+      "fault_onset": 16,
+      "fault_severity": 40,
+      "workload_level": 100,
+      "seed": 15159540
+    },
+    {
+      "scenario_id": "s11",
+      "fault_type": "D1",
+      "fault_onset": 12,
+      "fault_severity": 60,
+      "workload_level": 100,
+      "seed": 754282975
+    },
+    {
+      "scenario_id": "s12",
+      "fault_type": "D1",
+      "fault_onset": 14,
+      "fault_severity": 90,
+      "workload_level": 100,
+      "seed": 1367474928
+    },
+    {
+      "scenario_id": "s13",
+      "fault_type": "D1",
+      "fault_onset": 8,
+      "fault_severity": 40,
+      "workload_level": 100,
+      "seed": 1880898134
+    },
+    {
+      "scenario_id": "s14",
+      "fault_type": "D1",
+      "fault_onset": 24,
+      "fault_severity": 60,
+      "workload_level": 100,
+      "seed": 305948438
+    },
+    {
+      "scenario_id": "s15",
+      "fault_type": "D1",
+      "fault_onset": 24,
+      "fault_severity": 90,
+      "workload_level": 100,
+      "seed": 1933717602
+    },
+    {
+      "scenario_id": "s16",
+      "fault_type": "D1",
+      "fault_onset": 10,
+      "fault_severity": 40,
+      "workload_level": 100,
+      "seed": 606396287
+    },
+    {
+      "scenario_id": "s17",
+      "fault_type": "D1",
+      "fault_onset": 14,
+      "fault_severity": 60,
+      "workload_level": 100,
+      "seed": 1333520236
+    },
+    {
+      "scenario_id": "s18",
+      "fault_type": "D1",
+      "fault_onset": 21,
+      "fault_severity": 90,
+      "workload_level": 100,
+      "seed": 241661619
+    },
+    {
+      "scenario_id": "s19",
+      "fault_type": "D1",
+      "fault_onset": 21,
+      "fault_severity": 40,
+      "workload_level": 100,
+      "seed": 253226506
+    },
+    {
+      "scenario_id": "s20",
+      "fault_type": "D1",
+      "fault_onset": 9,
+      "fault_severity": 60,
+      "workload_level": 100,
+      "seed": 1907695084
+    },
+    {
+      "scenario_id": "s21",
+      "fault_type": "D1",
+      "fault_onset": 9,
+      "fault_severity": 90,
+      "workload_level": 100,
+      "seed": 1494828303
+    },
+    {
+      "scenario_id": "s22",
+      "fault_type": "D1",
+      "fault_onset": 20,
+      "fault_severity": 40,
+      "workload_level": 100,
+      "seed": 79953195
+    },
+    {
+      "scenario_id": "s23",
+      "fault_type": "D1",
+      "fault_onset": 12,
+      "fault_severity": 60,
+      "workload_level": 100,
+      "seed": 1929472367
+    },
+    {
+      "scenario_id": "s24",
+      "fault_type": "D1",
+      "fault_onset": 16,
+      "fault_severity": 90,
+      "workload_level": 100,
+      "seed": 1300939110
+    }
+  ],
+  "scenarios_hash": "9e93485d5005bfb5"
+}
