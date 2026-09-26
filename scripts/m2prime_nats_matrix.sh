@@ -246,6 +246,31 @@ MANIFEST
   # binary that does not report it sends the analysis silently back to the
   # edge-side denominator, which scores an action that refuses work only on the
   # part it let through. Checked on the first branch, not after 900.
+  # The fault must reach the container. It travels through compose variable
+  # substitution, which can fall back to its defaults without saying so, and
+  # then every branch would run the same fault while every manifest claimed a
+  # different one. Checked on every branch: it costs nothing and the failure it
+  # catches would invalidate the whole design.
+  if ! python3 - "$dir" <<'FAULTCHK'
+import json, sys, os
+d = sys.argv[1]
+want = json.load(open(os.path.join(d, "scenario.json")))
+cap = json.load(open(os.path.join(d, "anchor.json")))["state"]["edge_capacity"]
+ran = (int(cap.get("edge00/degrade_at_epoch", -1)),
+       int(cap.get("edge00/degraded_serve", -1)))
+exp = (want["fault_onset"], want["fault_severity"])
+if ran != exp:
+    print(f"declared fault {exp} but the node ran {ran}", file=sys.stderr)
+    raise SystemExit(1)
+FAULTCHK
+  then
+    echo "FAIL: $branch ran a different fault than its scenario declares."
+    echo "      The parameters did not reach the container: check that"
+    echo "      $COMPOSE_FILE substitutes DEGRADE_AT and DEGRADED_SERVE."
+    echo "fault did not reach the container" >"$dir/REFUSED.txt"
+    return 1
+  fi
+
   missing="$(python3 -c "
 import json,sys
 o = json.load(open(sys.argv[1])).get('observed') or {}
