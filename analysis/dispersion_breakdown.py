@@ -72,7 +72,7 @@ def main():
     print("\nIS Y DISCRETE? (distinct values per cell, and the smallest gap)")
     steps = []
     discrete_cells = 0
-    for (a, act), v in sorted(cells.items()):
+    for (_sc, a, act), v in sorted(cells.items()):
         vals = sorted({round(float(r["Y_ms"]), 6) for r in v})
         if len(vals) > 1:
             gaps = [vals[i + 1] - vals[i] for i in range(len(vals) - 1)]
