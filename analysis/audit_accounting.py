@@ -78,6 +78,31 @@ def audit(path, rec):
     # 6. Only a throttled branch defers work.
     if action != "THROTTLE" and deferred > 0:
         bad.append(f"{action} deferred {deferred:.0f} events at the gateway")
+    # 7a. The fault the node actually ran must be the fault the scenario
+    #     declared. The parameters reach the container through compose variable
+    #     substitution, which can silently fall back to its defaults: every
+    #     branch would then carry the same fault while every manifest claimed
+    #     otherwise, and the matrix would look like a factorial design without
+    #     being one. This is the cheapest possible check against the most
+    #     expensive possible mistake.
+    if not rec.get("legacy"):
+        try:
+            with open(os.path.join(path, "anchor.json")) as fh:
+                cap = json.load(fh)["state"]["edge_capacity"]
+        except (OSError, KeyError):
+            cap = None
+        if cap is None:
+            bad.append("no edge_capacity in the anchor state to verify the fault")
+        else:
+            ran_onset = int(cap.get("edge00/degrade_at_epoch", -1))
+            ran_sev = int(cap.get("edge00/degraded_serve", -1))
+            if ran_onset != rec["fault_onset"]:
+                bad.append(f"declared onset {rec['fault_onset']} but the node ran "
+                           f"{ran_onset}")
+            if ran_sev != rec["fault_severity"]:
+                bad.append(f"declared severity {rec['fault_severity']} but the node "
+                           f"ran {ran_sev}")
+
     # 7. A healthy no-action branch is not allowed to fail. If it does, the
     #    budget or the accounting is wrong, not the system.
     # A pre-fault branch spans no fault at all: nothing is wrong and nothing
@@ -115,6 +140,31 @@ def main():
         bad = audit(d, rec)
         if bad:
             failed[os.path.basename(d)] = bad
+
+    # A cell's repeats are replays of one prefix, and the actions compared at an
+    # anchor must share that prefix. If the fault differed across them, the
+    # replay band would measure the scenario and the action contrast would
+    # compare two different systems.
+    cell_faults = {}
+    for d in dirs:
+        try:
+            rec = branches.read(d, matrix)
+        except ValueError:
+            continue
+        key = (rec["scenario_id"], rec["anchor"])
+        sig = (rec["fault_type"], rec["fault_onset"], rec["fault_severity"],
+               rec["workload_level"], rec["seed"])
+        cell_faults.setdefault(key, {}).setdefault(sig, []).append(
+            os.path.basename(d))
+    split_cells = {k: v for k, v in cell_faults.items() if len(v) > 1}
+    if split_cells:
+        print(f"REFUSED: {len(split_cells)} anchor cell(s) contain more than one "
+              "scenario. Repeats are replays of one prefix and the actions "
+              "compared at an anchor must share it.", file=sys.stderr)
+        for k, v in sorted(split_cells)[:3]:
+            print(f"  {k}: {len(v)} distinct fault settings, e.g. "
+                  f"{[b[0] for b in v.values()]}", file=sys.stderr)
+        return 1
 
     print(f"ACCOUNTING AUDIT: {len(dirs)} branches, {len(failed)} with violations")
     if not failed:

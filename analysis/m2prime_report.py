@@ -52,14 +52,28 @@ def read_json(path):
 
 def load(root):
     records = []
-    for directory in sorted(glob.glob(os.path.join(root, "a*-*-r*"))):
+    patterns = ("s*-a*-*-r*", "a*-*-r*")
+    dirs = []
+    for pat in patterns:
+        dirs = sorted(glob.glob(os.path.join(root, pat)))
+        if dirs:
+            break
+    for directory in dirs:
         name = os.path.basename(directory)
-        try:
-            anchor, action, repeat = name.split("-")
-        except ValueError:
+        parts = name.split("-")
+        # From protocol 0.9 a branch is scoped by its scenario. The completeness
+        # check read three-part names only, so a complete 288-branch pilot was
+        # reported as expected=96 actual=0 -- the run was fine and the verifier
+        # was a version behind. A checker that cannot see the branches it is
+        # checking must not be the thing that fails a matrix.
+        if len(parts) == 4:
+            scenario, anchor, action, repeat = parts
+        elif len(parts) == 3:
+            scenario, (anchor, action, repeat) = "s00", parts
+        else:
             continue
-        rec = {"branch_name": name, "anchor_name": anchor, "action": action,
-               "repeat": repeat, "dir": directory,
+        rec = {"branch_name": name, "scenario": scenario, "anchor_name": anchor,
+               "action": action, "repeat": repeat, "dir": directory,
                "refused": os.path.exists(os.path.join(directory, "REFUSED.txt"))}
         for kind in ("anchor", "outcome", "branch"):
             path = os.path.join(directory, kind + ".json")
@@ -74,7 +88,15 @@ def expected_cells(root):
     actions = meta["actions"]
     if isinstance(actions, str):
         actions = actions.split()
-    expected = {f"a{a:02d}-{action}-r{repeat:02d}"
+    # The scenario ids come from the recorded set, not from a count, so a
+    # mismatch between the declared scenarios and what ran is itself visible.
+    scenarios = []
+    path = os.path.join(root, "scenarios.json")
+    if os.path.exists(path):
+        scenarios = [s["scenario_id"] for s in read_json(path)["scenarios"]]
+    prefixes = [f"{sid}-" for sid in scenarios] or [""]
+    expected = {f"{pre}a{a:02d}-{action}-r{repeat:02d}"
+                for pre in prefixes
                 for a in range(1, int(meta["anchors"]) + 1)
                 for action in actions
                 for repeat in range(1, int(meta["repeats"]) + 1)}
