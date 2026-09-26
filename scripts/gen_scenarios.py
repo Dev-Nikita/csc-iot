@@ -36,10 +36,16 @@ def draw(master_seed, n, mechanisms, workloads):
     rng = random.Random(master_seed)
     out = []
     for i in range(1, n + 1):
-        mech = mechanisms[(i - 1) % len(mechanisms)]  # balanced, not random
+        # Mechanism, severity and workload are assigned round-robin rather than
+        # drawn. A random draw of 24 scenarios gave 12 at the mildest severity
+        # and 4 at the strongest, which leaves the parameter-shift split of B5
+        # with too few scenarios on the held-out side to say anything. Onset
+        # stays random: it is the factor whose whole purpose is to stop the
+        # anchor index from indexing the fault's age.
+        mech = mechanisms[(i - 1) % len(mechanisms)]
         onset = rng.randint(*ONSET_RANGE)
-        sev = 0 if mech == "D3" else rng.choice(SEVERITY_LEVELS)
-        load = rng.choice(workloads)
+        sev = 0 if mech == "D3" else SEVERITY_LEVELS[(i - 1) % len(SEVERITY_LEVELS)]
+        load = workloads[(i - 1) % len(workloads)]
         seed = rng.randrange(1, 2**31 - 1)
         out.append({
             "scenario_id": f"s{i:02d}",

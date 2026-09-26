@@ -9,6 +9,12 @@ BIN="${BIN:-bin}"
 STACK_ID="${STACK_ID:-}"
 EXPERIMENT="${EXPERIMENT:-m2prime-nats}"
 ANCHORS="${ANCHORS:-30}"
+# An anchor LIST, when the anchors must reach past the fault onsets. With onsets
+# drawn from 8-24, anchors 1..8 put 115 of 192 scenario-anchor pairs before the
+# fault and exactly 1 after it, so the post-onset regime -- where the value of
+# intervening decays with delay -- would be absent from the design. A spread
+# list covers all three regimes at the same branch count.
+ANCHOR_LIST="${ANCHOR_LIST:-}"
 REPEATS="${REPEATS:-10}"
 ACTIONS="${ACTIONS:-NO_OP THROTTLE REROUTE}"
 HORIZON="${HORIZON:-3}"
@@ -103,13 +109,21 @@ fi
 
 python3 check_reportable_stack.py --expect-stack-id "$STACK_ID" >/dev/null
 
+if [ -n "$ANCHOR_LIST" ]; then
+  ANCHOR_SPEC="$(echo "$ANCHOR_LIST" | tr -d ' ')"
+  ANCHOR_SEQ="$(echo "$ANCHOR_SPEC" | tr ',' ' ')"
+else
+  ANCHOR_SPEC="1..$ANCHORS"
+  ANCHOR_SEQ="$(seq 1 "$ANCHORS")"
+fi
+ANCHOR_COUNT="$(echo "$ANCHOR_SEQ" | wc -w)"
 SCENARIOS_HASH="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["scenarios_hash"])' "$SCENARIOS")"
 SCENARIO_COUNT="$(python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))["scenarios"]))' "$SCENARIOS")"
 OUT="$ROOT/$STACK_ID/$EXPERIMENT"
 [ ! -e "$OUT" ] || { echo "FAIL: $OUT exists; experiments are append-only"; exit 2; }
 mkdir -p "$OUT"
 CONFIG_HASH="$(python3 -c 'import hashlib,sys; print(hashlib.sha256(sys.argv[1].encode()).hexdigest()[:16])' \
-  "$ANCHORS|$REPEATS|$ACTIONS|$HORIZON|$PERIOD|$EMIT_SPREAD|$SEED|$NETEM_SEED|$SCENARIOS_HASH")"
+  "$ANCHOR_SPEC|$REPEATS|$ACTIONS|$HORIZON|$PERIOD|$EMIT_SPREAD|$SEED|$NETEM_SEED|$SCENARIOS_HASH")"
 
 cat > "$OUT/matrix.json" <<JSON
 {
@@ -118,6 +132,8 @@ cat > "$OUT/matrix.json" <<JSON
   "git_commit": "$GIT_COMMIT",
   "config_hash": "$CONFIG_HASH",
   "anchors": $ANCHORS,
+  "anchor_spec": "$ANCHOR_SPEC",
+  "anchor_count": $ANCHOR_COUNT,
   "repeats": $REPEATS,
   "actions": "$ACTIONS",
   "horizon": $HORIZON,
@@ -288,7 +304,7 @@ print(' '.join(s.lstrip('/') for s in need
 }
 
 for sidx in $(seq 1 "$SCENARIO_COUNT"); do
-  for anchor in $(seq 1 "$ANCHORS"); do
+  for anchor in $ANCHOR_SEQ; do
     for action in $ACTIONS; do
       for repeat in $(seq 1 "$REPEATS"); do
         if ! run_branch "$sidx" "$anchor" "$action" "$repeat"; then
