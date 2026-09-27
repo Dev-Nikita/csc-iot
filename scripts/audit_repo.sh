@@ -77,6 +77,12 @@ chk "a failed accounting audit stops the analysis" grep -q 'audit-failed' script
 chk "severity and workload advance on different strides" \
   grep -q 'len(SEVERITY_LEVELS)) % len(workloads)' scripts/gen_scenarios.py
 chk "the generator refuses aliased factors"       grep -q '_refuse_aliased_factors' scripts/gen_scenarios.py
+# Sized as a leftover, the calibration split gives n=1, tau_hat=-inf, and a
+# controller that abstains everywhere -- an artefact that reads as a finding.
+chk "calibration runs are allocated first, not left over" \
+  grep -q 'cal_runs=CAL_RUNS' analysis/predictor.py
+chk "the calibration size is derived from equation 9" \
+  grep -q 'def min_calibration_runs' analysis/predictor.py
 
 # Protocol 0.5-0.9. Each of these was written after a defect that invalidated a
 # run, and each is here because a stale copy of the file would silently undo it.
