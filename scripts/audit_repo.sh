@@ -49,8 +49,29 @@ chk "branch actions require acknowledgements"     grep -q 'SubjectControllerActi
 chk "reportable branches recreate topology"       grep -q 'force-recreate' scripts/m2prime_nats_matrix.sh
 chk "local matrix refuses to impersonate NATS"    grep -q 'local stdlib-TCP diagnostic runner' scripts/m2prime_matrix.sh
 chk "M2 diagnostic is not named J_obs"            grep -q 'never the manuscript.*J_obs' analysis/m2prime_report.py
-check "negative transport tests excluded from the nats build" \
-  'head -1 internal/bus/factory_notags_test.go | grep -q "go:build !nats"'
+# Called the helper by the wrong name and passed the test as one quoted string.
+# Bash reported 'check: command not found', the script does not run with -e, and
+# the failure counter was never touched -- so this line printed an error after
+# REPO AUDIT OK and could never fail. A guard that cannot fail is not a guard.
+chk "negative transport tests excluded from the nats build" \
+  bash -c 'head -1 internal/bus/factory_notags_test.go | grep -q "go:build !nats"'
+
+# Protocol 0.5-0.9. Each of these was written after a defect that invalidated a
+# run, and each is here because a stale copy of the file would silently undo it.
+chk "the objective refuses a missing observable"   grep -q 'no unserved_eligible in observed' analysis/jobs.py
+chk "the objective refuses inconsistent accounting" grep -q 'accounting is inconsistent' analysis/jobs.py
+chk "the edge reports eligible unserved work"      grep -q '"unserved_eligible": eligible' cmd/csc-node/main.go
+chk "eligibility is taken from the event epoch"    grep -q 'q.tick < currentEpoch' cmd/csc-node/main.go
+chk "the gateway reports what it accepted"         grep -q '"ingress_accepted":' cmd/csc-node/main.go
+chk "every edge reads the frozen budget"           bash -c '! grep -o "\\-sla-ms\", \"[^\"]*\"" docker-compose.nats.yml | sort -u | grep -qv SLA_MS'
+chk "the fault is a scenario factor"               grep -q 'DEGRADE_AT' docker-compose.nats.yml
+chk "the runner verifies the fault reached the container" grep -q 'ran a different fault than its scenario declares' scripts/m2prime_nats_matrix.sh
+chk "the audit bounds served work by the declared severity" grep -q 'declared degradation had no effect' analysis/audit_accounting.py
+chk "the budget is looked up per workload level"   test -f configs/budgets.json
+chk "features exclude the fault schedule"          grep -q 'FORBIDDEN_SUBSTRINGS' analysis/features.py
+chk "a time-only baseline exists"                  grep -q 'TIME_ONLY' analysis/features.py
+chk "leakage folds are held out by design point"   grep -q 'held out by DESIGN POINT' analysis/leakage_tests.py
+chk "pre-fault needs a strict inequality"          grep -q 'onset > anchor + horizon' analysis/branches.py
 echo
 if [ "$fail" -eq 0 ]; then echo "REPO AUDIT OK"; else
   echo "REPO AUDIT FAILED -- a fixed file has probably been overwritten by an older copy."; fi
