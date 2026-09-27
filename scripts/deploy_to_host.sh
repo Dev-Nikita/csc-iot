@@ -46,7 +46,12 @@ rsync -e "ssh -o IdentitiesOnly=yes -i $SSH_IDENTITY" -avz --delete \
 
 echo
 echo "verifying on $HOST"
-ssh "${SSH_OPTIONS[@]}" "$HOST" "cd $DEST && ./scripts/audit_repo.sh"
+# Invoked through bash, not as ./: an editor, a filesystem or an rsync that
+# drops the executable bit would otherwise fail the deploy with "Permission
+# denied" and say nothing about what is actually wrong. The mode is also restored
+# on the remote, because a script that must be executable there should not depend
+# on how it travelled.
+ssh "${SSH_OPTIONS[@]}" "$HOST" "cd $DEST && chmod +x scripts/*.sh 2>/dev/null; bash scripts/audit_repo.sh"
 echo
 echo "next, on the host:"
 echo "  ssh $HOST"
