@@ -114,13 +114,14 @@ def splits(rows, seed=SEED, cal_runs=CAL_RUNS, val_runs=VAL_RUNS,
     # design points, which is what in-distribution means here.
     id_rows = [r for r in rows if r["point"] in id_points]
     runs = sorted({(r["rec"]["seed"],) + r["point"] for r in id_rows})
-    need = cal_runs + val_runs + test_id_runs + MIN_TRAIN_RUNS
+    min_train = MIN_TRAIN_RUNS if cal_runs >= CAL_RUNS else 4
+    need = cal_runs + val_runs + test_id_runs + min_train
     if len(runs) < need:
         per_scenario = max(1, len(runs) // max(1, len(id_points)))
         raise SystemExit(
             f"REFUSED: {len(runs)} in-distribution runs, {need} needed "
             f"({cal_runs} calibration + {val_runs} validation + "
-            f"{test_id_runs} ID test + at least {MIN_TRAIN_RUNS} training).\n"
+            f"{test_id_runs} ID test + at least {min_train} training).\n"
             f"  The calibration count is set by equation (9), not by taste: at "
             f"delta = 0.10 the correction alone forbids any threshold below "
             f"n = 9, and needs about 20 once the empirical risk is non-zero. A "

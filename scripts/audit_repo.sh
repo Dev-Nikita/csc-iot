@@ -97,6 +97,11 @@ chk "every script keeps its executable bit" \
   bash -c 'for f in scripts/*.sh; do [ -x "$f" ] || { echo "not executable: $f"; exit 1; }; done'
 chk "the deploy does not depend on an executable bit" \
   grep -q 'bash scripts/audit_repo.sh' scripts/deploy_to_host.sh
+# A dry run exercises the decision pipeline on a set too small to carry the
+# guarantee. It must be impossible to mistake its output for a measurement.
+chk "a dry run stamps its rows unreportable"      grep -q 'reportable.: 0 if args.dry_run' analysis/evaluate.py
+chk "both readings of the no-gate ablation exist" grep -q 'a1b_no_gate_at_all' analysis/policies.py
+chk "C(NO_OP) is zero by definition"              grep -q 'cost = {"NO_OP": 0.0}' analysis/evaluate.py
 
 # Protocol 0.5-0.9. Each of these was written after a defect that invalidated a
 # run, and each is here because a stale copy of the file would silently undo it.
