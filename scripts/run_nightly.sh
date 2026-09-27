@@ -71,7 +71,22 @@ for pidfile in logs/*.pid; do
   fi
 done
 
-STACK_ID="${STACK_ID:-$(python3 check_reportable_stack.py --print-stack-id 2>/dev/null)}"
+# STACK_ID from the environment is taken on trust by every script here, and
+# nothing checked it against reality. A stale value left in a shell -- set by
+# hand while diagnosing something else -- stamped a whole run with the id of a
+# stack from five days earlier, which mislabels its provenance and makes the data
+# unusable. The id is derived, and an environment value that disagrees with the
+# running stack is now refused rather than believed.
+LIVE_STACK="$(python3 check_reportable_stack.py --print-stack-id 2>/dev/null)"
+if [ -n "${STACK_ID:-}" ] && [ -n "$LIVE_STACK" ] && [ "$STACK_ID" != "$LIVE_STACK" ]; then
+  echo "FAIL: STACK_ID=$STACK_ID in the environment, but the validated stack is"
+  echo "      $LIVE_STACK. A run stamped with the wrong stack id records the"
+  echo "      wrong substrate and cannot be reported. Do not set STACK_ID by"
+  echo "      hand; it is derived. Clear it and try again:"
+  echo "        unset STACK_ID"
+  exit 2
+fi
+STACK_ID="${STACK_ID:-$LIVE_STACK}"
 [ -n "$STACK_ID" ] || { echo "FAIL: no reportable stack. Run make stack-nats first."; exit 2; }
 
 # Each VAR=value is re-quoted individually. Passing them through unquoted split

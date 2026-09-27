@@ -105,7 +105,7 @@ chk "C(NO_OP) is zero by definition"              grep -q 'cost = {"NO_OP": 0.0}
 # A direct matrix invocation required STACK_ID exported by hand, and failed with
 # "run make stack-nats first" on a stack that was already up and validated.
 chk "the matrix derives its own stack id" \
-  grep -q 'STACK_ID:-\$(python3 check_reportable_stack.py' scripts/m2prime_nats_matrix.sh
+  grep -q 'STACK_ID:-\$LIVE_STACK' scripts/m2prime_nats_matrix.sh
 # rsync --delete destroyed host-generated work inside a synced directory twice:
 # logs/ first, then the scenario sets drawn on the host.
 chk "the deploy protects host-generated scenario sets" \
@@ -126,6 +126,12 @@ chk "the matrix accepts its name positionally" \
 # recreates the topology, so concurrent runs void each other's data.
 chk "the nightly refuses a concurrent run" \
   grep -q 'is still running (pid' scripts/run_nightly.sh
+# A stale STACK_ID left in a shell stamped a run with a stack id from five days
+# earlier. The id is derived; an environment value that disagrees is refused.
+chk "the nightly refuses a mismatched STACK_ID" \
+  grep -q 'but the validated stack is' scripts/run_nightly.sh
+chk "the matrix refuses a mismatched STACK_ID" \
+  grep -q 'but the validated stack is' scripts/m2prime_nats_matrix.sh
 
 # Protocol 0.5-0.9. Each of these was written after a defect that invalidated a
 # run, and each is here because a stale copy of the file would silently undo it.
