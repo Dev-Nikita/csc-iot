@@ -1,0 +1,233 @@
+2880 branches
+  MAE of the structural prediction 0.0780
+    pre-fault   n= 600  MAE 0.1724
+    spanning    n= 720  MAE 0.0862
+    post-onset  n=1560  MAE 0.0380
+
+contrast             regime       obs delta  hat delta  sign
+s01-a02-THROTTLE     pre-fault      -0.6742    -0.0015  ok
+s01-a06-THROTTLE     pre-fault      -0.4787    -0.0543  ok
+s01-a10-REROUTE      spanning       +0.1626    +0.2015  ok
+s01-a10-THROTTLE     spanning       -0.2088    -0.0521  ok
+s01-a14-REROUTE      spanning       +0.2559    +0.1370  ok
+s01-a18-REROUTE      post-onset     +0.2369    +0.2204  ok
+s01-a22-REROUTE      post-onset     +0.2004    +0.1876  ok
+s01-a26-REROUTE      post-onset     +0.1880    +0.1667  ok
+s01-a30-REROUTE      post-onset     +0.1805    +0.1449  ok
+s02-a02-THROTTLE     pre-fault      -0.6738    +0.0002  FLIPPED
+s02-a06-THROTTLE     pre-fault      -0.4775    -0.0569  ok
+s02-a10-THROTTLE     spanning       -0.3436    -0.0710  ok
+s02-a14-REROUTE      spanning       +0.1459    +0.1509  ok
+s02-a14-THROTTLE     spanning       -0.1450    -0.0601  ok
+s02-a18-REROUTE      post-onset     +0.2128    +0.1819  ok
+s02-a22-REROUTE      post-onset     +0.1964    +0.1793  ok
+s02-a26-REROUTE      post-onset     +0.1775    +0.1604  ok
+s02-a30-REROUTE      post-onset     +0.1587    +0.1329  ok
+s03-a02-THROTTLE     pre-fault      -0.6742    -0.0007  ok
+s03-a06-THROTTLE     spanning       -0.4215    -0.0688  ok
+s03-a10-REROUTE      spanning       +0.1374    +0.1710  ok
+s03-a10-THROTTLE     spanning       -0.2290    -0.0690  ok
+s03-a14-REROUTE      post-onset     +0.1911    +0.2048  ok
+s03-a18-REROUTE      post-onset     +0.1933    +0.1828  ok
+s03-a22-REROUTE      post-onset     +0.1729    +0.1395  ok
+s03-a26-REROUTE      post-onset     +0.1484    +0.1058  ok
+s03-a30-REROUTE      post-onset     +0.1409    +0.0997  ok
+s04-a02-THROTTLE     spanning       -0.6193    +0.0015  FLIPPED
+s04-a06-REROUTE      spanning       +0.2759    +0.2785  ok
+s04-a06-THROTTLE     spanning       -0.2096    -0.0307  ok
+s04-a10-REROUTE      post-onset     +0.3292    +0.2859  ok
+s04-a14-REROUTE      post-onset     +0.2853    +0.2557  ok
+s04-a18-REROUTE      post-onset     +0.2537    +0.2115  ok
+s04-a22-REROUTE      post-onset     +0.2213    +0.1694  ok
+s04-a26-REROUTE      post-onset     +0.2039    +0.1423  ok
+s04-a30-REROUTE      post-onset     +0.1761    +0.1380  ok
+s05-a02-THROTTLE     pre-fault      -0.6700    +0.0015  FLIPPED
+s05-a06-THROTTLE     pre-fault      -0.4670    -0.0242  ok
+s05-a10-THROTTLE     pre-fault      -0.3626    -0.0667  ok
+s05-a14-THROTTLE     spanning       -0.2206    -0.0713  ok
+s05-a18-REROUTE      spanning       +0.1751    +0.1212  ok
+s05-a22-REROUTE      post-onset     +0.1930    +0.1830  ok
+s05-a26-REROUTE      post-onset     +0.1725    +0.1610  ok
+s05-a30-REROUTE      post-onset     +0.1619    +0.1437  ok
+s06-a02-THROTTLE     pre-fault      -0.6739    +0.0015  FLIPPED
+s06-a06-THROTTLE     pre-fault      -0.4782    -0.0606  ok
+s06-a10-THROTTLE     pre-fault      -0.3686    -0.0718  ok
+s06-a14-THROTTLE     spanning       -0.2514    -0.0645  ok
+s06-a18-THROTTLE     spanning       -0.1510    -0.0602  ok
+s06-a22-REROUTE      post-onset     +0.1406    +0.1440  ok
+s06-a26-REROUTE      post-onset     +0.1414    +0.1396  ok
+s06-a30-REROUTE      post-onset     +0.1319    +0.1203  ok
+s07-a02-THROTTLE     pre-fault      -0.6789    -0.0000  ok
+s07-a06-REROUTE      spanning       +0.2029    +0.2507  ok
+s07-a06-THROTTLE     spanning       -0.2721    -0.0573  ok
+s07-a10-REROUTE      spanning       +0.3218    +0.1869  ok
+s07-a14-REROUTE      post-onset     +0.2791    +0.2503  ok
+s07-a18-REROUTE      post-onset     +0.2529    +0.2173  ok
+s07-a22-REROUTE      post-onset     +0.2277    +0.1802  ok
+s07-a26-REROUTE      post-onset     +0.2050    +0.1500  ok
+s07-a30-REROUTE      post-onset     +0.1869    +0.1316  ok
+s08-a02-THROTTLE     spanning       -0.6385    +0.0008  FLIPPED
+s08-a06-REROUTE      spanning       +0.2316    +0.2530  ok
+s08-a06-THROTTLE     spanning       -0.2403    -0.0558  ok
+s08-a10-REROUTE      post-onset     +0.3063    +0.2562  ok
+s08-a14-REROUTE      post-onset     +0.2815    +0.2418  ok
+s08-a18-REROUTE      post-onset     +0.2442    +0.1929  ok
+s08-a22-REROUTE      post-onset     +0.2151    +0.1668  ok
+s08-a26-REROUTE      post-onset     +0.1963    +0.1317  ok
+s08-a30-REROUTE      post-onset     +0.1887    +0.1144  ok
+s09-a02-THROTTLE     pre-fault      -0.6609    -0.0000  ok
+s09-a06-THROTTLE     pre-fault      -0.4812    -0.0768  ok
+s09-a10-THROTTLE     pre-fault      -0.3647    -0.0742  ok
+s09-a14-THROTTLE     spanning       -0.2844    -0.0656  ok
+s09-a18-THROTTLE     spanning       -0.2033    -0.0552  ok
+s09-a26-REROUTE      post-onset     +0.1321    +0.1285  ok
+s09-a30-REROUTE      post-onset     +0.1301    +0.1317  ok
+s10-a02-THROTTLE     pre-fault      -0.6622    -0.0006  ok
+s10-a06-THROTTLE     pre-fault      -0.4795    -0.0582  ok
+s10-a10-THROTTLE     spanning       -0.2531    -0.0824  ok
+s10-a14-REROUTE      spanning       +0.2434    +0.1502  ok
+s10-a18-REROUTE      post-onset     +0.2357    +0.2220  ok
+s10-a22-REROUTE      post-onset     +0.2043    +0.1912  ok
+s10-a26-REROUTE      post-onset     +0.1807    +0.1571  ok
+s10-a30-REROUTE      post-onset     +0.1779    +0.1503  ok
+s11-a02-THROTTLE     pre-fault      -0.6744    -0.0014  ok
+s11-a06-REROUTE      spanning       +0.1263    +0.2495  ok
+s11-a06-THROTTLE     spanning       -0.3436    -0.0600  ok
+s11-a10-REROUTE      spanning       +0.2693    +0.1821  ok
+s11-a14-REROUTE      post-onset     +0.2622    +0.2357  ok
+s11-a18-REROUTE      post-onset     +0.2358    +0.1979  ok
+s11-a22-REROUTE      post-onset     +0.2106    +0.1648  ok
+s11-a26-REROUTE      post-onset     +0.1940    +0.1476  ok
+s11-a30-REROUTE      post-onset     +0.1753    +0.1267  ok
+s12-a02-THROTTLE     pre-fault      -0.6775    -0.0006  ok
+s12-a06-THROTTLE     spanning       -0.4712    -0.0478  ok
+s12-a10-THROTTLE     spanning       -0.2979    -0.0526  ok
+s12-a14-REROUTE      post-onset     +0.1348    +0.1718  ok
+s12-a14-THROTTLE     post-onset     -0.1541    -0.0419  ok
+s12-a18-REROUTE      post-onset     +0.1789    +0.1835  ok
+s12-a22-REROUTE      post-onset     +0.1633    +0.1506  ok
+s12-a26-REROUTE      post-onset     +0.1469    +0.1203  ok
+s12-a30-REROUTE      post-onset     +0.1389    +0.1026  ok
+s13-a02-REROUTE      spanning       +0.2188    +0.5465  ok
+s13-a02-THROTTLE     spanning       -0.4535    +0.0008  FLIPPED
+s13-a06-REROUTE      spanning       +0.3970    +0.2862  ok
+s13-a10-REROUTE      post-onset     +0.3496    +0.3103  ok
+s13-a14-REROUTE      post-onset     +0.3000    +0.2483  ok
+s13-a18-REROUTE      post-onset     +0.2609    +0.1979  ok
+s13-a22-REROUTE      post-onset     +0.2413    +0.1625  ok
+s13-a26-REROUTE      post-onset     +0.1974    +0.1474  ok
+s13-a30-REROUTE      post-onset     +0.1492    +0.1304  ok
+s14-a02-THROTTLE     pre-fault      -0.6745    +0.0008  FLIPPED
+s14-a06-THROTTLE     pre-fault      -0.4856    -0.0786  ok
+s14-a10-THROTTLE     pre-fault      -0.3639    -0.0671  ok
+s14-a14-THROTTLE     pre-fault      -0.2937    -0.0643  ok
+s14-a18-THROTTLE     spanning       -0.1789    -0.0547  ok
+s14-a22-REROUTE      spanning       +0.1555    +0.1056  ok
+s14-a26-REROUTE      post-onset     +0.1618    +0.1583  ok
+s14-a30-REROUTE      post-onset     +0.1569    +0.1439  ok
+s15-a02-THROTTLE     pre-fault      -0.6777    -0.0008  ok
+s15-a06-THROTTLE     pre-fault      -0.4653    -0.0275  ok
+s15-a10-THROTTLE     pre-fault      -0.3615    -0.0678  ok
+s15-a14-THROTTLE     pre-fault      -0.2963    -0.0669  ok
+s15-a18-THROTTLE     spanning       -0.2335    -0.0584  ok
+s15-a22-THROTTLE     spanning       -0.1340    -0.0385  ok
+s15-a30-REROUTE      post-onset     +0.1283    +0.1261  ok
+s16-a02-THROTTLE     spanning       -0.6245    -0.0022  ok
+s16-a06-REROUTE      spanning       +0.2596    +0.2510  ok
+s16-a06-THROTTLE     spanning       -0.2168    -0.0578  ok
+s16-a10-REROUTE      post-onset     +0.3306    +0.2929  ok
+s16-a14-REROUTE      post-onset     +0.2852    +0.2574  ok
+s16-a18-REROUTE      post-onset     +0.2538    +0.2108  ok
+s16-a22-REROUTE      post-onset     +0.2314    +0.1756  ok
+s16-a26-REROUTE      post-onset     +0.2179    +0.1490  ok
+s16-a30-REROUTE      post-onset     +0.1734    +0.1291  ok
+s17-a02-THROTTLE     pre-fault      -0.6742    +0.0017  FLIPPED
+s17-a06-THROTTLE     spanning       -0.4433    -0.0554  ok
+s17-a10-REROUTE      spanning       +0.1815    +0.2004  ok
+s17-a10-THROTTLE     spanning       -0.1753    -0.0535  ok
+s17-a14-REROUTE      post-onset     +0.2558    +0.2173  ok
+s17-a18-REROUTE      post-onset     +0.2344    +0.2047  ok
+s17-a22-REROUTE      post-onset     +0.2005    +0.1721  ok
+s17-a26-REROUTE      post-onset     +0.1892    +0.1573  ok
+s17-a30-REROUTE      post-onset     +0.1661    +0.1270  ok
+s18-a02-THROTTLE     pre-fault      -0.6750    -0.0007  ok
+s18-a06-THROTTLE     pre-fault      -0.4677    -0.0267  ok
+s18-a10-THROTTLE     pre-fault      -0.3735    -0.0829  ok
+s18-a14-THROTTLE     spanning       -0.2827    -0.0638  ok
+s18-a18-THROTTLE     spanning       -0.1928    -0.0599  ok
+s18-a26-REROUTE      post-onset     +0.1393    +0.1383  ok
+s18-a30-REROUTE      post-onset     +0.1391    +0.1347  ok
+s19-a02-THROTTLE     pre-fault      -0.6740    +0.0008  FLIPPED
+s19-a06-THROTTLE     pre-fault      -0.4772    -0.0546  ok
+s19-a10-THROTTLE     pre-fault      -0.3681    -0.0798  ok
+s19-a14-THROTTLE     spanning       -0.2421    -0.0708  ok
+s19-a18-REROUTE      spanning       +0.1746    +0.1246  ok
+s19-a22-REROUTE      post-onset     +0.1931    +0.1822  ok
+s19-a26-REROUTE      post-onset     +0.1730    +0.1696  ok
+s19-a30-REROUTE      post-onset     +0.1619    +0.1540  ok
+s20-a02-THROTTLE     spanning       -0.5577    -0.0008  ok
+s20-a06-REROUTE      spanning       +0.2920    +0.2529  ok
+s20-a06-THROTTLE     spanning       -0.1864    -0.0559  ok
+s20-a10-REROUTE      post-onset     +0.3146    +0.3003  ok
+s20-a14-REROUTE      post-onset     +0.2817    +0.2251  ok
+s20-a18-REROUTE      post-onset     +0.2506    +0.1973  ok
+s20-a22-REROUTE      post-onset     +0.2210    +0.1510  ok
+s20-a26-REROUTE      post-onset     +0.2076    +0.1357  ok
+s20-a30-REROUTE      post-onset     +0.1920    +0.1266  ok
+s21-a02-THROTTLE     spanning       -0.6494    +0.0006  FLIPPED
+s21-a06-THROTTLE     spanning       -0.3614    -0.0578  ok
+s21-a10-REROUTE      post-onset     +0.1946    +0.2161  ok
+s21-a10-THROTTLE     post-onset     -0.1730    -0.0392  ok
+s21-a14-REROUTE      post-onset     +0.2105    +0.2082  ok
+s21-a18-REROUTE      post-onset     +0.1956    +0.1628  ok
+s21-a22-REROUTE      post-onset     +0.1700    +0.1243  ok
+s21-a26-REROUTE      post-onset     +0.1558    +0.1127  ok
+s21-a30-REROUTE      post-onset     +0.1485    +0.1018  ok
+s22-a02-THROTTLE     pre-fault      -0.6748    +0.0021  FLIPPED
+s22-a06-THROTTLE     pre-fault      -0.4668    -0.0249  ok
+s22-a10-THROTTLE     pre-fault      -0.3596    -0.0536  ok
+s22-a14-THROTTLE     spanning       -0.1979    -0.0477  ok
+s22-a18-REROUTE      spanning       +0.2008    +0.1210  ok
+s22-a22-REROUTE      post-onset     +0.1936    +0.1853  ok
+s22-a26-REROUTE      post-onset     +0.1757    +0.1736  ok
+s22-a30-REROUTE      post-onset     +0.1714    +0.1596  ok
+s23-a02-THROTTLE     pre-fault      -0.6641    +0.0008  FLIPPED
+s23-a06-REROUTE      spanning       +0.1228    +0.2522  ok
+s23-a06-THROTTLE     spanning       -0.3552    -0.0761  ok
+s23-a10-REROUTE      spanning       +0.2765    +0.1854  ok
+s23-a14-REROUTE      post-onset     +0.2599    +0.2415  ok
+s23-a18-REROUTE      post-onset     +0.2355    +0.1918  ok
+s23-a22-REROUTE      post-onset     +0.2074    +0.1660  ok
+s23-a26-REROUTE      post-onset     +0.1893    +0.1421  ok
+s23-a30-REROUTE      post-onset     +0.1778    +0.1233  ok
+s24-a02-THROTTLE     pre-fault      -0.6741    +0.0007  FLIPPED
+s24-a06-THROTTLE     pre-fault      -0.4744    -0.0741  ok
+s24-a10-THROTTLE     spanning       -0.3315    -0.0517  ok
+s24-a14-THROTTLE     spanning       -0.2020    -0.0610  ok
+s24-a18-REROUTE      post-onset     +0.1475    +0.1507  ok
+s24-a22-REROUTE      post-onset     +0.1583    +0.1560  ok
+s24-a26-REROUTE      post-onset     +0.1467    +0.1323  ok
+s24-a30-REROUTE      post-onset     +0.1332    +0.1048  ok
+
+RESOLVED CONTRASTS 203
+  sign reproduced 190/203 = 0.936
+    pre-fault   31/40
+    spanning    56/60
+    post-onset  103/103
+
+  FAILS the preregistered test: 13 sign(s) flipped.
+    s02-a02-THROTTLE (pre-fault) observed -0.6738, predicted +0.0002
+    s04-a02-THROTTLE (spanning) observed -0.6193, predicted +0.0015
+    s05-a02-THROTTLE (pre-fault) observed -0.6700, predicted +0.0015
+    s06-a02-THROTTLE (pre-fault) observed -0.6739, predicted +0.0015
+    s08-a02-THROTTLE (spanning) observed -0.6385, predicted +0.0008
+    s13-a02-THROTTLE (spanning) observed -0.4535, predicted +0.0008
+    s14-a02-THROTTLE (pre-fault) observed -0.6745, predicted +0.0008
+    s17-a02-THROTTLE (pre-fault) observed -0.6742, predicted +0.0017
+    s19-a02-THROTTLE (pre-fault) observed -0.6740, predicted +0.0008
+    s21-a02-THROTTLE (spanning) observed -0.6494, predicted +0.0006
+    s22-a02-THROTTLE (pre-fault) observed -0.6748, predicted +0.0021
+    s23-a02-THROTTLE (pre-fault) observed -0.6641, predicted +0.0008
+    s24-a02-THROTTLE (pre-fault) observed -0.6741, predicted +0.0007
+  The protocol says a flipped sign on a resolvable contrast is a
+  modelling failure, to be reported and not tuned away.

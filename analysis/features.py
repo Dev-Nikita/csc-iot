@@ -91,6 +91,18 @@ def extract(branch_dir):
         nominal = f[f"{e}_nominal_serve"]
         # The observable trace of a capacity loss: throughput below nominal.
         f[f"{e}_serve_deficit"] = (nominal - served / epoch) / nominal if nominal else 0.0
+        # Windowed throughput: what the node served in the last completed epoch.
+        # The cumulative rate above averages healthy and degraded epochs and so
+        # cannot separate a recent severe loss from an old mild one. Absent in
+        # branches recorded before this observable existed, where it falls back
+        # to the cumulative rate and is flagged so that a model can say which it
+        # had.
+        last = obs.get(f"{e}/served_last_epoch")
+        f[f"{e}_served_last_epoch"] = float(last) if last is not None \
+            else served / epoch
+        f[f"{e}_has_windowed_serve"] = 1.0 if last is not None else 0.0
+        f[f"{e}_serve_deficit_windowed"] = (
+            (nominal - f[f"{e}_served_last_epoch"]) / nominal) if nominal else 0.0
 
     limits = state.get("rate_limits") or {}
     for g in GATEWAYS:
@@ -111,6 +123,16 @@ def extract(branch_dir):
     f["system_undelivered_share"] = ((total_acc - total_served) / total_acc
                                      if total_acc else 0.0)
     f["system_accepted_per_epoch"] = total_acc / epoch
+    # Windowed arrival rate. The cumulative rate is contaminated by the warm-up
+    # ramp: at epoch 2 it reads 50 while the steady rate is 100, which makes an
+    # admission cap of 50 look non-binding when it binds hard.
+    wl = [obs.get(f"{g}/ingress_accepted_last_epoch") for g in GATEWAYS]
+    if any(v is not None for v in wl):
+        f["system_accepted_last_epoch"] = sum(float(v or 0.0) for v in wl)
+        f["system_has_windowed_arrivals"] = 1.0
+    else:
+        f["system_accepted_last_epoch"] = total_acc / epoch
+        f["system_has_windowed_arrivals"] = 0.0
 
     _assert_clean(f)
     return f

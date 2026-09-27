@@ -41,3 +41,17 @@ paper/main.pdf
 
 # Build output: rebuilt by `make build`, never evidence.
 bin/
+
+# run logs -- same rule as data/raw: append-only, not committed
+/logs/*
+!/logs/.gitkeep
+
+# latex build artifacts
+/paper/main.pdf
+/paper/main.bbl
+/paper/*.aux
+/paper/*.blg
+/paper/*.fls
+/paper/*.fdb_latexmk
+/paper/*.log
+/paper/*.synctex.gz

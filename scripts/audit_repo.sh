@@ -56,6 +56,16 @@ chk "M2 diagnostic is not named J_obs"            grep -q 'never the manuscript.
 chk "negative transport tests excluded from the nats build" \
   bash -c 'head -1 internal/bus/factory_notags_test.go | grep -q "go:build !nats"'
 
+# Protocol 0.10. The structural model failed its preregistered sign test because
+# the only rate observables were cumulative; these four lines are the fix, and a
+# stale binary or a stale feature extractor would silently reinstate the failure.
+chk "gateway reports a windowed arrival rate"     grep -q 'ingress_accepted_last_epoch' cmd/csc-node/main.go
+chk "edge reports a windowed service rate"        grep -q 'served_last_epoch' cmd/csc-node/main.go
+chk "features expose the windowed rates"          grep -q 'system_accepted_last_epoch' analysis/features.py
+chk "features flag a missing windowed rate"       grep -q 'has_windowed_serve' analysis/features.py
+chk "the structural model reads the windowed rate" grep -q 'system_accepted_last_epoch' analysis/structural.py
+chk "the sign test is the declared structural test" grep -q 'surviving ALL FOUR bands' analysis/structural_signtest.py
+
 # Protocol 0.5-0.9. Each of these was written after a defect that invalidated a
 # run, and each is here because a stale copy of the file would silently undo it.
 chk "the objective refuses a missing observable"   grep -q 'no unserved_eligible in observed' analysis/jobs.py
