@@ -29,7 +29,7 @@
 \begin{document}
 
 \title{Counterfactual Shadow Control: Risk-Calibrated\\
-Minimum-Intervention Self-Healing for Mobile Edge IoT Systems}
+Minimum-Intervention Recovery for Edge Services}
 
 \author{Nikita Tarasov%
 \thanks{The author is with Lviv Polytechnic National University, Lviv, Ukraine
@@ -629,17 +629,151 @@ observations ship with the artifact.
 \section{Results}
 \label{sec:results}
 
-\TODO{This section is a scaffold. No experiment has been run. Every number
-below is produced by \texttt{analysis/} from \texttt{results\_long.csv} and
-pulled in with \texttt{\textbackslash input}; nothing here is to be typed by
-hand. Do not write the prose until BACKLOG.md phase 16 is complete, and write
-what the data say rather than what H1--H4 predicted.}
+Results are reported in the order in which they became interpretable. The
+measurement is established first, then replay resolution, then what the actions
+do, and only then what can be predicted about them. Nothing below is typed by
+hand: every figure is emitted by \texttt{analysis/make\_tables.py} from the
+recorded runs, and each table names the run, the runtime stack and the protocol
+revision that produced it.
+
+Two of the four completed matrices are \emph{not} reported. Their objective was
+computed from observables that did not mean what the analysis assumed, the
+defects and their dated corrections are in the protocol's amendment log, and the
+runs are superseded rather than reinterpreted. What follows comes from the two
+runs that pass the accounting audit described next.
+
+\subsection{The measurement is audited before it is interpreted}
+\label{sec:results-audit}
+
+Every branch is checked against seven accounting invariants: that the numerator
+and the denominator of the objective cover one set of events; that eligible
+unserved work is a subset of the queue; that every served event appears exactly
+once in the latency histogram; that violations are a subset of served work; that
+the histogram agrees with the violation count at the frozen budget; that only a
+throttled branch defers work at the gateway; and that a branch spanning no fault
+fails nothing. A violation of any of these is an instrumentation defect and
+never a property of the system, so a run that fails them is not reported.
+
+A further invariant checks that the declared fault had an \emph{effect} rather
+than merely being configured: an edge whose capacity drops to $S$ at epoch $T$
+cannot have served more than $N(T-1) + S(H-T+1)$ events, whatever the action.
+The bound is one-sided, because serving less is ordinary --- rerouting moves work
+away and an unsaturated node serves only what arrives --- so only the upper limit
+carries information. On the scenario-factored matrix it binds on 2175 of 2880
+branches and holds on all of them.
+
+Both reported runs pass all invariants on every branch, with no refused branch
+and prefix identity holding within every replay cell.
 
 \subsection{Determinism and replay resolution}
-\TODO{Report the dispersion band from the same-state/same-action branches
-before any comparison that depends on it. If the band is wide enough to
-swallow the differences between actions, say so and stop: the rest of this
-section is not interpretable without it.}
+\label{sec:results-replay}
+
+\input{generated_tables/table_bands_single.tex}
+
+Table~\ref{tab:bands-single} reports the replay dispersion band before any
+comparison that depends on it. The preregistered definition is the pooled
+$Q_{0.95}$ of within-cell differences, and that figure resolves 45 of 60 action
+contrasts at the gate. The band is not uniform, however: the worst single cell is
+$2.8\times$ the pooled value, and the protocol states that a band holding on
+average while failing in one cell is not a band. We therefore report the gate
+under four bands and name the set that survives all of them --- 33 of 60
+contrasts. The preregistered number is the one the hypothesis was stated against;
+the four-band set is what can be claimed without depending on which band is
+chosen.
+
+The dispersion is dominated by the failure term, which carries $89\%$ of it.
+This is a property of the instrument rather than of the system: service occurs on
+epoch boundaries and events are emitted across a window, so per-event latency in
+a healthy system spreads by roughly that window and a budget placed inside the
+spread measures emission phase rather than failure. The budget is therefore
+calibrated by a declared rule --- the healthy per-event $p_{99}$, rounded up to
+50\,ms, measured on a dedicated no-action calibration run at the same offered
+load --- and frozen before any comparison. At the calibrated 750\,ms, $0.9\%$ of
+a healthy system's events exceed it. An earlier budget of 500\,ms, derived from
+branch-mean rather than per-event latency, classified $31\%$ of a working
+system's events as failures.
+
+\subsection{What the actions do}
+\label{sec:results-actions}
+
+Three findings survive the four-band criterion, and they are reported with their
+regime, because the regime is what makes them interpretable. A branch is
+\emph{pre-fault} when its horizon ends before the fault onset, \emph{spanning}
+when the onset falls inside the horizon, and \emph{post-onset} when the fault is
+already running at the anchor. The labels are computed from each branch's own
+numbers rather than from its position in the design.
+
+First, intervening in a system that is not degrading does nothing. At the
+pre-fault anchors the contrast between no action and rerouting is $0.000$ with a
+bootstrap interval of $[-0.000, +0.005]$. This is a measured null rather than a
+failure to resolve, and it is the empirical content of minimum-necessary
+intervention: the mechanism declines to act when there is nothing to act on.
+
+Second, throttling is harmful wherever it is resolvable, and most harmful
+earliest. It is the clearest effect in the data --- at the shallowest anchors its
+signal exceeds the band by more than an order of magnitude --- and it becomes
+indistinguishable from inaction at the deepest anchors not because it stops
+hurting but because inaction has caught up with it.
+
+Third, the value of intervening decays with delay. The no-action-minus-reroute
+contrast rises to $0.264$ at an intermediate anchor and falls to $0.174$ at the
+deepest one, with non-overlapping bootstrap intervals at the two ends. The same
+ordering appeared in every run of this design, at two different latency budgets
+and under two different definitions of the objective's denominator, which is the
+strongest evidence available here that it is a property of the system rather than
+of the instrument.
+
+\subsection{What decision-time telemetry predicts}
+\label{sec:results-prediction}
+
+\input{generated_tables/table_bands_factored.tex}
+\input{generated_tables/table_prediction.tex}
+
+The single-scenario run cannot support any claim about generalisation: one fault
+onset and one severity make the anchor index an exact proxy for how long the
+fault has been running, so a predictor could score well by memorising a schedule
+that never varies. The fault is therefore a declared factor --- onset, severity,
+offered load and seed are drawn per scenario and held fixed within a replay cell
+and across the actions compared at an anchor --- and prediction is evaluated with
+folds held out by fault design point, so that no test scenario shares its fault
+setting with any training scenario.
+
+Table~\ref{tab:prediction} reports an action-conditioned predictor of
+$J_{\mathrm{obs}}$ built only from state observable at the decision instant. The
+feature set provably excludes the fault schedule: onset, severity, mechanism and
+the node's reported degradation configuration are forbidden by name and by
+substring, and the exclusion is tested by rewriting the recorded schedule in a
+copy of the anchor state and asserting that the feature vector is unchanged. What
+the model may see is the observable trace of degradation --- throughput below the
+node's nominal capacity, queue depth, the latency distribution so far.
+
+Two controls decide whether the result means anything. A time-only predictor
+given the elapsed epoch and the candidate action reaches $0.1174$; the telemetry
+model reaches $0.0261$, cutting the error by $78\%$, so the skill is not the
+clock. Permuting the telemetry between branches while leaving actions and targets
+in place raises the error to $0.1607$, a factor of $6.2$, so the skill comes from
+the telemetry rather than from anything else in the design. Both controls are
+required to pass before any prediction figure is reported, and the table is not
+generated otherwise.
+
+The per-regime rows qualify the headline. The pre-fault regime is the easiest and
+the least informative, because $J_{\mathrm{obs}}$ is nearly constant there by
+construction. The spanning regime is the interesting one: the fault has not
+happened at decision time and nothing in the observed state carries it, yet the
+error is $0.0367$ against $0.1624$ for a constant. What the model predicts there
+is the consequence of what has already accumulated, not the arrival of the
+fault, and separating those two contributions is the subject of
+\TODO{the spanning-regime holdout described in the next revision: train with all
+spanning branches removed and test on them, which distinguishes transfer from
+knowledge of the onset distribution}.
+
+\subsection{Structural versus associative prediction}
+\label{sec:results-b5}
+\TODO{The comparison that decides the architecture. Report
+$\mathrm{CRA}_\eta$ and $\mathrm{Reg}_\eta$ for the structural model and the
+associative challenger in three regimes --- in-distribution, parameter shift and
+mechanism shift --- and apply the retention rule fixed in the protocol before
+these test sets were inspected. A tie is reported as a tie.}
 
 \subsection{Common-anchor decision quality}
 \TODO{$\mathrm{CRA}_\eta$, $\mathrm{CRA@2}$, $\mathrm{Reg}_\eta$, and
@@ -708,6 +842,18 @@ removes neither structural misspecification nor the invariance assumption. What 
 executed alternatives, which is what \eqref{eq:cra} and \eqref{eq:regret}
 measure: a structure wrong in a way that matters should surface there rather
 than hide behind good predictive scores.
+
+The evaluation runs nine containers on a single host. No claim is made about
+geographic distribution, multi-host placement or multi-tenancy, and none can be
+supported by this substrate; what the substrate supports is a claim about the
+decision procedure and about how its effect is measured, both of which are
+independent of where the containers run. The cost term is reduced: it carries
+displaced and undelivered work, while the resource and bandwidth components
+named in Section~\ref{sec:results} are not instrumented, and every table
+reporting $J_{\mathrm{obs}}$ says so. Two of the four completed matrices are
+superseded by dated protocol amendments rather than reinterpreted, and the
+amendment log ships with the artifact so that a reader can see which defect
+invalidated which run.
 
 The testbed emulates radio behaviour and mobility, applying impairment at the
 network layer from an abstract link-quality score, so the results characterise
