@@ -14,9 +14,19 @@ it is a property of the code rather than of a dataset.
                be materially worse than the telemetry model. If the clock alone
                does nearly as well, the scenario confound is still there.
 
-The model here is deliberately plain -- ridge regression on standardised
-features, fitted with numpy. This file tests the data, not the architecture, and
-a strong learner would make a weak confound harder to see.
+The probe is a k-nearest-neighbour regressor on standardised features. The first
+version of this file used ridge regression, reasoning that a weak learner makes
+a weak confound easier to see. That was wrong, and it cost two false verdicts: a
+linear model extrapolating to an unseen fault design point predicted outside
+[0,1] and scored worse than a constant, so both tests came back INCONCLUSIVE and
+I twice reported that the data might be inadequate. On the same data kNN reaches
+MAE 0.026 against 0.198 for a constant. A probe that cannot fit the task cannot
+testify about the task.
+
+kNN is used because its predictions are averages of training targets, so it
+cannot blow up outside the observed range, and because it assumes nothing about
+the shape of the relationship. Ridge is still reported beside it, as a note on
+how non-linear the task is, but it no longer decides anything.
 """
 import argparse
 import glob
@@ -63,6 +73,34 @@ def design(rows, names, actions):
     a = np.array([[1.0 if r["rec"]["action"] == act else 0.0 for act in actions]
                   for r in rows])
     return np.hstack([x, a, np.ones((len(rows), 1))])
+
+
+def knn_cv(rows, names, actions, groups, k=10, permute=False, seed=20260927):
+    """Mean absolute out-of-fold error, folds held out by group.
+
+    With permute=True the telemetry rows are shuffled between branches while the
+    candidate action and the targets stay put: if the error barely moves, the
+    skill was not coming from the telemetry.
+    """
+    y = np.array([r["y"] for r in rows])
+    g = np.array(groups)
+    x_all = design(rows, names, actions)
+    if permute:
+        rng = np.random.default_rng(seed)
+        order = rng.permutation(len(rows))
+        n = len(names)
+        x_all = np.hstack([x_all[order, :n], x_all[:, n:]])
+    errs = []
+    for held in sorted(set(g)):
+        tr, te = g != held, g == held
+        xt, xv, yt = x_all[tr], x_all[te], y[tr]
+        mu, sd = xt.mean(0), xt.std(0)
+        sd[sd == 0] = 1.0
+        xt, xv = (xt - mu) / sd, (xv - mu) / sd
+        dist = ((xv[:, None, :] - xt[None, :, :]) ** 2).sum(-1)
+        idx = np.argpartition(dist, min(k, xt.shape[0] - 1), axis=1)[:, :k]
+        errs.append(np.abs(yt[idx].mean(1) - y[te]))
+    return float(np.mean(np.concatenate(errs)))
 
 
 def ridge_cv(rows, names, actions, groups, lam=1.0):
@@ -129,15 +167,38 @@ def main():
         groups = [r["rec"]["anchor"] for r in rows]
         held_by = "anchor (single-scenario run: weaker, see below)"
 
-    full = ridge_cv(rows, names, actions, groups)
-    time_only = ridge_cv(rows, list(features.TIME_ONLY), actions, groups)
+    full = knn_cv(rows, names, actions, groups)
+    time_only = knn_cv(rows, list(features.TIME_ONLY), actions, groups)
     constant = mean_cv(rows, groups)
+    linear = ridge_cv(rows, names, actions, groups)
     spread = float(np.std([r["y"] for r in rows]))
     print(f"\nheld out by: {held_by}")
-    print(f"  mean |error| telemetry model     {full:.4f}")
+    print(f"  mean |error| telemetry, kNN      {full:.4f}")
     print(f"  mean |error| time-only f(t,a)    {time_only:.4f}")
     print(f"  mean |error| predict-the-mean    {constant:.4f}")
+    print(f"  mean |error| telemetry, ridge    {linear:.4f}   (linear, for reference)")
     print(f"  standard deviation of J_obs      {spread:.4f}")
+    if linear >= constant:
+        print("  A linear fit is worse than a constant here, which says the")
+        print("  relationship is not linear -- not that the telemetry is empty.")
+
+    # Per regime, so the headline number is not read as uniform skill. In the
+    # pre-fault regime J_obs is nearly constant by construction, which makes it
+    # the easiest of the three and the least informative.
+    regimes = {}
+    for r in rows:
+        regimes.setdefault(r["rec"]["regime"], []).append(r)
+    if len(regimes) > 1:
+        print("\n  by regime (same folds):")
+        for name in ("pre-fault", "spanning", "post-onset"):
+            sub = regimes.get(name)
+            if not sub or len(sub) < 50:
+                continue
+            sg = [groups[i] for i, r in enumerate(rows) if r["rec"]["regime"] == name]
+            if len(set(sg)) < 2:
+                continue
+            print(f"    {name:11s} n={len(sub):4d}  kNN {knn_cv(sub, names, actions, sg):.4f}"
+                  f"  mean {mean_cv(sub, sg):.4f}")
     if full >= constant:
         print("\n  NOTE: the telemetry model is no better than predicting the")
         print("  training mean. Held out this way the task is not learnable at all,")
@@ -177,10 +238,7 @@ def main():
         print("  a matrix with more than one design point.")
         ok_perm = None
     else:
-        rng = np.random.default_rng(args.seed)
-        order = rng.permutation(len(rows))
-        shuffled = [dict(r, x=rows[order[i]]["x"]) for i, r in enumerate(rows)]
-        perm = ridge_cv(shuffled, names, actions, groups)
+        perm = knn_cv(rows, names, actions, groups, permute=True)
         print(f"  mean |error| with telemetry permuted {perm:.4f} "
               f"(intact {full:.4f})")
         ok_perm = perm > full * 1.2
