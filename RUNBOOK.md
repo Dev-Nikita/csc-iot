@@ -44,12 +44,18 @@ not land, not that the guard is wrong.
 cd ~/csc-iot
 make up-nats
 make stack-nats
-STACK=$(python3 check_reportable_stack.py --print-stack-id)
-echo "STACK=$STACK"
+export STACK_ID=$(python3 check_reportable_stack.py --print-stack-id 2>/dev/null)
+echo "STACK_ID=$STACK_ID"
 ```
 
 `make up-nats` comes first: impairment is applied to a live container, so the
-stack cannot be stamped before it exists.
+stack cannot be stamped before it exists. The variable is `STACK_ID` and it is
+**exported**, not merely set: that is the name the matrix script reads from the
+environment. Setting a similarly named shell variable instead cost a full round
+of failures that all said `STACK_ID is required (run make stack-nats first)` on a
+stack that was up and validated. The script now derives the id itself when the
+environment does not carry it, so the export is a convenience rather than a
+requirement.
 
 **STOP** unless `make stack-nats` itself succeeds. A printed stack id is not
 evidence --- `check_reportable_stack.py` will print the id of a previous run with
@@ -75,7 +81,7 @@ Then score it:
 
 ```bash
 cd ~/csc-iot
-R=data/raw/$STACK/windowed-pilot-v1
+R=data/raw/$STACK_ID/windowed-pilot-v1
 python3 analysis/audit_accounting.py $R
 python3 analysis/jobs.py $R --latency-max-ms 3000 --latency-max-epochs 14 \
   --allow-partial-cost --out $R/jobs.csv | tail -5
@@ -112,14 +118,14 @@ compute `J_obs` from such a matrix at all. Only `calibrate_budget.py` reads it.
 
 ```bash
 cd ~/csc-iot
-STACK=$(python3 check_reportable_stack.py --print-stack-id)
+export STACK_ID=$(python3 check_reportable_stack.py --print-stack-id 2>/dev/null)
 for L in 60 140; do
   python3 scripts/gen_scenarios.py --n 2 --master-seed 2026092$L \
     --mechanisms D1 --workloads $L --for-calibration \
     --out configs/scenarios-cal-L$L.json
   SCENARIOS=configs/scenarios-cal-L$L.json ANCHOR_LIST="2,6" \
     bash scripts/m2prime_nats_matrix.sh budget-cal-L$L 2>&1 | tail -3
-  python3 analysis/calibrate_budget.py data/raw/$STACK/budget-cal-L$L --workload $L
+  python3 analysis/calibrate_budget.py data/raw/$STACK_ID/budget-cal-L$L --workload $L
 done
 ```
 
@@ -284,8 +290,8 @@ has landed and you have re-run `make deploy`.
 
 ```bash
 cd ~/csc-iot
-STACK=$(python3 check_reportable_stack.py --print-stack-id)
-R=data/raw/$STACK/b5-matrix-v2
+export STACK_ID=$(python3 check_reportable_stack.py --print-stack-id 2>/dev/null)
+R=data/raw/$STACK_ID/b5-matrix-v2
 cat logs/b5-matrix-v2.done          # must be 0
 ls logs/b5-matrix-v2.audit-failed   # must NOT exist
 ```
@@ -336,11 +342,11 @@ Then package everything small enough to send:
 ```bash
 cd ~/csc-iot
 tar czf /tmp/b5v2-results.tgz \
-  data/raw/$STACK/b5-matrix-v2/jobs.csv \
-  data/raw/$STACK/b5-matrix-v2/structural.csv \
-  data/raw/$STACK/b5-matrix-v2/decisions.csv \
-  data/raw/$STACK/b5-matrix-v2/matrix.json \
-  data/raw/$STACK/b5-matrix-v2/scenarios.json \
+  data/raw/$STACK_ID/b5-matrix-v2/jobs.csv \
+  data/raw/$STACK_ID/b5-matrix-v2/structural.csv \
+  data/raw/$STACK_ID/b5-matrix-v2/decisions.csv \
+  data/raw/$STACK_ID/b5-matrix-v2/matrix.json \
+  data/raw/$STACK_ID/b5-matrix-v2/scenarios.json \
   logs/b5-matrix-v2.log
 ls -la /tmp/b5v2-results.tgz
 ```
@@ -362,7 +368,7 @@ hand.
 
 ```bash
 # for reference; I run this
-python3 analysis/make_tables.py --factored-root data/raw/$STACK/b5-matrix-v2 \
+python3 analysis/make_tables.py --factored-root data/raw/$STACK_ID/b5-matrix-v2 \
   --out-dir paper/generated_tables
 ```
 

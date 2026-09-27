@@ -102,6 +102,10 @@ chk "the deploy does not depend on an executable bit" \
 chk "a dry run stamps its rows unreportable"      grep -q 'reportable.: 0 if args.dry_run' analysis/evaluate.py
 chk "both readings of the no-gate ablation exist" grep -q 'a1b_no_gate_at_all' analysis/policies.py
 chk "C(NO_OP) is zero by definition"              grep -q 'cost = {"NO_OP": 0.0}' analysis/evaluate.py
+# A direct matrix invocation required STACK_ID exported by hand, and failed with
+# "run make stack-nats first" on a stack that was already up and validated.
+chk "the matrix derives its own stack id" \
+  grep -q 'STACK_ID:-\$(python3 check_reportable_stack.py' scripts/m2prime_nats_matrix.sh
 
 # Protocol 0.5-0.9. Each of these was written after a defect that invalidated a
 # run, and each is here because a stale copy of the file would silently undo it.
