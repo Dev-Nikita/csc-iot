@@ -69,13 +69,28 @@ ssh "${SSH_OPTIONS[@]}" "$HOST" "cd $DEST && chmod +x scripts/*.sh 2>/dev/null; 
 # updates one and not the other is half a deploy.
 echo
 echo "rebuilding the host binaries (bin/ is not synced)"
-ssh "${SSH_OPTIONS[@]}" "$HOST" "cd $DEST && make build TAGS=nats" || {
+# bash -lc, not a bare command: a non-interactive ssh runs neither the login
+# profile nor .bashrc, so a Go installed under /usr/local/go -- with its PATH set
+# in a profile, as the usual tarball install does -- is simply absent. The first
+# attempt reported 'go: command not found' on a host where go builds fine
+# interactively, which is a PATH difference wearing the costume of a missing
+# toolchain. The explicit paths are a fallback for a host whose profile does not
+# set them either.
+GO_PATHS='export PATH="$PATH:/usr/local/go/bin:$HOME/go/bin:/usr/lib/go/bin"'
+if ! ssh "${SSH_OPTIONS[@]}" "$HOST" \
+     "bash -lc '$GO_PATHS; cd $DEST && make build TAGS=nats'"; then
   echo
-  echo "the host build FAILED. The sources are synced but bin/ is stale, so the"
-  echo "matrix runner will refuse to start. Fix the build on the host before"
-  echo "running anything: ssh $HOST; cd $DEST; make build TAGS=nats"
+  if ssh "${SSH_OPTIONS[@]}" "$HOST" "bash -lc '$GO_PATHS; command -v go'" \
+       >/dev/null 2>&1; then
+    echo "the host build FAILED with a working Go toolchain, so this is a real"
+    echo "compile error. Read it above; the sources are synced but bin/ is stale,"
+    echo "and the matrix runner will refuse to start until it is rebuilt."
+  else
+    echo "no Go toolchain found on $HOST, even through a login shell. Install it,"
+    echo "or add its bin directory to the profile, then: make build TAGS=nats"
+  fi
   exit 2
-}
+fi
 
 echo
 echo "next, on the host:"
