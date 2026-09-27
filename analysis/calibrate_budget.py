@@ -39,6 +39,31 @@ def main():
 
     matrix = branches.read_matrix(args.root)
     pattern = "s*-a*" if glob.glob(os.path.join(args.root, "s*-a*")) else "a*"
+
+    # A calibration is a declared rule applied to a COMPLETED dedicated run.
+    # Applied while the run is still executing it silently uses whatever branches
+    # happen to exist: L=60 was once read at 20 of 40 pre-fault no-action
+    # branches, which produced a plausible number from half a measurement. A
+    # budget is then frozen and every later Y is scored against it, so a partial
+    # read is not a smaller error than a wrong rule.
+    expected = 0
+    if matrix:
+        try:
+            expected = (int(matrix["anchor_count"]) * int(matrix["repeats"])
+                        * len(str(matrix["actions"]).split())
+                        * int(matrix["scenario_count"]))
+        except (KeyError, TypeError, ValueError):
+            expected = 0
+    present = len(glob.glob(os.path.join(args.root, pattern)))
+    if expected and present < expected:
+        print(f"REFUSED: {present} of {expected} branches are present, so this "
+              f"run is incomplete.", file=sys.stderr)
+        print("  A budget calibrated on part of a run is frozen and then scores "
+              "every later Y.", file=sys.stderr)
+        print("  Wait for it to finish -- bash scripts/run_nightly.sh --status "
+              "must show exit 0 --", file=sys.stderr)
+        print("  then run this again.", file=sys.stderr)
+        return 2
     hist = {}
     count = 0
     loads = set()

@@ -138,6 +138,11 @@ chk "voiding a run is a script, not a loop of mv"  test -x scripts/void_run.sh
 chk "voiding refuses a live run"                   grep -q 'Voiding a live run' scripts/void_run.sh
 chk "voiding is recorded in a ledger"              grep -q 'LEDGER.md' scripts/void_run.sh
 chk "the status listing skips voided runs"         grep -q 'case "\$name" in _\*)' scripts/run_nightly.sh
+# A budget was once read from a run still in progress: 20 of 40 pre-fault
+# branches produced a plausible number from half a measurement, and a budget is
+# frozen and then scores every later Y.
+chk "calibration refuses an incomplete run" \
+  grep -q 'branches are present, so this' analysis/calibrate_budget.py
 
 # Protocol 0.5-0.9. Each of these was written after a defect that invalidated a
 # run, and each is here because a stale copy of the file would silently undo it.
