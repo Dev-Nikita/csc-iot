@@ -487,6 +487,12 @@ func runGateway(ctx context.Context, id string, b bus.Bus, ingress, route string
 			// rule exactly, so the two sides of the objective share a horizon.
 			Observed: map[string]float64{
 				"ingress_accepted":         accepted,
+				// The arrival rate in the last completed epoch. The cumulative
+				// count divided by the epoch index is contaminated by the
+				// warm-up ramp, which at an early anchor understates the steady
+				// rate by a factor of two and makes an admission cap look
+				// non-binding when it binds hard.
+				"ingress_accepted_last_epoch": float64(acceptedByEpoch[readEpoch-1]),
 				"admission_deferred_total": deferred,
 				"admission_backlog_depth":  residual,
 			},
@@ -608,6 +614,14 @@ func runEdge(ctx context.Context, id string, b bus.Bus, servePerEpoch int, slaEp
 	var inbox []queued
 	var currentEpoch int64
 	var served, violations, waitSum, waitMax float64
+	// Throughput in the LAST COMPLETED epoch, not only since the run began.
+	// A cumulative count averages healthy and degraded epochs, so it cannot
+	// separate a recent severe degradation from an old mild one: served + queued
+	// = arrivals * epochs holds identically, leaving onset and severity
+	// unidentifiable from cumulative counters alone. A windowed rate is the
+	// standard thing any real service exposes, and without it a structural
+	// model of capacity can only guess. Observed only, never hashed.
+	servedByEpoch := map[int64]float64{}
 	var latSum, latMax, latViolations float64
 	// Per-event latency histogram, 25 ms bins. The budget is a per-EVENT
 	// promise, so it has to be calibrated against the per-event distribution;
@@ -713,6 +727,7 @@ func runEdge(ctx context.Context, id string, b bus.Bus, servePerEpoch int, slaEp
 			inbox = inbox[1:]
 			wait := float64(k - item.arrivedK)
 			served++
+			servedByEpoch[k]++
 			waitSum += wait
 			if wait > waitMax {
 				waitMax = wait
@@ -780,6 +795,7 @@ func runEdge(ctx context.Context, id string, b bus.Bus, servePerEpoch int, slaEp
 			// them from the denominator. A healthy branch scored Y = 0.125 with
 			// zero SLA violations.
 			"unserved_eligible": eligible,
+			"served_last_epoch": servedByEpoch[currentEpoch-1],
 			"lat_ms_sum":        latSum,
 			"lat_ms_max":        latMax,
 			"lat_ms_violations": latViolations,

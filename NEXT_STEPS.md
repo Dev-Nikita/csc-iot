@@ -1,6 +1,6 @@
 # What to do next, in order
 
-Updated 2026-09-27. Each step says who does it, what it produces, and what
+Updated 2026-09-27 (after protocol 0.10). Each step says who does it, what it produces, and what
 would make it fail. A step is not finished until its check passes; a step whose
 check fails is not worked around.
 
@@ -10,125 +10,170 @@ server step that uses code changed since the last deploy.
 
 ---
 
-## Step 1 — Spanning-regime holdout (no new runs) — mine
+## Step 1 — Spanning-regime holdout — DONE
 
-The prediction result has one unanswered question. In the spanning regime the
-fault has not happened at decision time and nothing observable carries it, yet
-the model reaches MAE 0.0367 against 0.1624 for a constant. Two explanations
-fit: it is predicting the consequences of what has already accumulated, or it
-has learned the distribution of onsets from training and is exploiting it.
+Transfer, not memorisation: trained with every spanning branch removed, the
+model reaches MAE 0.0479 on spanning branches against 0.1922 for a constant.
+The irreducible component is bounded at 1.9x the post-onset error.
 
-Train with every spanning branch removed, test only on spanning branches. If the
-error holds, the skill transfers. If it collapses, the model was using the onset
-distribution, and the paper says so — that is the difference between a
-controller that reads state and one that has memorised the experiment.
+## Step 2 — Structural model — DONE, with a negative result and a fix
 
-**Check:** a number, either way, and one sentence in
-Section~\ref{sec:results-prediction} replacing the TODO.
+`analysis/structural.py` is written, frozen, and documented; three assumptions
+are stated in its header and in the paper. `analysis/structural_signtest.py` is
+the preregistered test.
 
-## Step 2 — Structural model `Ĵ(s,a)` — mine
+On cumulative counters the model reproduces 190/203 resolvable signs and fails
+13, all of them THROTTLE at anchor a02. Diagnosis: `served + q = lambda*k` holds
+identically, so onset and severity are not separately identifiable from
+cumulative counters; and at epoch 2 the cumulative arrival rate reads 50 while
+the steady rate is 100, so an admission cap of 50 looks non-binding. Post-onset
+signs were already 103/103.
 
-Written before the challenger exists so that it cannot be tuned against it, for
-the same reason the gate and the budget rule were frozen in advance. Inputs are
-the 57 permitted features only. Two assumptions go in the paper, not only the
-code: capacity is inferred from throughput only when the queue is non-empty
-(with an empty queue, throughput is the arrival rate and says nothing about
-capacity), and the shape of the latency distribution is taken as observed while
-the shift comes from queueing arithmetic.
+Fix, protocol 0.10: the gateway reports `ingress_accepted_last_epoch`, each edge
+reports `served_last_epoch`, `features.py` exposes both and flags their absence,
+the model reads them. Verified neutral on existing data: predictions are
+bit-identical through the fallback path. Pre-amendment record kept at
+`data/derived/structural-prefix-v1/`.
 
-**Check:** `analysis/test_structural.py` — the model must reproduce, on
-recorded branches, the sign of every contrast that survived all four bands in
-Section~\ref{sec:results-actions}. A structural model that cannot order the
-actions it was built to order is not a baseline.
+**Still open:** the fix cannot be evaluated without new branches. That is Step 3.
 
-## Step 3 — B5 in three regimes — mine, then one decision
+## Step 3 — Rebuild and re-run B5 with the windowed observables — Nikita [server]
 
-In-distribution, parameter shift (train on the two milder severities, test on
-the strongest), mechanism shift (needs Step 5). Apply the retention rule from
-protocol §11b, which was fixed before any of these test sets existed:
-`ΔCRA_η ≥ 0.05` or `Reg_η ≤ 0.90 × Reg_η(challenger)`, bootstrap CI excluding
-zero. A tie is a tie and the explicit structural layer is dropped.
+The node binary changed, so the matrix must be re-run before any model layer is
+compared. Nothing else in the design moves: same 24 scenarios, same anchors,
+same budget, same gate.
 
-**Check:** the rule is applied as written, and the outcome — including a tie —
-selects the architecture for Step 6.
-
-## Step 4 — Calibrate the budget for the other workload levels — yours
-
-The frozen 750 ms applies to 100 events per epoch only. The healthy per-event
-latency distribution depends on offered load, so a single budget across levels
-would make the failure term measure the load. Two calibration runs, about 15
-minutes each.
-
-**[mac]** `make deploy HOST=cybernord`
-
-**[server]**
 ```bash
-cd ~/csc-iot && make build TAGS=nats && make up-nats && make stack-nats
-export STACK_ID=$(python3 check_reportable_stack.py --print-stack-id)
+# on the mac, in the project folder
+make deploy HOST=cybernord
 
+# on the server
+cd ~/csc-iot
+go build ./... && go vet ./... && go test ./... 2>&1 | tail -20
+python3 -m pytest -q analysis/ 2>&1 | tail -5
+bash scripts/audit_repo.sh | tail -3
+```
+
+All four must pass. The audit now carries six new guards for the windowed
+observables; if one fails, the deploy did not land.
+
+Then a three-scenario pilot, NOT the full matrix, to confirm the new counters
+actually appear in `anchor.json`. The pilot needs its own scenario file, drawn
+by the same generator so that its hash is declared rather than hand-edited:
+
+```bash
+cd ~/csc-iot
+python3 scripts/gen_scenarios.py --n 3 --master-seed 20260927 \
+  --mechanisms D1 --workloads 100 --out configs/scenarios-windowed-pilot.json
+
+SCENARIOS=configs/scenarios-windowed-pilot.json ANCHOR_LIST="2,18" \
+  bash scripts/m2prime_nats_matrix.sh windowed-pilot-v1 2>&1 | tail -20
+```
+
+Anchor 2 is the one that failed, anchor 18 the one that already passed, so this
+pilot tests exactly the two cases that matter. Then:
+
+```bash
+R=$(ls -dt data/raw/*/windowed-pilot-v1 | head -1)
+python3 analysis/audit_accounting.py $R
+python3 analysis/jobs.py $R --latency-max-ms 3000 --latency-max-epochs 14 \
+  --allow-partial-cost --out $R/jobs.csv | tail -5
+python3 analysis/structural.py $R $R/jobs.csv --out $R/structural.csv
+python3 analysis/structural_signtest.py $R/jobs.csv $R/structural.csv | head -8
+```
+
+**Check:** the sign test's first line must read `WINDOWED OBSERVABLES present in
+N/N anchors sampled`. If it reads `0/N`, the containers are running an old
+image — rebuild them, do not proceed. A pilot this small will resolve few
+contrasts; that is expected and is not the test. What matters here is that the
+counters exist and that `audit_accounting.py` still passes all its invariants
+with the new fields present.
+
+Only then the full matrix:
+
+```bash
+nohup bash scripts/run_nightly.sh b5-matrix-v2 > logs/b5-matrix-v2.log 2>&1 &
+bash scripts/run_nightly.sh --status
+```
+
+~2880 branches at ~22 s is about 17.6 h. Start it before leaving the server.
+
+## Step 4 — Re-test the structural layer, then compare — mine
+
+With `b5-matrix-v2` in hand: the sign test again, and only if it passes, the
+structural-versus-associative comparison under the Section 11b retention rule.
+
+If the sign test still fails at a02 with windowed counters present, the cause is
+not the telemetry and the model is wrong — that gets reported as written, and
+the paper reports an associative structural layer instead. The retention rule
+was fixed before these sets were seen and does not move either way.
+
+## Step 5 — Budget calibration for workload 60 and 140 — Nikita [server]
+
+Two short runs. Protocol 0.9 requires a budget per workload level; only L=100 is
+frozen at 750 ms, so every cross-load figure is currently unscorable. Workload is
+a scenario factor, not an environment variable, so each calibration needs its own
+single-workload scenario file:
+
+```bash
+cd ~/csc-iot
 for L in 60 140; do
-  python3 scripts/gen_scenarios.py --n 1 --master-seed 2026 \
-    --mechanisms D1 --workloads $L --out /tmp/cal-$L.json 2>/dev/null \
-    || { echo "level $L has no budget yet -- expected, that is what we are fixing"; }
+  python3 scripts/gen_scenarios.py --n 2 --master-seed 2026092$L \
+    --mechanisms D1 --workloads $L --out configs/scenarios-cal-L$L.json
+  SCENARIOS=configs/scenarios-cal-L$L.json ANCHOR_LIST="2,6" \
+    bash scripts/m2prime_nats_matrix.sh budget-cal-L$L 2>&1 | tail -3
+  python3 analysis/calibrate_budget.py $(ls -dt data/raw/*/budget-cal-L$L | head -1)
 done
 ```
-The generator refuses a level with no budget, which is the guard working. The
-calibration run therefore has to bypass it deliberately: the budget is measured
-on **no-action pre-fault branches**, where the SLA is not used at all.
 
-**Check:** `analysis/calibrate_budget.py … --workload 60` and `--workload 140`
-each print a per-event $p_{99}$; both go into `configs/budgets.json` with their
-provenance **before** any comparative run at those levels.
+Calibration is defined on healthy `NO_OP` branches, which is why the anchors are
+early ones. Write both results into `configs/budgets.json`, which currently holds
+only `100 -> 750`, and record them as a protocol amendment. Independent of
+Step 3 — it can run any time, including while the matrix is running if the
+machine has headroom, though separately is safer.
 
-## Step 5 — MIGRATE, and the D2/D3 fault mechanisms — mine
+## Step 6 — MIGRATE with real side effects; mechanisms D2 and D3
 
-Four actions and three mechanisms are what the plan promises. `MIGRATE` needs
-real state movement with an acknowledgement, like the existing actions. `D3`
-(edge stall) is expressible with the flags that exist — severity 0. `D2`
-(ingress impairment ramp) needs netem re-applied part-way through a branch; the
-scenario generator refuses to emit it until it exists, rather than running `D1`
-under its name.
+D2 needs mid-branch netem, D3 is severity 0 (a declared no-op fault, the control
+for "does the label alone move the objective").
 
-**Check:** the runner's per-branch fault verification passes for every new
-mechanism, and the audit's degradation bound binds on the new branches.
+## Step 7 — Controller — mine
 
-## Step 6 — The controller — mine
+Ensemble K=10, CRC on the set-level loss, MNI with abstention, reported per
+regime beside the ensemble spread that produced it.
 
-Ensemble of ten, conformal risk control on the declared set-level loss,
-minimum-necessary intervention with guarded abstention, on whichever
-architecture Step 3 selected. Abstention is reported per regime beside the
-ensemble spread that produced it, and never as a single rate: an abstention that
-no measurable signal produced is not the mechanism working.
+## Step 8 — Baselines B1-B4, B5t, ablations A1-A2, D0 audit — Nikita [server]
 
-**Check:** a closed-loop run in which the selector demonstrably chooses — the
-log names the action, the cheaper alternatives it rejected and why.
+## Step 9 — Finish the manuscript, and the page budget
 
-## Step 7 — Baselines, ablations, D0 — yours to run, mine to analyse
+Measured today, not estimated: the manuscript compiles to **exactly 10 pages**
+with all 20 references resolved and no undefined citations. References occupy
+page 10 alone.
 
-B1 never intervene, B2 reactive threshold, B3 greedy predicted-best without gate
-or cost ordering, B4 replay oracle (labelled as not implementable online), B5t
-time-only control retained. A1 removes the gate, A2 removes the cost ordering.
-Then the D0 determinism audit on the frozen configuration.
+Two things were wrong with the build and are now fixed. `IEEEtran.bst` lived one
+directory above the repository, so `bibtex` silently failed and `main.bbl` was
+empty --- every PDF built in that state had **no bibliography at all**, which is
+why the paper appeared to fit comfortably. The style file is now inside `paper/`,
+the submission package is self-contained, and `main.bbl` carries all 20 entries.
 
-Branch cost grows with the anchor: 2880 branches with anchors to 30 took 17.5
-hours, about 22 s each, against 15.4 s measured on a pilot with short anchors.
-The next design size comes from a fit of cost against anchor, not from one mean.
+The honest consequence: 10 pages is the TNSM free limit and the paper is already
+at it, with 12 TODO blocks left --- six results subsections, two figures, the
+abstract and the closing sentence. Those will add roughly two to three pages.
+Plan for it now rather than discover it at submission:
 
-## Step 8 — Finish the manuscript — mine
+- TNSM allows up to 16 pages at \$220 per page over 10, with an academic waiver
+  requestable within 30 days of acceptance. Twelve to thirteen pages is a normal
+  submission, not a problem, provided the overage is deliberate.
+- The compression levers, in the order they cost least: Section 2's related-work
+  table, the two figures if the tables carry the same numbers, and the
+  System Model's worked example.
+- Do not compress by deleting the identifiability subsection or the four-band
+  reporting. Those are the parts a reviewer will check.
 
-Results are written from validated artifacts only. Abstract and conclusion last.
-`\thanks` e-mail and the artifact URL still say TODO and must be filled. The
-paper is 9 pages now against a 10-page TNSM core, so Step 6 and Step 7 have
-roughly one page between them; something in Sections II–IV gives way rather than
-buying overlength pages.
+Build it as a self-contained package:
 
----
+```bash
+cd paper && latexmk -C && latexmk -pdf main.tex && pdfinfo main.pdf | grep Pages
+```
 
-## Standing rules that have already earned their place
-
-- A run is not read until `analysis/audit_accounting.py` returns zero.
-- A verifier that cannot fail is not a verifier. Three of them were fixed after
-  they failed correct runs, and one had never executed at all.
-- `bash scripts/audit_repo.sh` after every deploy: it guards the invariants that
-  each cost a run, against a stale copy quietly undoing them.
-- Numbers reach the paper through `analysis/make_tables.py`, never by hand.
+Still needed from Nikita: the `\thanks` e-mail address and the artifact URL.

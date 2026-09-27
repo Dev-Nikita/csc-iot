@@ -782,6 +782,51 @@ decides. No predictor built on this state can remove it, and the paper does not
 suggest that conformal calibration does: the guarantee is over the observed
 distribution, and an event absent from the observations lies outside it.
 
+\subsection{What the structural model needs from the telemetry}
+\label{sec:results-identifiability}
+
+The structural predictor $\hat{J}(s,a)$ is queueing arithmetic with no fitted
+parameters: it advances the admission backlog and the per-edge queues over the
+planning horizon under the semantics of the action, takes the shape of the
+per-event latency distribution as measured and computes only its shift, and then
+scores the result with the same objective, over the same branch-level window, as
+the measurement. It was written and frozen before the associative challenger was
+evaluated, and its acceptance test was fixed in the protocol in advance: it must
+reproduce the \emph{sign} of every contrast the measurement can resolve, that is
+every contrast surviving all four bands of Section~\ref{sec:results-actions}.
+Direction, not magnitude, is what a controller consumes.
+
+Built on cumulative counters, the model fails that test, and the failure is
+informative. Let $\lambda$ be the offered rate, $c$ the effective service rate
+and $k$ the epoch index. Cumulative served work and current queue depth satisfy
+$\mathrm{served} + q = \lambda k$ identically, so no function of them separates
+the onset of a degradation from its severity: only the product of depth and
+duration is observable. A direct test confirms this. Estimating capacity as
+$q/w_{\max}$ over 104 post-onset no-action branches gives medians $103.3$,
+$100.0$ and $83.3$ for declared post-fault capacities of $40$, $60$ and $90$ ---
+it recovers the arrival rate, near $100$, and not the capacity. The cumulative
+throughput $\mathrm{served}/k$ does order with severity ($67.8$, $78.7$, $91.7$)
+but is biased upward, because it averages healthy and degraded epochs.
+
+The same absence defeats the arrival rate. Of $203$ resolvable contrasts the
+frozen model reproduced $190$ signs; all $13$ failures were the admission-cap
+action at the earliest anchor, where the observed contrast is near $-0.67$ and
+the prediction near zero. At epoch two the cumulative arrival rate reads $50$
+because it still contains the warm-up ramp, while the steady rate is $100$; an
+admission cap of $50$ therefore appears not to bind when in fact it binds hard.
+In the post-onset regime, where the ramp is long past, the model reproduced
+$103$ of $103$ signs.
+
+We report this as a requirement on instrumentation rather than as a defect of
+the model. A decision-time state built from cumulative counters is not
+sufficient for structural reasoning about capacity, however the model is
+written; a windowed rate --- work served and work admitted in the last completed
+interval --- is standard in production telemetry and restores identifiability of
+the current operating point. Each node now reports both. The objective, the
+resolvability gate, the bands and the retention rule are unchanged, and the
+pre-amendment predictions and sign test are retained in the artifact so that the
+sequence can be audited.
+
 \subsection{Structural versus associative prediction}
 \label{sec:results-b5}
 \TODO{The comparison that decides the architecture. Report
