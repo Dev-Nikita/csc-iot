@@ -132,6 +132,12 @@ chk "the nightly refuses a mismatched STACK_ID" \
   grep -q 'but the validated stack is' scripts/run_nightly.sh
 chk "the matrix refuses a mismatched STACK_ID" \
   grep -q 'but the validated stack is' scripts/m2prime_nats_matrix.sh
+# Voiding by hand with a loop of mv once moved a LIVE run's log and data out from
+# under it, leaving a finished-looking name over a branch still in progress.
+chk "voiding a run is a script, not a loop of mv"  test -x scripts/void_run.sh
+chk "voiding refuses a live run"                   grep -q 'Voiding a live run' scripts/void_run.sh
+chk "voiding is recorded in a ledger"              grep -q 'LEDGER.md' scripts/void_run.sh
+chk "the status listing skips voided runs"         grep -q 'case "\$name" in _\*)' scripts/run_nightly.sh
 
 # Protocol 0.5-0.9. Each of these was written after a defect that invalidated a
 # run, and each is here because a stale copy of the file would silently undo it.

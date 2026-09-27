@@ -24,6 +24,10 @@ if [ "${1:-}" = "--status" ]; then
   for log in logs/*.log; do
     [ -e "$log" ] || continue
     name="$(basename "$log" .log)"
+    # Voided runs live in logs/_void/ and are not runs any more. Before this they
+    # were listed beside the live ones -- four quarantined attempts in a status
+    # table is how a listing stops being read.
+    case "$name" in _*) continue ;; esac
     # A live run is identified by its recorded pid, not by matching a command
     # line: the launcher quotes its environment assignments, so a pattern like
     # EXPERIMENT=$name never matched EXPERIMENT='$name' and every running job
