@@ -114,6 +114,10 @@ chk "the deploy protects host-generated scenario sets" \
 # and the runner refused to start -- correctly, but a round trip too late.
 chk "the deploy rebuilds the host binaries" \
   grep -q 'make build TAGS=nats' scripts/deploy_to_host.sh
+# A non-interactive ssh reads no profile, so a Go under /usr/local/go is absent
+# and the build failed with 'go: command not found' on a host where go works.
+chk "the host build runs in a login shell" \
+  grep -q "bash -lc" scripts/deploy_to_host.sh
 
 # Protocol 0.5-0.9. Each of these was written after a defect that invalidated a
 # run, and each is here because a stale copy of the file would silently undo it.
