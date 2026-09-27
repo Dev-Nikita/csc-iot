@@ -55,6 +55,22 @@ if [ -e "$LOG" ]; then
   exit 2
 fi
 
+# Every matrix recreates the whole topology for each branch, so two runs on one
+# Docker stack tear each other's containers down mid-branch and both data sets are
+# void. Three were once launched at once -- a pilot and two budget calibrations --
+# and nothing stopped it. Concurrency here is not slow, it is wrong.
+for pidfile in logs/*.pid; do
+  [ -e "$pidfile" ] || continue
+  other="$(basename "$pidfile" .pid)"
+  if kill -0 "$(cat "$pidfile")" 2>/dev/null; then
+    echo "FAIL: '$other' is still running (pid $(cat "$pidfile"))."
+    echo "      Every branch recreates the shared topology, so a second matrix"
+    echo "      would destroy both runs' data rather than merely slow them down."
+    echo "      Wait for it, or stop it: kill \$(cat $pidfile)"
+    exit 2
+  fi
+done
+
 STACK_ID="${STACK_ID:-$(python3 check_reportable_stack.py --print-stack-id 2>/dev/null)}"
 [ -n "$STACK_ID" ] || { echo "FAIL: no reportable stack. Run make stack-nats first."; exit 2; }
 

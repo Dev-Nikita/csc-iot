@@ -122,6 +122,10 @@ chk "the host build runs in a login shell" \
 # the append-only guard refused a directory nobody had asked for.
 chk "the matrix accepts its name positionally" \
   grep -q 'EXPERIMENT="\$1"' scripts/m2prime_nats_matrix.sh
+# Three matrices were once launched at once on one Docker stack. Every branch
+# recreates the topology, so concurrent runs void each other's data.
+chk "the nightly refuses a concurrent run" \
+  grep -q 'is still running (pid' scripts/run_nightly.sh
 
 # Protocol 0.5-0.9. Each of these was written after a defect that invalidated a
 # run, and each is here because a stale copy of the file would silently undo it.
