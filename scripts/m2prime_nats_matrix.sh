@@ -6,7 +6,13 @@ set -euo pipefail
 
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.nats.yml}"
 BIN="${BIN:-bin}"
-STACK_ID="${STACK_ID:-}"
+# Derived here when it is not already in the environment, exactly as
+# scripts/run_nightly.sh does it. Before this, a direct invocation required the
+# caller to export STACK_ID by hand, and setting a similarly named shell variable
+# instead -- STACK=... -- failed with "STACK_ID is required (run make stack-nats
+# first)" on a stack that was up and validated. An error that names the wrong
+# cause costs more than the check saves.
+STACK_ID="${STACK_ID:-$(python3 check_reportable_stack.py --print-stack-id 2>/dev/null)}"
 EXPERIMENT="${EXPERIMENT:-m2prime-nats}"
 ANCHORS="${ANCHORS:-30}"
 # An anchor LIST, when the anchors must reach past the fault onsets. With onsets
@@ -51,7 +57,12 @@ compose() { docker compose -f "$COMPOSE_FILE" "$@"; }
 
 [ -x "$BIN/csc-orchestrator" ] || { echo "FAIL: build bin/ with -tags=nats first"; exit 2; }
 [ -x "$BIN/csc-stackstamp" ] || { echo "FAIL: build bin/csc-stackstamp first"; exit 2; }
-[ -n "$STACK_ID" ] || { echo "FAIL: STACK_ID is required (run make stack-nats first)"; exit 2; }
+[ -n "$STACK_ID" ] || {
+  echo "FAIL: no reportable stack. The id is derived from"
+  echo "      check_reportable_stack.py, which found none validated."
+  echo "      Run: make up-nats && make stack-nats"
+  exit 2
+}
 
 [ -n "$SCENARIOS" ] || {
   echo "FAIL: SCENARIOS=<file> is required."
