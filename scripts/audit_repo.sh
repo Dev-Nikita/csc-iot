@@ -83,6 +83,13 @@ chk "calibration runs are allocated first, not left over" \
   grep -q 'cal_runs=CAL_RUNS' analysis/predictor.py
 chk "the calibration size is derived from equation 9" \
   grep -q 'def min_calibration_runs' analysis/predictor.py
+# A workload level cannot be calibrated from a file that needs its own budget to
+# exist. The escape is narrow and every part of it has to be present, or either
+# the deadlock returns or a placeholder budget reaches a results table.
+chk "the budget deadlock has a stamped escape"     grep -q 'for_calibration' scripts/gen_scenarios.py
+chk "the runner carries the calibration stamp"     grep -q 'budget-calibration' scripts/m2prime_nats_matrix.sh
+chk "the objective refuses a calibration matrix"   grep -q 'budget-calibration' analysis/jobs.py
+chk "aliasing needs two levels on both factors"    grep -q 'min(count.values()) < 2' scripts/gen_scenarios.py
 
 # Protocol 0.5-0.9. Each of these was written after a defect that invalidated a
 # run, and each is here because a stale copy of the file would silently undo it.

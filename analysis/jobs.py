@@ -172,6 +172,19 @@ def main():
         print("  protocol that this run measures a reduced objective.", file=sys.stderr)
         return 2
 
+    # A budget-calibration matrix ran with a placeholder budget so that a
+    # workload level with no budget could be measured at all. Its Y and its cost
+    # term are meaningless and it must never reach a results table.
+    mpath = os.path.join(args.root, "matrix.json")
+    if os.path.exists(mpath):
+        with open(mpath) as fh:
+            if json.load(fh).get("purpose") == "budget-calibration":
+                print("REFUSED: this matrix was run for budget calibration, with "
+                      "a placeholder", file=sys.stderr)
+                print("  latency budget. J_obs from it is not a measurement. Use "
+                      "analysis/calibrate_budget.py.", file=sys.stderr)
+                return 2
+
     rows = []
     matrix = branches.read_matrix(args.root)
     pattern = "s*-a*" if glob.glob(os.path.join(args.root, "s*-a*")) else "a*"
