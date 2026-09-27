@@ -13,6 +13,16 @@ BIN="${BIN:-bin}"
 # first)" on a stack that was up and validated. An error that names the wrong
 # cause costs more than the check saves.
 STACK_ID="${STACK_ID:-$(python3 check_reportable_stack.py --print-stack-id 2>/dev/null)}"
+# The experiment name is accepted as the first positional argument as well as
+# through the environment. Only the environment worked before, so
+#   bash scripts/m2prime_nats_matrix.sh windowed-pilot-v1
+# silently used the default name and the append-only guard refused, naming a
+# directory nobody had asked for. scripts/run_nightly.sh takes the name
+# positionally, so the two interfaces disagreed; they no longer do.
+if [ $# -gt 0 ] && [ "${1#-}" = "$1" ]; then
+  EXPERIMENT="$1"
+  shift
+fi
 EXPERIMENT="${EXPERIMENT:-m2prime-nats}"
 ANCHORS="${ANCHORS:-30}"
 # An anchor LIST, when the anchors must reach past the fault onsets. With onsets
