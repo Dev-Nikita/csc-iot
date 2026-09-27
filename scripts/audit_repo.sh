@@ -90,6 +90,13 @@ chk "the budget deadlock has a stamped escape"     grep -q 'for_calibration' scr
 chk "the runner carries the calibration stamp"     grep -q 'budget-calibration' scripts/m2prime_nats_matrix.sh
 chk "the objective refuses a calibration matrix"   grep -q 'budget-calibration' analysis/jobs.py
 chk "aliasing needs two levels on both factors"    grep -q 'min(count.values()) < 2' scripts/gen_scenarios.py
+# Two scripts lost their executable bit to an in-place rewrite and the deploy
+# failed with a bare "Permission denied", which names the symptom and not the
+# cause. The deploy no longer depends on the bit; this reports it anyway.
+chk "every script keeps its executable bit" \
+  bash -c 'for f in scripts/*.sh; do [ -x "$f" ] || { echo "not executable: $f"; exit 1; }; done'
+chk "the deploy does not depend on an executable bit" \
+  grep -q 'bash scripts/audit_repo.sh' scripts/deploy_to_host.sh
 
 # Protocol 0.5-0.9. Each of these was written after a defect that invalidated a
 # run, and each is here because a stale copy of the file would silently undo it.
