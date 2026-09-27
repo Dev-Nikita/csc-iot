@@ -176,6 +176,39 @@ Telemetry, ridge (linear) & {fmt(vals.get('ridge', float('nan')))} & --- & --- &
 \\end{{tabular}}
 \\end{{table}}
 """)
+    # Spanning-regime holdout: whether skill where the fault has not yet happened
+    # transfers, or is knowledge of the onset distribution.
+    span_path = os.path.join(args.out_dir, "spanning_summary.json")
+    run = subprocess.run(
+        [sys.executable, os.path.join(os.path.dirname(__file__), "regime_holdout.py"),
+         args.factored_root, os.path.join(args.factored_root, "jobs.csv"),
+         "--json", span_path], capture_output=True, text=True)
+    if not os.path.exists(span_path):
+        sys.exit("the regime holdout wrote no summary:\n" + run.stdout + run.stderr)
+    sp = json.load(open(span_path))
+    write(os.path.join(args.out_dir, "table_spanning.tex"), f"""\
+\\begin{{table}}[!t]
+\\centering
+\\caption{{Spanning-regime holdout. In this regime the fault arrives inside the
+horizon and nothing in the state at the decision instant carries it. The strict
+row trains on no branch that spans a fault and on no branch sharing the test
+branch's fault setting, so it is the only row that supports a claim.
+($n={sp['n_test']}$ branches, MAE in $J_{{\\mathrm{{obs}}}}$ units.)}}
+\\label{{tab:spanning}}
+\\begin{{tabular}}{{lr}}
+\\toprule
+Training set & MAE \\\\
+\\midrule
+Held out by fault design point (spanning allowed) & {fmt(sp['design_point_holdout'])} \\\\
+No spanning branch in training & {fmt(sp['regime_holdout'])} \\\\
+\\textbf{{No spanning branch, fault setting unseen}} & \\textbf{{{fmt(sp['strict_holdout'])}}} \\\\
+\\midrule
+Predict the training mean & {fmt(sp['constant'])} \\\\
+Standard deviation of $J_{{\\mathrm{{obs}}}}$ here & {fmt(sp['spread'])} \\\\
+\\bottomrule
+\\end{{tabular}}
+\\end{{table}}
+""")
     return 0
 
 

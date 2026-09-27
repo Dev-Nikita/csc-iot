@@ -1,0 +1,10 @@
+{
+  "constant": 0.19218619357505043,
+  "design_point_holdout": 0.03480387064330915,
+  "n_test": 720,
+  "regime": "spanning",
+  "regime_holdout": 0.0479249028305043,
+  "spread": 0.18941527395841765,
+  "strict_holdout": 0.04792666727281925,
+  "verdict": "TRANSFER"
+}
