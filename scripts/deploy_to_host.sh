@@ -29,6 +29,13 @@ fi
 [[ -n "${SSH_IDENTITY:-}" ]] || { echo "no SSH identity found; set SSH_IDENTITY=/path/to/key" >&2; exit 2; }
 SSH_OPTIONS=(-o IdentitiesOnly=yes -i "$SSH_IDENTITY")
 
+# --delete removes anything on the host that is not here, which twice destroyed
+# work generated ON the host inside a synced directory: first logs/, now the
+# scenario files drawn there by gen_scenarios.py. 'protect' stops the deletion
+# while still transferring the copies that do live in this repo. A generated
+# scenario set loses nothing by being recreated -- it is a pure function of its
+# seed, and each run copies it into its own output directory -- but losing it
+# mid-workflow reads as a missing file rather than as a deleted one.
 echo "syncing to $HOST:$DEST"
 rsync -e "ssh -o IdentitiesOnly=yes -i $SSH_IDENTITY" -avz --delete \
   --exclude '.git' \
@@ -42,6 +49,8 @@ rsync -e "ssh -o IdentitiesOnly=yes -i $SSH_IDENTITY" -avz --delete \
   --exclude 'paper/*.aux' --exclude 'paper/*.log' --exclude 'paper/*.fls' \
   --exclude 'paper/*.fdb_latexmk' --exclude 'paper/*.synctex.gz' \
   --exclude '.DS_Store' \
+  --filter='protect configs/scenarios-*.json' \
+  --filter='protect configs/budgets-*.json' \
   ./ "$HOST:$DEST/"
 
 echo

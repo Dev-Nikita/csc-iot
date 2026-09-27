@@ -106,6 +106,10 @@ chk "C(NO_OP) is zero by definition"              grep -q 'cost = {"NO_OP": 0.0}
 # "run make stack-nats first" on a stack that was already up and validated.
 chk "the matrix derives its own stack id" \
   grep -q 'STACK_ID:-\$(python3 check_reportable_stack.py' scripts/m2prime_nats_matrix.sh
+# rsync --delete destroyed host-generated work inside a synced directory twice:
+# logs/ first, then the scenario sets drawn on the host.
+chk "the deploy protects host-generated scenario sets" \
+  grep -q "protect configs/scenarios" scripts/deploy_to_host.sh
 
 # Protocol 0.5-0.9. Each of these was written after a defect that invalidated a
 # run, and each is here because a stale copy of the file would silently undo it.
