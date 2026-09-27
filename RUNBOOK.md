@@ -91,41 +91,21 @@ with both numbers equal and non-zero. `0/N` means the containers are running the
 old image: `make stack-nats` again and confirm the rebuild. A pilot this small
 resolves few contrasts; that is expected and is not what is being tested here.
 
-### 1.5 Launch the full matrix `[SERVER]`
+### 1.5 Calibrate the budget for workload 60 and 140 — now, not later `[SERVER]`
 
-`run_nightly.sh` detaches itself with `setsid`, so no `nohup`, no `tmux`, and the
-laptop may sleep or disconnect.
+This moved ahead of the main matrix, and the reason matters. `scenarios-b5.json`
+as it stands varies only onset, severity and seed: **one workload level, one
+mechanism**. The paper claims results in three shift regimes --- in-distribution,
+parameter shift and mechanism shift --- and that matrix cannot support the last
+two. Re-running it for eighteen hours would produce the same limitation again.
 
-```bash
-cd ~/csc-iot
-bash scripts/run_nightly.sh b5-matrix-v2 SCENARIOS=configs/scenarios-b5.json \
-  ANCHOR_LIST="2,6,10,14,18,22,26,30" REPEATS=5 HORIZON=8 \
-  ACTIONS="NO_OP THROTTLE REROUTE"
-```
-
-2880 branches at roughly 22 s is about 17.6 hours. Check on it from anywhere:
-
-```bash
-cd ~/csc-iot && bash scripts/run_nightly.sh --status
-tail -5 logs/b5-matrix-v2.log
-```
-
-The wrapper now runs the accounting audit itself and **stops before the analysis
-if it fails**, leaving `logs/b5-matrix-v2.audit-failed` behind. Until today it
-passed two obsolete flags to the audit, argparse rejected them, and no nightly
-run was ever audited at all — so if you remember that line scrolling past, that
-is what it was.
-
-### 1.6 Budget calibration for workload 60 and 140 `[SERVER]`
-
-Independent of everything above; do it while the matrix runs only if the machine
-has headroom, otherwise after. Protocol 0.9 requires one budget per workload
-level and only L=100 is frozen, at 750 ms, so every cross-load figure is
-currently unscorable. Workload is a scenario factor, not an environment
-variable, so each calibration needs its own single-workload file.
+The generator refuses a workload level with no calibrated budget, and it is right
+to: borrowing another level's promise would make `Y` measure the load. So the
+budgets come first.
 
 ```bash
 cd ~/csc-iot
+STACK=$(python3 check_reportable_stack.py --print-stack-id)
 for L in 60 140; do
   python3 scripts/gen_scenarios.py --n 2 --master-seed 2026092$L \
     --mechanisms D1 --workloads $L --out configs/scenarios-cal-L$L.json
@@ -135,8 +115,64 @@ for L in 60 140; do
 done
 ```
 
-Send me both printed budgets. I write them into `configs/budgets.json` and log
-the amendment — do not hand-edit that file, the runner checks it.
+Two short runs. **Send me both printed budgets and stop there.** I write them
+into `configs/budgets.json` with the calibration provenance and log the
+amendment; do not hand-edit that file, the runner checks it and the generator
+reads it.
+
+### 1.6 Regenerate the scenario set `[SERVER]`, after I return the budgets
+
+```bash
+cd ~/csc-iot
+python3 scripts/gen_scenarios.py --n 36 --master-seed 20260927 \
+  --mechanisms D1,D3 --workloads 60,100,140 --out configs/scenarios-b5-v2.json
+```
+
+This gives 36 design points: both mechanisms balanced 18/18, and for the graded
+mechanism all nine (severity, workload) cells with two replicates each.
+
+A defect was fixed in the generator today to make that possible. Severity and
+workload were both indexed by the same counter, so of the nine combinations only
+three could ever appear --- the mildest fault only at the lightest load, the
+strongest only at the heaviest. The two factors would have been aliased, and a
+parameter-shift split on either would silently have been a shift on both. With a
+single workload level the defect was latent, which is why it survived; it bites
+the moment workload becomes a factor. The generator now refuses any draw in
+which two factors are perfectly correlated, and that guard fires on the old
+stride.
+
+### 1.7 Launch the full matrix `[SERVER]`
+
+`run_nightly.sh` detaches itself with `setsid`, so no `nohup`, no `tmux`, and the
+laptop may sleep or the connection drop.
+
+```bash
+cd ~/csc-iot
+bash scripts/run_nightly.sh b5-matrix-v2 SCENARIOS=configs/scenarios-b5-v2.json \
+  ANCHORS=30 ANCHOR_LIST="2,6,10,14,18,22,26,30" REPEATS=5 HORIZON=8 \
+  ACTIONS="NO_OP REROUTE THROTTLE"
+```
+
+Every value other than the scenario file is copied from `b5-matrix-v1`'s own
+`matrix.json`, including the order of the action list, because the order enters
+`config_hash`.
+
+**Expect 26 to 35 hours, not 18.** 36 scenarios give 4320 branches against 2880,
+and the added branches are the slow ones: workload 140 carries more events per
+epoch, and mechanism D3 stalls an edge completely so its queues grow without
+bound. Start it when a day and a half of machine time is free. Check from
+anywhere:
+
+```bash
+cd ~/csc-iot && bash scripts/run_nightly.sh --status
+tail -5 logs/b5-matrix-v2.log
+```
+
+The wrapper now runs the accounting audit itself and **stops before the analysis
+if it fails**, leaving `logs/b5-matrix-v2.audit-failed` behind. Until today it
+passed two obsolete flags to the audit, argparse rejected them, and no nightly
+run was ever audited at all --- so if you remember that line scrolling past, that
+is what it was.
 
 ---
 
