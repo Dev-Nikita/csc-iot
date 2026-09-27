@@ -47,9 +47,18 @@ def draw(master_seed, n, mechanisms, workloads):
         # with too few scenarios on the held-out side to say anything. Onset
         # stays random: it is the factor whose whole purpose is to stop the
         # anchor index from indexing the fault's age.
+        # Severity and workload must advance on DIFFERENT strides. Indexing both
+        # by (i-1) % 3 made them perfectly correlated: of the nine
+        # (severity, workload) combinations only three ever appeared --- the
+        # mildest fault only at the lightest load, the strongest only at the
+        # heaviest. Severity and workload would then be aliased, a model could
+        # not distinguish one from the other, and a parameter-shift split on
+        # either would silently be a shift on both. With a single workload level
+        # the defect was latent; it bites the moment workload becomes a factor,
+        # which is exactly what protocol 0.9 requires.
         mech = mechanisms[(i - 1) % len(mechanisms)]
         sev = 0 if mech == "D3" else SEVERITY_LEVELS[(i - 1) % len(SEVERITY_LEVELS)]
-        load = workloads[(i - 1) % len(workloads)]
+        load = workloads[((i - 1) // len(SEVERITY_LEVELS)) % len(workloads)]
         onsets = [o for o in range(ONSET_RANGE[0], ONSET_RANGE[1] + 1)
                   if (mech, o, sev, load) not in used]
         if not onsets:
@@ -68,7 +77,38 @@ def draw(master_seed, n, mechanisms, workloads):
             "workload_level": load,
             "seed": seed,
         })
+    _refuse_aliased_factors(out)
     return out
+
+
+def _refuse_aliased_factors(scenarios):
+    """A scenario set in which two factors move together is not a factorial set.
+
+    This is the guard that would have caught the severity/workload aliasing, so
+    it lives in the generator rather than in a review comment. Perfect
+    correlation is checked directly rather than by a coefficient: the question is
+    whether each level of one factor is seen at more than one level of the other.
+    """
+    graded = [s for s in scenarios if s["fault_severity"] > 0]
+    if len(graded) < 2:
+        return
+    for a, b in (("fault_severity", "workload_level"),
+                 ("fault_severity", "fault_onset"),
+                 ("workload_level", "fault_onset")):
+        seen = {}
+        for s in graded:
+            seen.setdefault(s[a], set()).add(s[b])
+        levels_of_a = len(seen)
+        if levels_of_a < 2:
+            continue
+        if all(len(v) == 1 for v in seen.values()):
+            pairs = sorted((k, sorted(v)[0]) for k, v in seen.items())
+            raise SystemExit(
+                f"REFUSED: {a} and {b} are perfectly aliased in this draw --- "
+                f"every level of {a} appears at exactly one level of {b}: "
+                f"{pairs}. A model cannot separate them and a shift split on "
+                f"one is a shift on both. Widen the levels or change the "
+                f"assignment strides.")
 
 
 def main():

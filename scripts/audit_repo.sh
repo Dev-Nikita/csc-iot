@@ -71,6 +71,12 @@ chk "the sign test is the declared structural test" grep -q 'surviving ALL FOUR 
 chk "the nightly audit passes no obsolete flags" \
   bash -c '! grep -q "audit_accounting.py.*--healthy-anchors" scripts/run_nightly.sh'
 chk "a failed accounting audit stops the analysis" grep -q 'audit-failed' scripts/run_nightly.sh
+# Severity and workload were indexed by the same counter, so only three of nine
+# combinations could appear and the two factors were aliased. Latent at one
+# workload level; active the moment workload becomes a factor.
+chk "severity and workload advance on different strides" \
+  grep -q 'len(SEVERITY_LEVELS)) % len(workloads)' scripts/gen_scenarios.py
+chk "the generator refuses aliased factors"       grep -q '_refuse_aliased_factors' scripts/gen_scenarios.py
 
 # Protocol 0.5-0.9. Each of these was written after a defect that invalidated a
 # run, and each is here because a stale copy of the file would silently undo it.
