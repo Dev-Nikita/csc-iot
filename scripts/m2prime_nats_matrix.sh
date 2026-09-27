@@ -12,7 +12,16 @@ BIN="${BIN:-bin}"
 # instead -- STACK=... -- failed with "STACK_ID is required (run make stack-nats
 # first)" on a stack that was up and validated. An error that names the wrong
 # cause costs more than the check saves.
-STACK_ID="${STACK_ID:-$(python3 check_reportable_stack.py --print-stack-id 2>/dev/null)}"
+# Same guard as scripts/run_nightly.sh: a stale STACK_ID in the environment was
+# believed and stamped a run with a five-day-old stack id.
+LIVE_STACK="$(python3 check_reportable_stack.py --print-stack-id 2>/dev/null)"
+if [ -n "${STACK_ID:-}" ] && [ -n "$LIVE_STACK" ] && [ "$STACK_ID" != "$LIVE_STACK" ]; then
+  echo "FAIL: STACK_ID=$STACK_ID in the environment, but the validated stack is"
+  echo "      $LIVE_STACK. Do not set STACK_ID by hand; it is derived."
+  echo "      Clear it and try again:  unset STACK_ID"
+  exit 2
+fi
+STACK_ID="${STACK_ID:-$LIVE_STACK}"
 # The experiment name is accepted as the first positional argument as well as
 # through the environment. Only the environment worked before, so
 #   bash scripts/m2prime_nats_matrix.sh windowed-pilot-v1
