@@ -118,6 +118,10 @@ chk "the deploy rebuilds the host binaries" \
 # and the build failed with 'go: command not found' on a host where go works.
 chk "the host build runs in a login shell" \
   grep -q "bash -lc" scripts/deploy_to_host.sh
+# Only EXPERIMENT= worked, so passing the name positionally used the default and
+# the append-only guard refused a directory nobody had asked for.
+chk "the matrix accepts its name positionally" \
+  grep -q 'EXPERIMENT="\$1"' scripts/m2prime_nats_matrix.sh
 
 # Protocol 0.5-0.9. Each of these was written after a defect that invalidated a
 # run, and each is here because a stale copy of the file would silently undo it.
