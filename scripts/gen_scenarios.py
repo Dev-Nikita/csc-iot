@@ -33,8 +33,13 @@ NOT_IMPLEMENTED = {
 
 
 def draw(master_seed, n, mechanisms, workloads):
+    """Unique design points. Two scenarios differing only by seed are replicates,
+    not design points: holding one out and training on the other tests
+    generalisation to a scenario the model has effectively seen. The draw is
+    without replacement over (mechanism, onset, severity, workload)."""
     rng = random.Random(master_seed)
     out = []
+    used = set()
     for i in range(1, n + 1):
         # Mechanism, severity and workload are assigned round-robin rather than
         # drawn. A random draw of 24 scenarios gave 12 at the mildest severity
@@ -43,9 +48,17 @@ def draw(master_seed, n, mechanisms, workloads):
         # stays random: it is the factor whose whole purpose is to stop the
         # anchor index from indexing the fault's age.
         mech = mechanisms[(i - 1) % len(mechanisms)]
-        onset = rng.randint(*ONSET_RANGE)
         sev = 0 if mech == "D3" else SEVERITY_LEVELS[(i - 1) % len(SEVERITY_LEVELS)]
         load = workloads[(i - 1) % len(workloads)]
+        onsets = [o for o in range(ONSET_RANGE[0], ONSET_RANGE[1] + 1)
+                  if (mech, o, sev, load) not in used]
+        if not onsets:
+            raise SystemExit(
+                f"REFUSED: the declared levels admit no further distinct design "
+                f"point for ({mech}, severity {sev}, load {load}); asked for "
+                f"{n} scenarios.")
+        onset = rng.choice(onsets)
+        used.add((mech, onset, sev, load))
         seed = rng.randrange(1, 2**31 - 1)
         out.append({
             "scenario_id": f"s{i:02d}",

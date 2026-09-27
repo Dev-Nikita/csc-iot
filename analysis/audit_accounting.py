@@ -103,6 +103,41 @@ def audit(path, rec):
                 bad.append(f"declared severity {rec['fault_severity']} but the node "
                            f"ran {ran_sev}")
 
+    # 7b. The declared fault must have HAD AN EFFECT, not merely been declared.
+    #     7a compares the configuration the node reports with the manifest, which
+    #     catches a parameter that never reached the container. It does not catch
+    #     a parameter that arrived and did nothing. Throughput does: an edge whose
+    #     capacity dropped to S at epoch T cannot have served more than
+    #     N*(T-1) + S*(epochs-T+1) events, whatever the action. Exceeding that
+    #     bound is proof the degradation did not happen.
+    #
+    #     One-sided on purpose. Serving LESS is ordinary -- REROUTE moves work
+    #     away, THROTTLE admits less, and an unsaturated edge serves only what
+    #     arrives. Only the upper bound carries information.
+    if not rec.get("legacy") and rec["fault_severity"] > 0:
+        try:
+            with open(os.path.join(path, "outcome.json")) as fh:
+                out_doc = json.load(fh)
+            end_epoch = int(out_doc["epoch"])
+            nominal = float(json.load(open(os.path.join(path, "anchor.json")))
+                            ["state"]["edge_capacity"]["edge00/serve_per_epoch"])
+        except (OSError, KeyError, ValueError):
+            end_epoch, nominal = None, None
+        if end_epoch and nominal:
+            onset = rec["fault_onset"]
+            serving = max(0, end_epoch - 1)          # epochs that served work
+            healthy_epochs = min(serving, max(0, onset - 1))
+            degraded_epochs = serving - healthy_epochs
+            bound = nominal * healthy_epochs + rec["fault_severity"] * degraded_epochs
+            served00 = suffix_sum(
+                {k: v for k, v in obs.items() if k.startswith("edge00/")}, "/served")
+            # Only informative where the bound actually binds.
+            if degraded_epochs > 0 and served00 > bound * 1.02 + 1:
+                bad.append(f"edge00 served {served00:.0f} but a fault at epoch "
+                           f"{onset} dropping capacity to {rec['fault_severity']} "
+                           f"allows at most {bound:.0f} over {serving} epochs: the "
+                           f"declared degradation had no effect")
+
     # 7. A healthy no-action branch is not allowed to fail. If it does, the
     #    budget or the accounting is wrong, not the system.
     # A pre-fault branch spans no fault at all: nothing is wrong and nothing
@@ -114,6 +149,15 @@ def audit(path, rec):
         if sla_viol > 0:
             bad.append(f"pre-fault NO_OP missed the epoch deadline {sla_viol:.0f} times")
     return bad
+
+
+def rows_are_legacy(dirs, matrix):
+    for d in dirs:
+        try:
+            return bool(branches.read(d, matrix).get("legacy"))
+        except ValueError:
+            continue
+    return True
 
 
 def main():
@@ -166,7 +210,26 @@ def main():
                   f"{[b[0] for b in v.values()]}", file=sys.stderr)
         return 1
 
+    binding = 0
+    for d in dirs:
+        try:
+            rec = branches.read(d, matrix)
+        except ValueError:
+            continue
+        if rec.get("legacy") or rec["fault_severity"] <= 0:
+            continue
+        try:
+            end_epoch = int(json.load(open(os.path.join(d, "outcome.json")))["epoch"])
+        except (OSError, KeyError, ValueError):
+            continue
+        if max(0, end_epoch - 1) - min(max(0, end_epoch - 1),
+                                       max(0, rec["fault_onset"] - 1)) > 0:
+            binding += 1
+
     print(f"ACCOUNTING AUDIT: {len(dirs)} branches, {len(failed)} with violations")
+    if not rows_are_legacy(dirs, matrix):
+        print(f"  the degradation-effect bound binds on {binding}/{len(dirs)} "
+              f"branches (the rest end before their onset)")
     if not failed:
         print("  every branch: one event set, histogram complete, "
               "pre-fault NO_OP clean")
