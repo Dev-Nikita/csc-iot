@@ -138,7 +138,10 @@ def main():
     ap.add_argument("root")
     ap.add_argument("jobs_csv")
     ap.add_argument("--seed", type=int, default=20260926)
+    ap.add_argument("--json", help="also write the figures here, so that anything "
+                                   "quoting them reads numbers rather than prose")
     args = ap.parse_args()
+    summary = {}
 
     rows = load(args.root)
     targets(rows, args.jobs_csv)
@@ -178,6 +181,9 @@ def main():
     print(f"  mean |error| predict-the-mean    {constant:.4f}")
     print(f"  mean |error| telemetry, ridge    {linear:.4f}   (linear, for reference)")
     print(f"  standard deviation of J_obs      {spread:.4f}")
+    summary.update(knn=full, time_only=time_only, constant=constant, ridge=linear,
+                   spread=spread, held_by=held_by, branches=len(rows),
+                   design_points=len(points), scenarios=len(scenarios))
     if linear >= constant:
         print("  A linear fit is worse than a constant here, which says the")
         print("  relationship is not linear -- not that the telemetry is empty.")
@@ -197,8 +203,10 @@ def main():
             sg = [groups[i] for i, r in enumerate(rows) if r["rec"]["regime"] == name]
             if len(set(sg)) < 2:
                 continue
-            print(f"    {name:11s} n={len(sub):4d}  kNN {knn_cv(sub, names, actions, sg):.4f}"
-                  f"  mean {mean_cv(sub, sg):.4f}")
+            k_r, m_r = knn_cv(sub, names, actions, sg), mean_cv(sub, sg)
+            summary.setdefault("regimes", {})[name] = {
+                "n": len(sub), "knn": k_r, "constant": m_r}
+            print(f"    {name:11s} n={len(sub):4d}  kNN {k_r:.4f}  mean {m_r:.4f}")
     if full >= constant:
         print("\n  NOTE: the telemetry model is no better than predicting the")
         print("  training mean. Held out this way the task is not learnable at all,")
@@ -239,12 +247,21 @@ def main():
         ok_perm = None
     else:
         perm = knn_cv(rows, names, actions, groups, permute=True)
+        summary["permuted"] = perm
         print(f"  mean |error| with telemetry permuted {perm:.4f} "
               f"(intact {full:.4f})")
         ok_perm = perm > full * 1.2
         print("  PASS" if ok_perm else
               "  FAIL: permuting the telemetry barely hurt, so the skill was "
               "not coming from the telemetry")
+
+    summary["time_only_pass"] = ok_time
+    summary["permutation_pass"] = ok_perm
+    if args.json:
+        with open(args.json, "w") as fh:
+            json.dump(summary, fh, indent=2, sort_keys=True)
+            fh.write("\n")
+        print(f"\nwrote {args.json}")
 
     failed = (ok_time is False) or (ok_perm is False)
     if failed:

@@ -1,0 +1,183 @@
+#!/usr/bin/env python3
+"""Generate the paper's result tables from recorded runs.
+
+No number in the manuscript is typed by hand. Each table carries the run it came
+from, the stack it ran on and the protocol revision, so a table in the paper can
+always be traced to the evidence that produced it.
+"""
+import argparse
+import csv
+import glob
+import itertools
+import json
+import os
+import subprocess
+import sys
+
+import branches
+from band_sensitivity import boot_ci, dispersion, median, quantile
+
+
+def provenance(root):
+    m = branches.read_matrix(root)
+    d = sorted(glob.glob(os.path.join(root, "[as]*-*")))
+    commit = stack = "?"
+    for b in d:
+        p = os.path.join(b, "anchor.json")
+        if os.path.exists(p):
+            a = json.load(open(p))
+            commit, stack = a.get("git_commit", "?"), a.get("runtime_stack_id", "?")
+            break
+    return {"experiment": m.get("experiment", os.path.basename(root)),
+            "stack": stack, "commit": commit,
+            "branches": len([x for x in d if os.path.isdir(x)])}
+
+
+def load_rows(jobs_csv):
+    return list(csv.DictReader(open(jobs_csv)))
+
+
+def bands_table(rows, gate=3.0):
+    cells = {}
+    for r in rows:
+        cells.setdefault((r.get("scenario", "s00"), r["anchor"], r["action"]),
+                         []).append(float(r["J_obs"]))
+    eta = {k: dispersion(v) for k, v in cells.items()}
+    pooled = quantile([abs(a - b) for v in cells.values()
+                       for a, b in itertools.combinations(v, 2)], 0.95)
+    worst = max(eta.values())
+    actions = sorted({c for _, _, c in cells} - {"NO_OP"})
+    counts = {"pooled": 0, "worst": 0, "local": 0, "ci": 0, "all": 0}
+    total = 0
+    for sc, a in sorted({(s, x) for s, x, _ in cells}):
+        base = cells.get((sc, a, "NO_OP"))
+        if not base:
+            continue
+        for act in actions:
+            v = cells.get((sc, a, act))
+            if not v:
+                continue
+            total += 1
+            delta = abs(median(base) - median(v))
+            local = max(eta[(sc, a, "NO_OP")], eta[(sc, a, act)])
+            lo, hi = boot_ci(base, v, n=2000)
+            ok = {"pooled": pooled and delta / pooled >= gate,
+                  "worst": worst and delta / worst >= gate,
+                  "local": (delta / local >= gate) if local else True,
+                  "ci": lo > 0 or hi < 0}
+            for k, good in ok.items():
+                counts[k] += bool(good)
+            counts["all"] += all(ok.values())
+    return pooled, worst, counts, total
+
+
+def fmt(x, nd=4):
+    return f"{x:.{nd}f}"
+
+
+def write(path, text):
+    with open(path, "w") as fh:
+        fh.write(text)
+    print(f"wrote {path}")
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--single-scenario-root", required=True,
+                    help="the audited single-scenario run (replay resolution)")
+    ap.add_argument("--factored-root", required=True,
+                    help="the scenario-factored matrix (prediction, generalisation)")
+    ap.add_argument("--out-dir", default="paper/generated_tables")
+    args = ap.parse_args()
+    os.makedirs(args.out_dir, exist_ok=True)
+
+    for tag, root in (("single", args.single_scenario_root),
+                      ("factored", args.factored_root)):
+        prov = provenance(root)
+        jobs = os.path.join(root, "jobs.csv")
+        if not os.path.exists(jobs):
+            sys.exit(f"{jobs} not found; run analysis/jobs.py with --out first")
+        rows = load_rows(jobs)
+        pooled, worst, counts, total = bands_table(rows)
+        scenarios = len({r.get("scenario", "s00") for r in rows})
+        caption = ("Replay dispersion and action resolvability on the audited "
+                   f"single-scenario run (\\texttt{{{prov['experiment']}}}, "
+                   f"{prov['branches']} branches, stack "
+                   f"\\texttt{{{prov['stack'][:8]}}}, {prov['commit']}). "
+                   "The preregistered band is the pooled one; the others are "
+                   "reported because a band that holds on average and fails in "
+                   "one cell is not a band."
+                   if tag == "single" else
+                   "Action resolvability on the scenario-factored matrix "
+                   f"(\\texttt{{{prov['experiment']}}}, {prov['branches']} "
+                   f"branches, {scenarios} scenarios, stack "
+                   f"\\texttt{{{prov['stack'][:8]}}}, {prov['commit']}).")
+        write(os.path.join(args.out_dir, f"table_bands_{tag}.tex"), f"""\
+\\begin{{table}}[!t]
+\\centering
+\\caption{{{caption}}}
+\\label{{tab:bands-{tag}}}
+\\begin{{tabular}}{{lr}}
+\\toprule
+Quantity & Value \\\\
+\\midrule
+Branches & {prov['branches']} \\\\
+Scenarios (distinct fault settings) & {scenarios} \\\\
+$\\eta_J$, pooled (preregistered) & {fmt(pooled)} \\\\
+$\\eta_J$, worst cell & {fmt(worst)} \\\\
+\\midrule
+Contrasts resolvable, pooled band & {counts['pooled']}/{total} \\\\
+\\quad worst-cell band & {counts['worst']}/{total} \\\\
+\\quad contrast-local band & {counts['local']}/{total} \\\\
+\\quad bootstrap CI excludes zero & {counts['ci']}/{total} \\\\
+\\quad \\textbf{{surviving all four}} & \\textbf{{{counts['all']}/{total}}} \\\\
+\\bottomrule
+\\end{{tabular}}
+\\end{{table}}
+""")
+
+    # Prediction table. The harness writes its figures as JSON and this reads
+    # that: parsing its prose broke on the first line that ended in a word.
+    summary_path = os.path.join(args.out_dir, "prediction_summary.json")
+    run = subprocess.run(
+        [sys.executable, os.path.join(os.path.dirname(__file__), "leakage_tests.py"),
+         args.factored_root, os.path.join(args.factored_root, "jobs.csv"),
+         "--json", summary_path], capture_output=True, text=True)
+    if not os.path.exists(summary_path):
+        sys.exit("the leakage harness wrote no summary:\n" + run.stdout + run.stderr)
+    vals = json.load(open(summary_path))
+    if not (vals.get("time_only_pass") and vals.get("permutation_pass")):
+        sys.exit("REFUSED: the leakage controls did not pass on this matrix, so a "
+                 "prediction table from it would be reporting a confound.")
+    regimes = [(n, v["n"], fmt(v["knn"]), fmt(v["constant"]))
+               for n, v in sorted((vals.get("regimes") or {}).items())]
+    prov = provenance(args.factored_root)
+    rl = "\n".join(f"\\quad {n} ($n={c}$) & {k} & --- & --- & {m} \\\\"
+                   for n, c, k, m in regimes)
+    write(os.path.join(args.out_dir, "table_prediction.tex"), f"""\
+\\begin{{table}}[!t]
+\\centering
+\\caption{{Action-conditioned prediction of $J_{{\\mathrm{{obs}}}}$ from
+decision-time telemetry, with folds held out by fault design point
+(\\texttt{{{prov['experiment']}}}, {prov['branches']} branches,
+{prov['commit']}). The time-only and permutation rows are leakage controls:
+the first asks how much of the skill is the clock, the second whether the
+skill comes from the telemetry at all.}}
+\\label{{tab:prediction}}
+\\begin{{tabular}}{{lrrrr}}
+\\toprule
+Predictor & MAE & Time-only & Permuted & Constant \\\\
+\\midrule
+Telemetry, $k$NN & \\textbf{{{fmt(vals['knn'])}}} & {fmt(vals['time_only'])}
+  & {fmt(vals['permuted'])} & {fmt(vals['constant'])} \\\\
+Telemetry, ridge (linear) & {fmt(vals.get('ridge', float('nan')))} & --- & --- & --- \\\\
+{rl}
+\\bottomrule
+\\end{{tabular}}
+\\end{{table}}
+""")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
