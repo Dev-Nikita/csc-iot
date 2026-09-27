@@ -760,12 +760,27 @@ The per-regime rows qualify the headline. The pre-fault regime is the easiest an
 the least informative, because $J_{\mathrm{obs}}$ is nearly constant there by
 construction. The spanning regime is the interesting one: the fault has not
 happened at decision time and nothing in the observed state carries it, yet the
-error is $0.0367$ against $0.1624$ for a constant. What the model predicts there
-is the consequence of what has already accumulated, not the arrival of the
-fault, and separating those two contributions is the subject of
-\TODO{the spanning-regime holdout described in the next revision: train with all
-spanning branches removed and test on them, which distinguishes transfer from
-knowledge of the onset distribution}.
+error is far below a constant. Two explanations fit, and they mean opposite
+things. Either the model reads what has already accumulated, in which case the
+skill would exist in a deployment; or it has learned this experiment's
+distribution of onsets from other branches that span faults, in which case it
+would not.
+
+\input{generated_tables/table_spanning.tex}
+
+Table~\ref{tab:spanning} separates them. Removing every spanning branch from
+training, and additionally every branch sharing the test branch's fault setting,
+leaves the error at $0.0479$ against $0.1922$ for a constant --- a factor of
+four, and only $1.4\times$ worse than when spanning examples are allowed. The
+skill therefore transfers: it comes from the observed state rather than from
+knowledge of when faults arrive in this design.
+
+That result also bounds what the method can claim. The strict error in the
+spanning regime is $1.9\times$ the error where the fault is already running, and
+the residual is the part of the outcome that the arrival of an unobserved fault
+decides. No predictor built on this state can remove it, and the paper does not
+suggest that conformal calibration does: the guarantee is over the observed
+distribution, and an event absent from the observations lies outside it.
 
 \subsection{Structural versus associative prediction}
 \label{sec:results-b5}
