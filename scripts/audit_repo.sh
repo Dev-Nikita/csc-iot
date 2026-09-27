@@ -65,6 +65,12 @@ chk "features expose the windowed rates"          grep -q 'system_accepted_last_
 chk "features flag a missing windowed rate"       grep -q 'has_windowed_serve' analysis/features.py
 chk "the structural model reads the windowed rate" grep -q 'system_accepted_last_epoch' analysis/structural.py
 chk "the sign test is the declared structural test" grep -q 'surviving ALL FOUR bands' analysis/structural_signtest.py
+# The nightly wrapper passed two pre-0.8 flags to the accounting audit, argparse
+# rejected them, and '||' printed one line instead of stopping. The audit had
+# never run in any nightly. A guard that cannot pass is worse than no guard.
+chk "the nightly audit passes no obsolete flags" \
+  bash -c '! grep -q "audit_accounting.py.*--healthy-anchors" scripts/run_nightly.sh'
+chk "a failed accounting audit stops the analysis" grep -q 'audit-failed' scripts/run_nightly.sh
 
 # Protocol 0.5-0.9. Each of these was written after a defect that invalidated a
 # run, and each is here because a stale copy of the file would silently undo it.
