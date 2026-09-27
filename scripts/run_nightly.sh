@@ -82,16 +82,33 @@ setsid bash -c "
       # The measurement is audited before it is interpreted. Three matrices
       # were discarded to defects that were visible in the recorded numbers
       # and that nothing looked at.
+      # The two flags this call used to pass, --healthy-anchors and --sla-ms,
+      # were left over from the pre-0.8 design where healthy and degraded were
+      # partitioned by anchor index and the budget came from the command line.
+      # The audit now reads both from each branch's own manifest, so argparse
+      # rejected them, the audit exited 2 every single time, and the '||' turned
+      # a dead guard into one quiet line above the results. No nightly run has
+      # ever actually been audited by this wrapper. The audit now runs, and a
+      # failure stops the analysis instead of captioning it.
       echo '=== accounting audit'
-      python3 -u analysis/audit_accounting.py 'data/raw/$STACK_ID/$NAME' \
-        --healthy-anchors a01,a02,a03 --sla-ms \${SLA_MS:-750} || \
-        echo '=== AUDIT FAILED: the numbers below are not reportable'
+      if python3 -u analysis/audit_accounting.py 'data/raw/$STACK_ID/$NAME'; then
+        echo '=== accounting audit passed'
+      else
+        echo '=== AUDIT FAILED. The analysis is NOT run: an unaudited'
+        echo '=== measurement is not a measurement. Diagnose, then re-run'
+        echo '=== the analysis by hand against data/raw/$STACK_ID/$NAME.'
+        touch 'logs/$NAME.audit-failed'
+        echo \$rc > 'logs/$NAME.done'
+        exit 3
+      fi
       echo '=== analysis'
       python3 -u analysis/jobs.py 'data/raw/$STACK_ID/$NAME' \
         --latency-max-epochs 14 --latency-max-ms 3000 --allow-partial-cost \
         --out 'data/raw/$STACK_ID/$NAME/jobs.csv'
       python3 -u analysis/dispersion_breakdown.py 'data/raw/$STACK_ID/$NAME/jobs.csv' \
         --sla-ms \${SLA_MS:-750} --healthy-anchors a01,a02,a03
+      echo '=== band sensitivity'
+      python3 -u analysis/band_sensitivity.py 'data/raw/$STACK_ID/$NAME/jobs.csv'
     fi
     echo \$rc > 'logs/$NAME.done'
     echo '=== $NAME done' \$(date -u +%FT%TZ)
