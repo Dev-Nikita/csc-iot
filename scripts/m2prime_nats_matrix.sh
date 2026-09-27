@@ -68,6 +68,14 @@ python3 - "$SCENARIOS" <<'GUARD' || exit 2
 import json, sys
 sc = json.load(open(sys.argv[1]))
 budgets = json.load(open("configs/budgets.json"))["budgets_ms"]
+# A budget-calibration set exists precisely to measure a level that has no
+# budget yet: requiring one would be a deadlock. The escape is narrow -- the
+# stamp travels into matrix.json and analysis/jobs.py refuses to score it.
+if sc.get("purpose") == "budget-calibration":
+    print("NOTE: purpose=budget-calibration. Running with a placeholder budget; "
+          "this matrix", file=sys.stderr)
+    print("      is not reportable and jobs.py will refuse it.", file=sys.stderr)
+    raise SystemExit(0)
 missing = sorted({str(s["workload_level"]) for s in sc["scenarios"]} - set(budgets))
 if missing:
     print("FAIL: no calibrated latency budget for workload level(s) "
@@ -142,6 +150,7 @@ cat > "$OUT/matrix.json" <<JSON
   "scenarios_file": "$SCENARIOS",
   "scenarios_hash": "$SCENARIOS_HASH",
   "scenario_count": $SCENARIO_COUNT,
+  "purpose": "$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("purpose","reportable"))' "$SCENARIOS")",
   "master_seed": $SEED,
   "netem_seed": $NETEM_SEED,
   "bus_impl": "nats",
@@ -171,7 +180,14 @@ print(f"onset={sc['fault_onset']}")
 print(f"sev={sc['fault_severity']}")
 print(f"load={sc['workload_level']}")
 print(f"sseed={sc['seed']}")
-print(f"sla={budgets[str(sc['workload_level'])]['sla_ms']}")
+# PLACEHOLDER_SLA_MS is deliberately absurd rather than plausible: a
+# calibration run must not carry a number anyone could mistake for a promise,
+# and the per-event histogram the calibration reads does not depend on it.
+doc = json.load(open(sys.argv[1]))
+if doc.get("purpose") == "budget-calibration":
+    print("sla=999999")
+else:
+    print(f"sla={budgets[str(sc['workload_level'])]['sla_ms']}")
 ENV
 )"
   branch="$sid-a$(printf %02d "$anchor")-$action-r$(printf %02d "$repeat")"

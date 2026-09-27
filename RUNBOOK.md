@@ -42,17 +42,19 @@ not land, not that the guard is wrong.
 
 ```bash
 cd ~/csc-iot
+make up-nats
 make stack-nats
-python3 check_reportable_stack.py --print-stack-id
-```
-
-**STOP** unless a stack id is printed. Note it down; every path below contains
-it, and `$STACK` in the blocks that follow means exactly this value.
-
-```bash
 STACK=$(python3 check_reportable_stack.py --print-stack-id)
 echo "STACK=$STACK"
 ```
+
+`make up-nats` comes first: impairment is applied to a live container, so the
+stack cannot be stamped before it exists.
+
+**STOP** unless `make stack-nats` itself succeeds. A printed stack id is not
+evidence --- `check_reportable_stack.py` will print the id of a previous run with
+nothing up at all, which is exactly what happened on the first attempt: the id
+appeared, and every command after it failed with `STACK_ID is required`.
 
 ### 1.4 Three-scenario pilot — the one thing that must not be skipped `[SERVER]`
 
@@ -100,15 +102,21 @@ parameter shift and mechanism shift --- and that matrix cannot support the last
 two. Re-running it for eighteen hours would produce the same limitation again.
 
 The generator refuses a workload level with no calibrated budget, and it is right
-to: borrowing another level's promise would make `Y` measure the load. So the
-budgets come first.
+to: borrowing another level's promise would make `Y` measure the load. But that
+created a deadlock of my own making --- a level cannot be calibrated from a file
+that requires its own budget to already exist. `--for-calibration` is the escape,
+and it is deliberately narrow: the file is stamped `purpose=budget-calibration`,
+the runner carries the stamp into `matrix.json` and runs with an absurd
+placeholder budget rather than a plausible one, and `analysis/jobs.py` refuses to
+compute `J_obs` from such a matrix at all. Only `calibrate_budget.py` reads it.
 
 ```bash
 cd ~/csc-iot
 STACK=$(python3 check_reportable_stack.py --print-stack-id)
 for L in 60 140; do
   python3 scripts/gen_scenarios.py --n 2 --master-seed 2026092$L \
-    --mechanisms D1 --workloads $L --out configs/scenarios-cal-L$L.json
+    --mechanisms D1 --workloads $L --for-calibration \
+    --out configs/scenarios-cal-L$L.json
   SCENARIOS=configs/scenarios-cal-L$L.json ANCHOR_LIST="2,6" \
     bash scripts/m2prime_nats_matrix.sh budget-cal-L$L 2>&1 | tail -3
   python3 analysis/calibrate_budget.py data/raw/$STACK/budget-cal-L$L --workload $L

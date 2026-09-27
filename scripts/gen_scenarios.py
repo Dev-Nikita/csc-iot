@@ -95,11 +95,22 @@ def _refuse_aliased_factors(scenarios):
     for a, b in (("fault_severity", "workload_level"),
                  ("fault_severity", "fault_onset"),
                  ("workload_level", "fault_onset")):
-        seen = {}
+        seen, count = {}, {}
         for s in graded:
             seen.setdefault(s[a], set()).add(s[b])
-        levels_of_a = len(seen)
-        if levels_of_a < 2:
+            count[s[a]] = count.get(s[a], 0) + 1
+        # Both factors must actually vary. A draw at one workload level has
+        # every severity at that single level, which is not aliasing -- it is a
+        # set with one level, and the guard fired on every single-workload
+        # calibration and pilot draw.
+        if len(seen) < 2 or len({s[b] for s in graded}) < 2:
+            continue
+        # Every level of A must have had a CHANCE to show a second level of B.
+        # With one scenario per level the one-to-one map is a property of the
+        # sample size, not of the design, and the guard fired on every small
+        # pilot draw. Aliasing is a claim about the assignment rule, so it is
+        # only made where the rule had room to reveal itself.
+        if min(count.values()) < 2:
             continue
         if all(len(v) == 1 for v in seen.values()):
             pairs = sorted((k, sorted(v)[0]) for k, v in seen.items())
@@ -120,6 +131,13 @@ def main():
     ap.add_argument("--workloads", default="100",
                     help="comma list from " + ",".join(str(w) for w in WORKLOAD_LEVELS))
     ap.add_argument("--out", required=True)
+    ap.add_argument("--for-calibration", action="store_true",
+                    help="the set exists only to measure a healthy latency "
+                         "distribution at a workload level that has no budget "
+                         "yet. Skips the budget check and stamps the file "
+                         "purpose=budget-calibration, which the runner carries "
+                         "into matrix.json and analysis/jobs.py refuses to "
+                         "score as a reportable objective.")
     args = ap.parse_args()
 
     mechs = args.mechanisms.split(",")
@@ -138,14 +156,23 @@ def main():
             print(f"REFUSED: workload {w} is not a declared level "
                   f"{WORKLOAD_LEVELS}", file=sys.stderr)
             return 2
-    budgets = json.load(open("configs/budgets.json"))["budgets_ms"]
-    for w in loads:
-        if str(w) not in budgets:
-            print(f"REFUSED: workload {w} has no calibrated latency budget in "
-                  f"configs/budgets.json. Calibrate it first with "
-                  f"analysis/calibrate_budget.py; borrowing another level's "
-                  f"budget would make Y measure the load.", file=sys.stderr)
-            return 2
+    # A workload level cannot be calibrated from a scenario file that requires
+    # its own budget to already exist. That deadlock is what --for-calibration
+    # exists to break, and the escape is narrow: the file is stamped, the runner
+    # carries the stamp into matrix.json, and the objective refuses to score it.
+    if not args.for_calibration:
+        budgets = json.load(open("configs/budgets.json"))["budgets_ms"]
+        for w in loads:
+            if str(w) not in budgets:
+                print(f"REFUSED: workload {w} has no calibrated latency budget "
+                      f"in configs/budgets.json. Calibrate it first:\n"
+                      f"  python3 scripts/gen_scenarios.py --n 2 --master-seed "
+                      f"<seed> --mechanisms D1 \\\n"
+                      f"    --workloads {w} --for-calibration --out "
+                      f"configs/scenarios-cal-L{w}.json\n"
+                      f"Borrowing another level's budget would make Y measure "
+                      f"the load.", file=sys.stderr)
+                return 2
 
     scenarios = draw(args.master_seed, args.n, mechs, loads)
     doc = {
@@ -158,6 +185,8 @@ def main():
         },
         "scenarios": scenarios,
     }
+    if args.for_calibration:
+        doc["purpose"] = "budget-calibration"
     blob = json.dumps(doc, sort_keys=True).encode()
     doc["scenarios_hash"] = hashlib.sha256(blob).hexdigest()[:16]
     with open(args.out, "w") as fh:
@@ -165,6 +194,12 @@ def main():
         fh.write("\n")
     print(f"wrote {args.out}: {len(scenarios)} scenarios, "
           f"hash {doc['scenarios_hash']}")
+    if args.for_calibration:
+        print("  purpose=budget-calibration: this set measures a healthy "
+              "latency distribution")
+        print("  at an uncalibrated workload level. Its J_obs is not reportable "
+              "and jobs.py")
+        print("  refuses it; only analysis/calibrate_budget.py reads it.")
     for s in scenarios:
         print(f"  {s['scenario_id']}  {s['fault_type']}  onset {s['fault_onset']:2d}  "
               f"severity {s['fault_severity']:3d}  load {s['workload_level']:3d}  "
