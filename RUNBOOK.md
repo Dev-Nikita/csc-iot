@@ -38,7 +38,8 @@ make deploy HOST=cybernord
 
 ```bash
 cd ~/csc-iot
-go build ./... && go vet ./... && go test ./... 2>&1 | tail -20
+make build TAGS=nats
+go vet ./... && go test ./... 2>&1 | tail -20
 python3 -m pytest -q analysis/ 2>&1 | tail -5
 bash scripts/audit_repo.sh | tail -3
 ```

@@ -110,6 +110,10 @@ chk "the matrix derives its own stack id" \
 # logs/ first, then the scenario sets drawn on the host.
 chk "the deploy protects host-generated scenario sets" \
   grep -q "protect configs/scenarios" scripts/deploy_to_host.sh
+# bin/ is not synced, so a deploy that carried newer sources left a stale binary
+# and the runner refused to start -- correctly, but a round trip too late.
+chk "the deploy rebuilds the host binaries" \
+  grep -q 'make build TAGS=nats' scripts/deploy_to_host.sh
 
 # Protocol 0.5-0.9. Each of these was written after a defect that invalidated a
 # run, and each is here because a stale copy of the file would silently undo it.
