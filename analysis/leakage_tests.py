@@ -112,9 +112,19 @@ def main():
 
     # Folds are held out by scenario when there is more than one, because a
     # random split lets a model interpolate inside a scenario it has seen.
-    if len(scenarios) > 1:
-        groups = [r["rec"]["scenario_id"] for r in rows]
-        held_by = "scenario"
+    # Folds are held out by DESIGN POINT, not by scenario id. Two scenarios with
+    # the same fault onset, severity and load differ only by seed: they are
+    # replicates, and training on one while testing on the other tests
+    # generalisation to a scenario the model has effectively already seen.
+    def design_point(rec):
+        return (rec["fault_type"], rec["fault_onset"], rec["fault_severity"],
+                rec["workload_level"])
+
+    points = sorted({design_point(r["rec"]) for r in rows})
+    if len(points) > 1:
+        groups = [str(design_point(r["rec"])) for r in rows]
+        held_by = (f"design point ({len(points)} distinct, "
+                   f"{len(scenarios)} scenarios)")
     else:
         groups = [r["rec"]["anchor"] for r in rows]
         held_by = "anchor (single-scenario run: weaker, see below)"
@@ -161,10 +171,10 @@ def main():
         print("  cannot make it worse. This test needs a model that predicts")
         print("  something first.")
         ok_perm = None
-    elif len(scenarios) < 2:
-        print("  REFUSED: one scenario. There is nothing to permute between, and")
+    elif len(points) < 2:
+        print("  REFUSED: one design point. There is nothing to permute between, and")
         print("  a test that cannot fail must not report success. Re-run this on")
-        print("  a multi-scenario matrix.")
+        print("  a matrix with more than one design point.")
         ok_perm = None
     else:
         rng = np.random.default_rng(args.seed)
