@@ -5,6 +5,15 @@ One file, in order, copy-paste ready. Written 2026-09-27 at protocol 0.10.
 **Legend.** `[SERVER]` = paste on `cybernord`, in `~/csc-iot`. `[MAC]` = paste in
 the project folder on the laptop. `[CLAUDE]` = I do it, you do nothing.
 
+**One rule that is worth more than it looks.** `make deploy` syncs with
+`rsync --delete`, so anything generated on the server inside a synced directory
+is destroyed by the next deploy. That has now cost two rounds: first `logs/`,
+then the scenario sets drawn by `gen_scenarios.py` into `configs/`. Both are
+protected now, but the habit to keep is: **deploy first, generate second, run
+third.** A generated scenario set loses nothing by being recreated -- it is a
+pure function of its seed, and every run copies it into its own output directory
+-- so regenerating is always the cheap fix when a file is reported missing.
+
 Every phase ends with a **STOP** condition. A STOP is not advice. If it trips,
 send me the output and do not run the next block — three matrices have already
 been thrown away to defects that were visible in the numbers and that nothing
