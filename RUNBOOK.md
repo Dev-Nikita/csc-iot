@@ -122,24 +122,65 @@ reads it.
 
 ### 1.6 Regenerate the scenario set `[SERVER]`, after I return the budgets
 
+**The size changed again, and this time for a reason that is arithmetic rather
+than taste.** Equation (9), the conformal risk control rule, corrects the
+empirical risk by `B/(n+1)` over `n` calibration *runs*. At the declared
+`delta = 0.10` that correction alone forbids any threshold below `n = 9`, and
+needs about `n = 20` once the calibration set shows a few per cent of empirical
+risk. A calibration split sized as whatever was left after training gives `n = 1`
+or `2`, and then `tau_hat = -inf`: the admissible set is empty everywhere and the
+controller abstains on every decision. That looks like a finding and is an
+artefact of the split.
+
+I found this by building the calibrator and running it against `b5-matrix-v1`,
+which has 16 in-distribution runs and produced exactly that: `tau_hat = -inf` at
+every threshold. `analysis/predictor.py` now allocates calibration **first**, to
+a declared count, and refuses a set that cannot supply it — naming the shortfall
+rather than degrading quietly.
+
+The consequence for the draw: the in-distribution pool must hold about 58 runs,
+*after* a severity level is held out for parameter shift and a whole mechanism
+for mechanism shift. That means roughly 115 design points, weighted about four to
+one toward the graded mechanism.
+
 ```bash
 cd ~/csc-iot
-python3 scripts/gen_scenarios.py --n 36 --master-seed 20260927 \
-  --mechanisms D1,D3 --workloads 60,100,140 --out configs/scenarios-b5-v2.json
+python3 scripts/gen_scenarios.py --n 115 --master-seed 20260927 \
+  --mechanisms D1,D1,D1,D1,D3 --workloads 60,100,140 \
+  --out configs/scenarios-b5-v2.json
 ```
 
-This gives 36 design points: both mechanisms balanced 18/18, and for the graded
-mechanism all nine (severity, workload) cells with two replicates each.
+Repeating `D1` in the list is not a trick: the mechanism is assigned round-robin
+over that list, so the repetition sets the ratio. This draw gives 92 graded and
+23 stall scenarios, all nine (severity, workload) cells populated with ten or
+eleven scenarios each, and an in-distribution pool of 62 runs.
 
-A defect was fixed in the generator today to make that possible. Severity and
-workload were both indexed by the same counter, so of the nine combinations only
-three could ever appear --- the mildest fault only at the lightest load, the
-strongest only at the heaviest. The two factors would have been aliased, and a
-parameter-shift split on either would silently have been a shift on both. With a
-single workload level the defect was latent, which is why it survived; it bites
-the moment workload becomes a factor. The generator now refuses any draw in
-which two factors are perfectly correlated, and that guard fires on the old
-stride.
+**If you would rather spend 27 hours than 38**, the alternative is to declare
+`delta = 0.15` instead, which needs 9 calibration runs and therefore 81 design
+points:
+
+```bash
+# ONLY if we agree to declare delta = 0.15 instead of 0.10
+python3 scripts/gen_scenarios.py --n 81 --master-seed 20260927 \
+  --mechanisms D1,D1,D1,D1,D3 --workloads 60,100,140 \
+  --out configs/scenarios-b5-v2.json
+```
+
+My recommendation is `delta = 0.10` and the longer run. `0.10` is the level a
+reviewer expects to see, `delta` is declared in advance either way, and choosing
+the weaker level because the stronger one costs machine time is the sort of thing
+that is visible in a paper. Eleven extra hours on a dedicated server is a cheap
+way not to have that conversation. Tell me which and I will fix it in the
+protocol before anything runs.
+
+A defect was also fixed in the generator today, which is what made a
+three-workload draw possible at all. Severity and workload were both indexed by
+the same counter, so of the nine combinations only three could ever appear — the
+mildest fault only at the lightest load, the strongest only at the heaviest. The
+two factors would have been aliased, and a parameter-shift split on either would
+silently have been a shift on both. With a single workload level the defect was
+latent, which is why it survived. The generator now refuses any draw in which two
+factors are perfectly correlated, and that guard fires on the old stride.
 
 ### 1.7 Launch the full matrix `[SERVER]`
 
@@ -149,15 +190,24 @@ laptop may sleep or the connection drop.
 ```bash
 cd ~/csc-iot
 bash scripts/run_nightly.sh b5-matrix-v2 SCENARIOS=configs/scenarios-b5-v2.json \
-  ANCHORS=30 ANCHOR_LIST="2,6,10,14,18,22,26,30" REPEATS=5 HORIZON=8 \
+  ANCHORS=30 ANCHOR_LIST="2,8,14,20,26,30" REPEATS=3 HORIZON=8 \
   ACTIONS="NO_OP REROUTE THROTTLE"
 ```
+
+Six anchors instead of eight and three repeats instead of five, to buy the
+scenarios the guarantee needs without the run becoming a week. Both costs are
+real and are stated in the paper: the pooled band, which is the preregistered
+one, comes from 2070 within-cell pairs rather than 5760 and is if anything better
+estimated because it spans more cells; the worst-cell band, a sensitivity rather
+than the headline, rests on three pairs per cell instead of ten and is
+correspondingly noisier. Anchors 2, 8, 14, 20, 26 and 30 against onsets 8-24 and
+a horizon of 8 still put branches in all three regimes.
 
 Every value other than the scenario file is copied from `b5-matrix-v1`'s own
 `matrix.json`, including the order of the action list, because the order enters
 `config_hash`.
 
-**Expect 26 to 35 hours, not 18.** 36 scenarios give 4320 branches against 2880,
+**Expect 38 to 50 hours.** 115 scenarios give 6210 branches against 2880,
 and the added branches are the slow ones: workload 140 carries more events per
 epoch, and mechanism D3 stalls an edge completely so its queues grow without
 bound. Start it when a day and a half of machine time is free. Check from
