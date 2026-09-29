@@ -143,6 +143,11 @@ chk "the status listing skips voided runs"         grep -q 'case "\$name" in _\*
 # frozen and then scores every later Y.
 chk "calibration refuses an incomplete run" \
   grep -q 'branches are present, so this' analysis/calibrate_budget.py
+# budgets.json is read by the runner and the generator, so it is recorded with
+# provenance rather than hand-edited, and an existing level is not overwritten
+# without --replace, because replacing one supersedes every result that used it.
+chk "budgets are recorded with provenance"        grep -q 'healthy_fraction_over_budget' analysis/calibrate_budget.py
+chk "replacing a frozen budget needs a flag"      grep -q 'needs --replace and a' analysis/calibrate_budget.py
 
 # Protocol 0.5-0.9. Each of these was written after a defect that invalidated a
 # run, and each is here because a stale copy of the file would silently undo it.
