@@ -6,18 +6,57 @@
     "The healthy per-event latency distribution depends on offered load, so one",
     "budget across levels would make Y measure the load rather than the failure.",
     "A level with no entry here cannot be run: the runner refuses it rather than",
-    "borrowing another level's promise."
+    "borrowing another level's promise.",
+    "Never hand-edited: analysis/calibrate_budget.py --record writes a level with",
+    "its provenance, refuses an incomplete run, and refuses to overwrite an",
+    "existing level without --replace."
   ],
   "budgets_ms": {
+    "60": {
+      "sla_ms": 850,
+      "calibration_run": "budget-cal-L60",
+      "runtime_stack_id": "161b4e3893c01695",
+      "branches": 40,
+      "events": 14400,
+      "per_event_p99_ms": 825,
+      "healthy_fraction_over_budget": 0.006,
+      "dated": "2026-09-29"
+    },
     "100": {
       "sla_ms": 750,
-      "calibration_run": "budget-cal",
-      "runtime_stack_id": "5bc49e1c2750002a",
-      "branches": 30,
-      "events": 27000,
+      "calibration_run": "budget-cal-L100-restack",
+      "runtime_stack_id": "161b4e3893c01695",
+      "branches": 40,
+      "events": 24000,
+      "per_event_p99_ms": 750,
+      "healthy_fraction_over_budget": 0.007,
+      "dated": "2026-09-29"
+    },
+    "140": {
+      "sla_ms": 750,
+      "calibration_run": "budget-cal-L140",
+      "runtime_stack_id": "161b4e3893c01695",
+      "branches": 40,
+      "events": 33600,
       "per_event_p99_ms": 750,
       "healthy_fraction_over_budget": 0.009,
-      "dated": "2026-09-22"
+      "dated": "2026-09-29"
     }
-  }
+  },
+  "superseded": [
+    {
+      "workload": "100",
+      "previous": {
+        "sla_ms": 750,
+        "calibration_run": "budget-cal",
+        "runtime_stack_id": "5bc49e1c2750002a",
+        "branches": 30,
+        "events": 27000,
+        "per_event_p99_ms": 750,
+        "healthy_fraction_over_budget": 0.009,
+        "dated": "2026-09-22"
+      },
+      "replaced": "2026-09-29"
+    }
+  ]
 }

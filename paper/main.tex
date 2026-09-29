@@ -688,10 +688,24 @@ a healthy system spreads by roughly that window and a budget placed inside the
 spread measures emission phase rather than failure. The budget is therefore
 calibrated by a declared rule --- the healthy per-event $p_{99}$, rounded up to
 50\,ms, measured on a dedicated no-action calibration run at the same offered
-load --- and frozen before any comparison. At the calibrated 750\,ms, $0.9\%$ of
-a healthy system's events exceed it. An earlier budget of 500\,ms, derived from
-branch-mean rather than per-event latency, classified $31\%$ of a working
+load --- and frozen before any comparison. An earlier budget of 500\,ms, derived
+from branch-mean rather than per-event latency, classified $31\%$ of a working
 system's events as failures.
+
+The rule gives $850$\,ms at the light load and $750$\,ms at both the nominal and
+the heavy one, each from 40 healthy no-action branches on one substrate, leaving
+between $0.6\%$ and $0.9\%$ of a healthy system's events above its own budget.
+The budgets are therefore \emph{not} monotone in offered load: the lightest level
+carries the heaviest tail. We report this rather than smooth it. Two explanations
+remain open and we cannot separate them here. At the light load the $p_{99}$ rests
+on $14\,400$ events, so some $144$ lie above it and the estimate moves by one or
+two $25$\,ms bins; alternatively the emission window interacts with
+epoch-boundary quantisation differently when events are sparse. What the
+measurement does exclude is the substrate: the nominal level was re-derived on a
+rebuilt stack and returned the same $p_{99}$ and the same $750$\,ms as its
+original calibration a week earlier, so the effect is a property of load or of
+the tail estimate and not of the platform. The point of calibrating rather than
+choosing a budget is that an anomaly like this is visible at all.
 
 \subsection{What the actions do}
 \label{sec:results-actions}
