@@ -109,40 +109,29 @@ with both numbers equal and non-zero. `0/N` means the containers are running the
 old image: `make stack-nats` again and confirm the rebuild. A pilot this small
 resolves few contrasts; that is expected and is not what is being tested here.
 
-### 1.5 Calibrate the budget for workload 60 and 140 — now, not later `[SERVER]`
+### 1.5 Calibrate every workload budget on one stack -- DONE 2026-09-29
 
-This moved ahead of the main matrix, and the reason matters. `scenarios-b5.json`
-as it stands varies only onset, severity and seed: **one workload level, one
-mechanism**. The paper claims results in three shift regimes --- in-distribution,
-parameter shift and mechanism shift --- and that matrix cannot support the last
-two. Re-running it for eighteen hours would produce the same limitation again.
+All three levels are in `configs/budgets.json`, each from a completed dedicated
+run of 40 healthy pre-fault no-action branches on stack `161b4e3893c01695`:
 
-The generator refuses a workload level with no calibrated budget, and it is right
-to: borrowing another level's promise would make `Y` measure the load. But that
-created a deadlock of my own making --- a level cannot be calibrated from a file
-that requires its own budget to already exist. `--for-calibration` is the escape,
-and it is deliberately narrow: the file is stamped `purpose=budget-calibration`,
-the runner carries the stamp into `matrix.json` and runs with an absurd
-placeholder budget rather than a plausible one, and `analysis/jobs.py` refuses to
-compute `J_obs` from such a matrix at all. Only `calibrate_budget.py` reads it.
+| load | budget | p99 | events | healthy events already over budget |
+|---|---|---|---|---|
+| 60 | 850 ms | 825 ms | 14 400 | 0.6% |
+| 100 | 750 ms | 750 ms | 24 000 | 0.7% |
+| 140 | 750 ms | 750 ms | 33 600 | 0.9% |
 
-```bash
-cd ~/csc-iot
-export STACK_ID=$(python3 check_reportable_stack.py --print-stack-id 2>/dev/null)
-for L in 60 140; do
-  python3 scripts/gen_scenarios.py --n 2 --master-seed 2026092$L \
-    --mechanisms D1 --workloads $L --for-calibration \
-    --out configs/scenarios-cal-L$L.json
-  SCENARIOS=configs/scenarios-cal-L$L.json ANCHOR_LIST="2,6" \
-    bash scripts/m2prime_nats_matrix.sh budget-cal-L$L 2>&1 | tail -3
-  python3 analysis/calibrate_budget.py data/raw/$STACK_ID/budget-cal-L$L --workload $L
-done
-```
+The L=100 level was re-derived on the current stack rather than carried over from
+2026-09-22, because a budget measured on one substrate and applied on another
+folds a stack difference into a load difference -- the same argument the protocol
+already makes for load. It returned exactly 750 ms again, so the substrate is
+cleared and the September entry is retained under `superseded`.
 
-Two short runs. **Send me both printed budgets and stop there.** I write them
-into `configs/budgets.json` with the calibration provenance and log the
-amendment; do not hand-edit that file, the runner checks it and the generator
-reads it.
+The budgets are not monotone in load, and that goes in the paper as an
+observation. See amendment 0.14.
+
+`configs/budgets.json` is never hand-edited: `calibrate_budget.py --record`
+writes a level with its provenance, refuses an incomplete run, and refuses to
+overwrite an existing level without `--replace`.
 
 ### 1.6 Regenerate the scenario set `[SERVER]`, after I return the budgets
 
