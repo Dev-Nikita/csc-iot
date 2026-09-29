@@ -55,3 +55,6 @@ bin/
 /paper/*.fdb_latexmk
 /paper/*.log
 /paper/*.synctex.gz
+
+# latex scratch
+/paper/*.tmp
