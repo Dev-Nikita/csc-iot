@@ -34,6 +34,16 @@ def main():
     ap.add_argument("--workload", type=int,
                     help="refuse any branch whose workload level differs; the "
                          "budget is calibrated per level")
+    ap.add_argument("--record", action="store_true",
+                    help="write the result into configs/budgets.json with its "
+                         "provenance. The file is frozen configuration read by "
+                         "the runner and the scenario generator; it is never "
+                         "hand-edited.")
+    ap.add_argument("--replace", action="store_true",
+                    help="allow replacing a level that already has a budget. A "
+                         "frozen budget is what every later Y is scored "
+                         "against, so replacing one supersedes every result "
+                         "that used it and needs a protocol amendment.")
     args = ap.parse_args()
     legacy_healthy = set(args.healthy_anchors.split(",")) if args.healthy_anchors else set()
 
@@ -130,6 +140,52 @@ def main():
     print(f"\nRULE (declared): p{RULE_QUANTILE*100:g} rounded up to {ROUND_MS} ms"
           f"  ->  budget = {budget} ms")
     print(f"healthy events that budget already counts as failures: {above(budget):.3f}")
+
+    if args.record:
+        # The budget file is frozen configuration that the runner and the
+        # scenario generator both read, so it is not hand-edited. Recording it
+        # here carries the provenance with the number: which run, which stack,
+        # how many branches and events it rests on, and what share of healthy
+        # events the budget already calls failures.
+        import datetime
+        path = "configs/budgets.json"
+        with open(path) as fh:
+            doc = json.load(fh)
+        key = str(lvl)
+        existing = doc["budgets_ms"].get(key)
+        if existing and not args.replace:
+            print(f"\nREFUSED: workload {key} already has a calibrated budget of "
+                  f"{existing['sla_ms']} ms from run", file=sys.stderr)
+            print(f"  '{existing.get('calibration_run')}' on stack "
+                  f"{existing.get('runtime_stack_id')} "
+                  f"({existing.get('dated')}).", file=sys.stderr)
+            print("  A frozen budget is what every later Y is scored against. "
+                  "Replacing one supersedes", file=sys.stderr)
+            print("  every result that used it, so it needs --replace and a "
+                  "protocol amendment.", file=sys.stderr)
+            return 2
+        stack = os.path.basename(os.path.dirname(os.path.abspath(args.root)))
+        doc["budgets_ms"][key] = {
+            "sla_ms": budget,
+            "calibration_run": os.path.basename(os.path.abspath(args.root)),
+            "runtime_stack_id": stack,
+            "branches": count,
+            "events": int(total),
+            "per_event_p99_ms": quantile(RULE_QUANTILE),
+            "healthy_fraction_over_budget": round(above(budget), 3),
+            "dated": datetime.date.today().isoformat(),
+        }
+        if existing:
+            doc.setdefault("superseded", []).append(
+                {"workload": key, "previous": existing,
+                 "replaced": datetime.date.today().isoformat()})
+        doc["budgets_ms"] = {k: doc["budgets_ms"][k]
+                             for k in sorted(doc["budgets_ms"], key=int)}
+        with open(path, "w") as fh:
+            json.dump(doc, fh, indent=2)
+            fh.write("\n")
+        print(f"\nrecorded workload {key} -> {budget} ms in {path}"
+              + ("  (previous value moved to 'superseded')" if existing else ""))
     return 0
 
 
