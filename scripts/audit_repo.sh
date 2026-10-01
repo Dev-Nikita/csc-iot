@@ -148,6 +148,11 @@ chk "calibration refuses an incomplete run" \
 # without --replace, because replacing one supersedes every result that used it.
 chk "budgets are recorded with provenance"        grep -q 'healthy_fraction_over_budget' analysis/calibrate_budget.py
 chk "replacing a frozen budget needs a flag"      grep -q 'needs --replace and a' analysis/calibrate_budget.py
+# One script runs the analysis in the order the protocol requires, so the order
+# cannot drift between runs and a failed gate stops what depends on it.
+chk "the analysis order is a script"              test -x scripts/analyze_matrix.sh
+chk "a failed audit stops the analysis report"    grep -q 'Nothing below this line is reportable' scripts/analyze_matrix.sh
+chk "a failed leakage test is flagged in the report" grep -q 'is not evidence' scripts/analyze_matrix.sh
 
 # Protocol 0.5-0.9. Each of these was written after a defect that invalidated a
 # run, and each is here because a stale copy of the file would silently undo it.
