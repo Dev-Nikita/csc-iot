@@ -184,6 +184,17 @@ def main():
     ap.add_argument("--delta", type=float, default=0.10)
     ap.add_argument("--u-max", type=float, default=0.15)
     ap.add_argument("--out")
+    ap.add_argument("--transfer-root",
+                    help="a SECOND matrix to evaluate on, with the predictor, "
+                         "tau_hat, theta, C(a) and the B1 thresholds all taken "
+                         "from the first. Its mechanisms were never seen in "
+                         "training or calibration, so this measures transfer to "
+                         "unseen failure physics rather than interpolation. Its "
+                         "eta_J comes from its own replay dispersion, because "
+                         "the band is a property of the measurement being "
+                         "scored.")
+    ap.add_argument("--transfer-jobs",
+                    help="jobs.csv for --transfer-root")
     ap.add_argument("--dry-run", action="store_true",
                     help="exercise every code path on a scenario set too small "
                          "to carry the guarantee. Shrinks the split counts, "
@@ -250,6 +261,27 @@ def main():
     time_ens = predictor.Ensemble(["epoch"], actions).fit(sp["train"])
 
     out_rows = []
+
+    transfer = []
+    if args.transfer_root:
+        if not args.transfer_jobs:
+            sys.exit("--transfer-root needs --transfer-jobs")
+        t_rows = predictor.load_rows(args.transfer_root, args.transfer_jobs)
+        t_jobs = list(csv.DictReader(open(args.transfer_jobs)))
+        t_eta = bs.quantile([abs(a_ - b_) for cell in _cells(t_rows).values()
+                             for a_, b_ in itertools.combinations(cell, 2)], 0.95)
+        t_ym = {j["branch"]: float(j["Y_ms"]) for j in t_jobs}
+        mechs = sorted({r["rec"]["fault_type"] for r in t_rows})
+        seen = sorted({r["rec"]["fault_type"] for r in sp["train"]})
+        print(f"\nTRANSFER MATRIX  mechanisms {', '.join(mechs)}  "
+              f"(training saw {', '.join(seen)})")
+        print(f"  {len(t_rows)} branches, eta_J from its own dispersion "
+              f"{t_eta:.4f}")
+        if set(mechs) & set(seen):
+            print("  WARNING: a mechanism here was also in training, so this is "
+                  "not a clean transfer test.")
+        transfer = [("transfer", t_rows, t_jobs, t_eta, t_ym)]
+
     for split in TEST_SPLITS:
         if not sp[split]:
             print(f"\n{split.upper()}: empty. Not measurable, not claimed.")
@@ -311,6 +343,54 @@ def main():
                                  "regime": reg, "eta_J": eta, "tau": tau,
                                  "theta": theta,
                                  "reportable": 0 if args.dry_run else 1, **m})
+
+    for label_split, t_rows, t_jobs, t_eta, t_ym in transfer:
+        pts = build_points(t_rows, t_jobs, t_eta)
+        if not pts:
+            print(f"\n{label_split.upper()}: no decision point with an "
+                  f"alternative.")
+            continue
+        for p in pts:
+            p["failed"] = {a_: crc.failed(v, theta) for a_, v in p["y_ms"].items()}
+            p["cost"] = {a_: cost[a_] for a_ in p["j_obs"]}
+        attach_predictions(pts, ens, actions)
+        for i, p in enumerate(pts):
+            probes = []
+            for a_ in actions:
+                pr = dict(p["rows"][next(iter(p["rows"]))][0])
+                pr["rec"] = dict(pr["rec"])
+                pr["rec"]["action"] = a_
+                probes.append(pr)
+            th, _ = time_ens.predict(probes)
+            p["risk_time"] = {a_: float(v) for a_, v in zip(actions, th)
+                              if a_ in p["j_obs"]}
+        methods = {
+            "B1_threshold": lambda p: policies.b1_threshold(p, dt, bt),
+            "B2_assoc": lambda p: policies.lowest_risk(p, "risk"),
+            "B5t_time_only": lambda p: policies.lowest_risk(p, "risk_time"),
+            "B6_csc": lambda p: policies.b6_csc(p, tau, args.u_max),
+            "A1a_no_unc_filter": lambda p: policies.a1a_no_uncertainty_filter(
+                p, tau),
+            "A1b_no_gate": policies.a1b_no_gate_at_all,
+            "A2_no_mni": lambda p: policies.a2_no_mni(p, tau, args.u_max),
+            "oracle_bound": lambda p: (
+                min(p["j_obs"], key=lambda a_: p["j_obs"][a_]), False),
+        }
+        print(f"\n{label_split.upper()}  ({len(pts)} decision points, "
+              f"unseen mechanisms)")
+        print(f"  {'method':14s} {'n':>4s} {'CRA_eta':>8s} {'acted':>6s} "
+              f"{'CRA|act':>8s} {'Reg_eta':>8s} {'PFR':>7s} {'WIR':>7s} "
+              f"{'abst':>6s}")
+        for label, fn in methods.items():
+            m = metrics(pts, [fn(p) for p in pts], t_eta)
+            print(f"  {label:14s} {m['n']:4d} {m['CRA_eta']:8.3f} "
+                  f"{m['n_acted']:6d} {m['CRA_eta_acted']:8.3f} "
+                  f"{m['Reg_eta']:8.4f} {m['PFR']:7.3f} {m['WIR']:7.3f} "
+                  f"{m['abstention']:6.3f}")
+            out_rows.append({"split": label_split, "method": label,
+                             "regime": "all", "eta_J": t_eta, "tau": tau,
+                             "theta": theta,
+                             "reportable": 0 if args.dry_run else 1, **m})
 
     if args.out and out_rows:
         with open(args.out, "w") as fh:

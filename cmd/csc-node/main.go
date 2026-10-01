@@ -85,6 +85,20 @@ func main() {
 	// be chosen relative to the offered load: a budget every event violates
 	// makes the failure term constant at 1 and blind to the action, and a budget
 	// nothing violates makes it constant at 0.
+	// A fault in the gateway's own admission capacity. This is NOT the THROTTLE
+	// action wearing a different name: the action is a control the operator may
+	// take and may undo, this is a loss of capacity the operator suffers and
+	// cannot route or throttle its way out of. It exists because with only
+	// edge-side faults, rerouting is almost always the best action and a
+	// one-line threshold on the per-edge service deficit attains the oracle
+	// bound -- which leaves the common-anchor comparison with nothing to
+	// separate. When the bottleneck is upstream of every edge, no downstream
+	// action helps and doing nothing is correct, so the right action now depends
+	// on WHERE the deficit is rather than on how large it is.
+	degradeAdmitAt := flag.Int64("degrade-admit-at-epoch", 0,
+		"gateway: epoch at which admission capacity drops (0 = never)")
+	degradedAdmit := flag.Int("degraded-admit-per-epoch", -1,
+		"gateway: admission capacity from -degrade-admit-at-epoch onwards")
 	degradeAt := flag.Int64("degrade-at-epoch", 0, "edge: epoch at which capacity drops (0 = never)")
 	degradedServe := flag.Int("degraded-serve-per-epoch", -1, "edge: capacity from -degrade-at-epoch onwards")
 	slaMs := flag.Int64("sla-ms", 500, "edge: end-to-end latency budget in milliseconds (measured, not quantised)")
@@ -137,7 +151,7 @@ func main() {
 	case "device-sim":
 		runDeviceSim(ctx, *id, *ingress, *devices, *rateHz, *seed, *perEpoch, *emitSpread, b, sig)
 	case "gateway":
-		runGateway(ctx, *id, b, *ingress, *route, sig)
+		runGateway(ctx, *id, b, *ingress, *route, *degradeAdmitAt, *degradedAdmit, sig)
 	case "edge":
 		runEdge(ctx, *id, b, *servePerEpoch, *slaEpochs, *slaMs, *degradeAt, *degradedServe, sig)
 	case "controller":
@@ -282,7 +296,23 @@ func runDeviceSim(ctx context.Context, id, ingress string, devices int, rateHz f
 
 // --- gateway: accepts ingress, forwards to an edge over the bus --------------
 
-func runGateway(ctx context.Context, id string, b bus.Bus, ingress, route string, sig chan os.Signal) {
+// effectiveAdmitCap is the tighter of the controller's limit and the capacity
+// the gateway actually has. -1 means unlimited on either side.
+func effectiveAdmitCap(action, fault int64) int64 {
+	switch {
+	case action < 0:
+		return fault
+	case fault < 0:
+		return action
+	case fault < action:
+		return fault
+	default:
+		return action
+	}
+}
+
+func runGateway(ctx context.Context, id string, b bus.Bus, ingress, route string,
+	degradeAdmitAt int64, degradedAdmit int, sig chan os.Signal) {
 	// The routing table is real state: the gateway publishes to the subject of
 	// the edge it currently routes to, so REROUTE moves traffic rather than
 	// updating a map nothing reads.
@@ -299,6 +329,13 @@ func runGateway(ctx context.Context, id string, b bus.Bus, ingress, route string
 	// content, so a deferral changes the future exactly as much as it really does.
 	var admitCap atomic.Int64
 	admitCap.Store(-1) // unlimited
+	// The capacity fault is held apart from the action's limit, and the binding
+	// one is whichever is tighter. Folding them into a single number would make
+	// a gateway fault indistinguishable from a THROTTLE the controller chose,
+	// and the whole point of the mechanism is that they are different situations
+	// calling for different actions.
+	var admitFaultCap atomic.Int64
+	admitFaultCap.Store(-1)
 	var admitMu sync.Mutex
 	var admittedThisEpoch int64
 	var backlog []ingressEvent
@@ -407,7 +444,14 @@ func runGateway(ctx context.Context, id string, b bus.Bus, ingress, route string
 		// A new epoch restores the admission budget, and deferred work goes
 		// first: a backlog that were never drained would be an outage, not a
 		// throttle.
-		cap := admitCap.Load()
+		//
+		// The capacity fault arrives on an epoch boundary in logical time, like
+		// every other declared fault, so what a branch suffers is a function of
+		// the epoch schedule and not of how fast this container happened to run.
+		if degradeAdmitAt > 0 && k >= degradeAdmitAt && degradedAdmit >= 0 {
+			admitFaultCap.Store(int64(degradedAdmit))
+		}
+		cap := effectiveAdmitCap(admitCap.Load(), admitFaultCap.Load())
 		admitMu.Lock()
 		admittedThisEpoch = 0
 		var drain []ingressEvent
@@ -469,7 +513,7 @@ func runGateway(ctx context.Context, id string, b bus.Bus, ingress, route string
 			}
 		}
 		admitMu.Unlock()
-		limit := float64(admitCap.Load())
+		limit := float64(effectiveAdmitCap(admitCap.Load(), admitFaultCap.Load()))
 		return nodestate.Report{
 			Routing: map[string]string{"edge": routeTo.Load().(string)},
 			// The admission LIMIT is future-relevant: THROTTLE changes it and it
@@ -486,6 +530,11 @@ func runGateway(ctx context.Context, id string, b bus.Bus, ingress, route string
 			// epoch before the one being read, matching the edge's eligibility
 			// rule exactly, so the two sides of the objective share a horizon.
 			Observed: map[string]float64{
+				// Declared, so the accounting audit can check that a gateway
+				// fault actually reached the container rather than trusting the
+				// scenario file. Observed only, never hashed.
+				"degrade_admit_at_epoch":   float64(degradeAdmitAt),
+				"degraded_admit":           float64(degradedAdmit),
 				"ingress_accepted":         accepted,
 				// The arrival rate in the last completed epoch. The cumulative
 				// count divided by the epoch index is contaminated by the

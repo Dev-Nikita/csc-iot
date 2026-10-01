@@ -156,6 +156,15 @@ chk "a failed leakage test is flagged in the report" grep -q 'is not evidence' s
 # Choosing the wrong action and declining to choose are different failures: the
 # first is the predictor, the second is the gate. A pooled rate conflates them.
 chk "accuracy when acting is reported separately" grep -q 'CRA_eta_acted' analysis/evaluate.py
+# D1 and D3 alone made rerouting almost always right, so a one-line threshold
+# attained the oracle bound and the comparison had nothing to separate.
+chk "a mechanism where rerouting is harmful exists"  grep -q 'D4' scripts/gen_scenarios.py
+chk "a mechanism upstream of every edge exists"      grep -q 'degrade-admit-at-epoch' cmd/csc-node/main.go
+chk "the gateway fault is not the throttle action"   grep -q 'func effectiveAdmitCap' cmd/csc-node/main.go
+chk "the audit skips the edge bound when no edge is faulted" \
+  grep -q 'edge_faulted' analysis/audit_accounting.py
+chk "decision methods can be scored on a second matrix" \
+  grep -q 'transfer-root' analysis/evaluate.py
 
 # Protocol 0.5-0.9. Each of these was written after a defect that invalidated a
 # run, and each is here because a stale copy of the file would silently undo it.
