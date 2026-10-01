@@ -153,6 +153,9 @@ chk "replacing a frozen budget needs a flag"      grep -q 'needs --replace and a
 chk "the analysis order is a script"              test -x scripts/analyze_matrix.sh
 chk "a failed audit stops the analysis report"    grep -q 'Nothing below this line is reportable' scripts/analyze_matrix.sh
 chk "a failed leakage test is flagged in the report" grep -q 'is not evidence' scripts/analyze_matrix.sh
+# Choosing the wrong action and declining to choose are different failures: the
+# first is the predictor, the second is the gate. A pooled rate conflates them.
+chk "accuracy when acting is reported separately" grep -q 'CRA_eta_acted' analysis/evaluate.py
 
 # Protocol 0.5-0.9. Each of these was written after a defect that invalidated a
 # run, and each is here because a stale copy of the file would silently undo it.

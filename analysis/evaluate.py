@@ -136,6 +136,12 @@ def metrics(points, chosen, eta):
     regret = []
     n_pre = n_prev = n_int = n_harm = 0
     abstained = 0
+    # A method that abstains is scored on the fallback it executed, which is
+    # right sometimes by luck. Reporting only the pooled rate then conflates two
+    # different failures -- choosing the wrong action, and declining to choose --
+    # and the first is a defect of the predictor while the second is the gate
+    # being conservative. They are separated here.
+    acted = acted_cra = 0
     for p, (a, absten) in zip(points, chosen):
         j = p["j_obs"]
         best = min(j.values())
@@ -145,6 +151,9 @@ def metrics(points, chosen, eta):
         cra2 += a in order[:2]
         regret.append(0.0 if (got - best) <= eta else got - best)
         abstained += absten
+        if not absten:
+            acted += 1
+            acted_cra += (got - best) <= eta
 
         # PFR and WIR rest on executed alternatives, never on an opinion of them.
         noop_failed = p["failed"]["NO_OP"]
@@ -163,7 +172,9 @@ def metrics(points, chosen, eta):
             "PFR": (n_prev / n_pre) if n_pre else float("nan"),
             "WIR": (n_harm / n_int) if n_int else float("nan"),
             "N_pre": n_pre, "N_int": n_int,
-            "abstention": abstained / n}
+            "abstention": abstained / n,
+            "n_acted": acted,
+            "CRA_eta_acted": (acted_cra / acted) if acted else float("nan")}
 
 
 def main():
@@ -281,8 +292,9 @@ def main():
                 min(p["j_obs"], key=lambda a: p["j_obs"][a]), False),
         }
         print(f"\n{split.upper()}  ({len(pts)} decision points)")
-        print(f"  {'method':14s} {'n':>4s} {'CRA_eta':>8s} {'CRA@2':>7s} "
-              f"{'Reg_eta':>8s} {'PFR':>7s} {'WIR':>7s} {'abst':>6s}")
+        print(f"  {'method':14s} {'n':>4s} {'CRA_eta':>8s} {'acted':>6s} "
+              f"{'CRA|act':>8s} {'Reg_eta':>8s} {'PFR':>7s} {'WIR':>7s} "
+              f"{'abst':>6s}")
         for label, fn in methods.items():
             for reg in ("all",) + REGIMES:
                 sub = pts if reg == "all" else [p for p in pts
@@ -292,9 +304,9 @@ def main():
                 m = metrics(sub, [fn(p) for p in sub], eta)
                 if reg == "all":
                     print(f"  {label:14s} {m['n']:4d} {m['CRA_eta']:8.3f} "
-                          f"{m['CRA@2']:7.3f} {m['Reg_eta']:8.4f} "
-                          f"{m['PFR']:7.3f} {m['WIR']:7.3f} "
-                          f"{m['abstention']:6.3f}")
+                          f"{m['n_acted']:6d} {m['CRA_eta_acted']:8.3f} "
+                          f"{m['Reg_eta']:8.4f} {m['PFR']:7.3f} "
+                          f"{m['WIR']:7.3f} {m['abstention']:6.3f}")
                 out_rows.append({"split": split, "method": label,
                                  "regime": reg, "eta_J": eta, "tau": tau,
                                  "theta": theta,
