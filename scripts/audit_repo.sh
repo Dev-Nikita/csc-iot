@@ -165,6 +165,14 @@ chk "the audit skips the edge bound when no edge is faulted" \
   grep -q 'edge_faulted' analysis/audit_accounting.py
 chk "decision methods can be scored on a second matrix" \
   grep -q 'transfer-root' analysis/evaluate.py
+# The fault check was edge-only, so the first D5 branch was refused for running
+# a healthy edge -- which is what D5 declares. Loosening it would have let a
+# gateway mechanism run as a healthy prefix; it is mechanism-aware instead, and
+# it now also verifies the relief path, without which D4 degenerates into D1.
+chk "the fault check verifies the relief path"     grep -q 'edge01 (relief path)' scripts/m2prime_nats_matrix.sh
+chk "the fault check verifies the gateway fault"   grep -q 'gateway00/degrade_admit_at_epoch\|degrade_admit_at_epoch", "degraded_admit' scripts/m2prime_nats_matrix.sh
+chk "a mechanism with no fault anywhere is refused" \
+  grep -q 'declares neither an edge fault nor a gateway fault' scripts/m2prime_nats_matrix.sh
 
 # Protocol 0.5-0.9. Each of these was written after a defect that invalidated a
 # run, and each is here because a stale copy of the file would silently undo it.
