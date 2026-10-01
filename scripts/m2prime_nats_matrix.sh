@@ -346,18 +346,61 @@ MANIFEST
 import json, sys, os
 d = sys.argv[1]
 want = json.load(open(os.path.join(d, "scenario.json")))
-cap = json.load(open(os.path.join(d, "anchor.json")))["state"]["edge_capacity"]
-ran = (int(cap.get("edge00/degrade_at_epoch", -1)),
-       int(cap.get("edge00/degraded_serve", -1)))
-exp = (want["fault_onset"], want["fault_severity"])
+a = json.load(open(os.path.join(d, "anchor.json")))
+cap = a["state"]["edge_capacity"]
+obs = a.get("observed") or {}
+onset = want["fault_onset"]
+bad = []
+
+
+def pair(src, node, k1, k2):
+    return (int(src.get(node + "/" + k1, -1)), int(src.get(node + "/" + k2, -1)))
+
+
+# The loaded edge. A mechanism that declares NO edge fault must find the edge
+# healthy: a substitution that left a previous scenario's fault in place would
+# otherwise turn a gateway mechanism into an edge mechanism without saying so,
+# and the manifest would still claim the gateway.
+ran = pair(cap, "edge00", "degrade_at_epoch", "degraded_serve")
+if int(want["edge_faulted"]):
+    exp = (onset, int(want["fault_severity"]))
+else:
+    exp = (0, -1)
 if ran != exp:
-    print(f"declared fault {exp} but the node ran {ran}", file=sys.stderr)
+    bad.append("edge00: declared %s but the node ran %s" % (exp, ran))
+
+# The relief path. D4 exists only because this edge is degraded BELOW the loaded
+# one. If the parameter fails to arrive, rerouting stays beneficial and D4
+# silently becomes D1 -- the exact defect the mechanism was written to remove.
+if int(want["relief_degraded_serve"]) >= 0:
+    exp = (onset, int(want["relief_degraded_serve"]))
+    ran = pair(cap, "edge01", "degrade_at_epoch", "degraded_serve")
+    if ran != exp:
+        bad.append("edge01 (relief path): declared %s but the node ran %s" % (exp, ran))
+
+# The gateway. Reported under observed, not under edge_capacity: an admission
+# cap the operator suffers is not structural service capacity.
+if int(want["degraded_admit"]) >= 0:
+    exp = (onset, int(want["degraded_admit"]))
+    ran = pair(obs, "gateway00", "degrade_admit_at_epoch", "degraded_admit")
+    if ran != exp:
+        bad.append("gateway00: declared %s but the node ran %s" % (exp, ran))
+
+# A branch that declares a fault nowhere is a healthy run wearing a scenario id.
+if not int(want["edge_faulted"]) and int(want["degraded_admit"]) < 0:
+    bad.append("scenario declares neither an edge fault nor a gateway fault")
+
+if bad:
+    for b in bad:
+        print(b, file=sys.stderr)
     raise SystemExit(1)
 FAULTCHK
   then
     echo "FAIL: $branch ran a different fault than its scenario declares."
     echo "      The parameters did not reach the container: check that"
-    echo "      $COMPOSE_FILE substitutes DEGRADE_AT and DEGRADED_SERVE."
+    echo "      $COMPOSE_FILE substitutes DEGRADE_AT / DEGRADED_SERVE (edge00),"
+    echo "      DEGRADE_AT_E01 / DEGRADED_SERVE_E01 (relief path, D4) and"
+    echo "      DEGRADE_ADMIT_AT / DEGRADED_ADMIT (gateway, D5)."
     echo "fault did not reach the container" >"$dir/REFUSED.txt"
     return 1
   fi
