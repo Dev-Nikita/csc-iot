@@ -80,7 +80,13 @@ services:
       context: .
       dockerfile: deploy/go.Dockerfile
       args: { CMD_NAME: csc-node, GO_TAGS: nats }
-    command: ["-role", "gateway", "-id", "gw00", "-bus-impl", "nats", "-bus", "nats://nats:4222", "-ingress", ":5000", "-route", "edge00"]
+    command: ["-role", "gateway", "-id", "gw00", "-bus-impl", "nats", "-bus", "nats://nats:4222",
+              "-ingress", ":5000", "-route", "edge00",
+              # D5: the gateway's own admission capacity degrades. Unset by
+              # default. This is a fault, not the THROTTLE action: no downstream
+              # action relieves a bottleneck upstream of every edge.
+              "-degrade-admit-at-epoch", "${DEGRADE_ADMIT_AT:-0}",
+              "-degraded-admit-per-epoch", "${DEGRADED_ADMIT:--1}"]
     depends_on: { nats: { condition: service_healthy } }
     networks: [device-gateway, gateway-edge]
 
@@ -112,7 +118,11 @@ services:
       args: { CMD_NAME: csc-node, GO_TAGS: nats }
     # the relief path REROUTE moves work to
     command: ["-role", "edge", "-id", "edge01", "-bus-impl", "nats", "-bus", "nats://nats:4222",
-              "-serve-per-epoch", "300", "-sla-epochs", "1", "-sla-ms", "${SLA_MS:-750}"]
+              "-serve-per-epoch", "300", "-sla-epochs", "1", "-sla-ms", "${SLA_MS:-750}",
+              # D4: the relief path degrades too. Unset by default, so every
+              # mechanism that does not declare it behaves exactly as before.
+              "-degrade-at-epoch", "${DEGRADE_AT_E01:-0}",
+              "-degraded-serve-per-epoch", "${DEGRADED_SERVE_E01:--1}"]
     depends_on: { nats: { condition: service_healthy } }
     networks: [gateway-edge]
 

@@ -26,6 +26,16 @@ WORKLOAD_LEVELS = (60, 100, 140)  # events per epoch
 MECHANISMS = {
     "D1": "edge capacity degradation at onset",
     "D3": "edge stall at onset (serve rate to zero)",
+    # D4 and D5 exist because of a measured defect in the design, not for
+    # coverage. With only D1 and D3, rerouting is almost always the best action
+    # and a one-line threshold on the per-edge service deficit attains the
+    # oracle bound (b5-matrix-v2: CRA_eta 1.000 on two of three splits), which
+    # leaves the common-anchor comparison with nothing to separate. In both of
+    # these the correct action depends on WHERE the deficit is rather than on how
+    # large it is, which the permitted features expose and a single threshold
+    # cannot read.
+    "D4": "correlated degradation: the loaded edge and the relief path together",
+    "D5": "gateway admission capacity loss (upstream of every edge)",
 }
 NOT_IMPLEMENTED = {
     "D2": "ingress impairment ramp: requires netem re-application mid-branch",
@@ -69,14 +79,34 @@ def draw(master_seed, n, mechanisms, workloads):
         onset = rng.choice(onsets)
         used.add((mech, onset, sev, load))
         seed = rng.randrange(1, 2**31 - 1)
-        out.append({
+        rec = {
             "scenario_id": f"s{i:02d}",
             "fault_type": mech,
             "fault_onset": onset,
             "fault_severity": sev,
             "workload_level": load,
             "seed": seed,
-        })
+        }
+        if mech == "D4":
+            # The relief path must end up WORSE than the loaded edge, not merely
+            # also degraded. Scaling it to its own larger nominal left rerouting
+            # beneficial, which would have reproduced the very defect this
+            # mechanism exists to remove. Half the loaded edge's surviving
+            # capacity puts it strictly below, so rerouting moves work from a
+            # node serving `sev` to one serving `sev/2` and is actively harmful.
+            rec["relief_degraded_serve"] = max(1, sev // 2)
+        if mech == "D5":
+            # The gateway admits less than is offered, so work is refused before
+            # it reaches any edge, and THE EDGES ARE NOT FAULTED AT ALL. That is
+            # the point: the per-edge service deficit stays near zero, the
+            # backlog grows upstream, and the only actions available make it
+            # worse -- rerouting cannot relieve a bottleneck ahead of every edge
+            # and throttling tightens the same limit that is already binding.
+            # Inaction is correct, which is a case the earlier mechanisms never
+            # produced.
+            rec["degraded_admit"] = int(round(load * sev / 150.0))
+            rec["edge_faulted"] = 0
+        out.append(rec)
     _refuse_aliased_factors(out)
     return out
 

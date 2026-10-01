@@ -123,7 +123,26 @@ def audit(path, rec):
                             ["state"]["edge_capacity"]["edge00/serve_per_epoch"])
         except (OSError, KeyError, ValueError):
             end_epoch, nominal = None, None
-        if end_epoch and nominal:
+        # A mechanism may fault the gateway and leave the edges alone (D5).
+        # The edge bound then does not apply, and asserting it anyway would
+        # report a correct run as broken. A separate bound is checked instead:
+        # a gateway that admits at most `degraded_admit` per epoch cannot have
+        # accepted more than that allows.
+        edge_faulted = rec.get("edge_faulted", 1)
+        gw_admit = rec.get("degraded_admit", -1)
+        if end_epoch and gw_admit is not None and gw_admit >= 0:
+            onset = rec["fault_onset"]
+            serving = max(0, end_epoch - 1)
+            healthy = min(serving, max(0, onset - 1))
+            degraded = serving - healthy
+            offered_rate = rec["workload_level"]
+            bound = offered_rate * healthy + gw_admit * degraded
+            if degraded > 0 and accepted > bound * 1.02 + 1:
+                bad.append(f"the gateway accepted {accepted:.0f} but an admission "
+                           f"fault at epoch {onset} capping it to {gw_admit} per "
+                           f"epoch allows at most {bound:.0f} over {serving} "
+                           f"epochs: the declared gateway fault had no effect")
+        if end_epoch and nominal and edge_faulted:
             onset = rec["fault_onset"]
             serving = max(0, end_epoch - 1)          # epochs that served work
             healthy_epochs = min(serving, max(0, onset - 1))
@@ -143,7 +162,13 @@ def audit(path, rec):
     # A pre-fault branch spans no fault at all: nothing is wrong and nothing
     # will go wrong inside its horizon. The regime is computed from the
     # branch's own onset and horizon, not from its anchor index.
-    if rec["regime"] == "pre-fault" and action == "NO_OP":
+    # A gateway admission fault refuses work before it reaches an edge, so a
+    # branch spanning one has undelivered work by design and the healthy-branch
+    # invariant does not apply to it. The regime label still says pre-fault when
+    # the fault lies beyond the horizon, and there the invariant does hold.
+    gw_faulted_in_horizon = (rec.get("degraded_admit", -1) >= 0
+                             and rec["regime"] != "pre-fault")
+    if rec["regime"] == "pre-fault" and action == "NO_OP" and not gw_faulted_in_horizon:
         if eligible + residual > 0:
             bad.append(f"pre-fault NO_OP left {eligible + residual:.0f} events undelivered")
         if sla_viol > 0:

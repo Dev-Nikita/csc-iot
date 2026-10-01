@@ -199,7 +199,7 @@ run_branch() {
   # Every factor of the scenario is read from the declared set, never inferred
   # from the branch name, and every one is written into the branch's own
   # manifest so no analysis has to parse a name to know what it ran.
-  local sid mech onset sev load sseed sla
+  local sid mech onset sev load sseed sla relief gwadmit edgefault
   eval "$(python3 - "$SCENARIOS" "$sidx" <<'ENV'
 import json, sys
 sc = json.load(open(sys.argv[1]))["scenarios"][int(sys.argv[2]) - 1]
@@ -210,6 +210,11 @@ print(f"onset={sc['fault_onset']}")
 print(f"sev={sc['fault_severity']}")
 print(f"load={sc['workload_level']}")
 print(f"sseed={sc['seed']}")
+# D4 degrades the relief path too; D5 degrades the gateway's admission. Both
+# default to "no fault" so every other mechanism is bit-identical to before.
+print(f"relief={sc.get('relief_degraded_serve', -1)}")
+print(f"gwadmit={sc.get('degraded_admit', -1)}")
+print(f"edgefault={sc.get('edge_faulted', 1)}")
 # PLACEHOLDER_SLA_MS is deliberately absurd rather than plausible: a
 # calibration run must not carry a number anyone could mistake for a promise,
 # and the per-event histogram the calibration reads does not depend on it.
@@ -226,12 +231,32 @@ ENV
   # The scenario is fixed within a cell and across the actions compared at an
   # anchor: repeats are replays of one prefix, and actions must share that
   # prefix to be comparable at all.
-  export DEGRADE_AT="$onset" DEGRADED_SERVE="$sev" \
-         EVENTS_PER_EPOCH="$load" MASTER_SEED="$sseed" SLA_MS="$sla"
+  # A mechanism may declare that the EDGE is not faulted -- D5 faults only the
+  # gateway, and degrading an edge as well would hide the thing it tests.
+  if [ "$edgefault" -eq 0 ]; then
+    export DEGRADE_AT=0 DEGRADED_SERVE=-1
+  else
+    export DEGRADE_AT="$onset" DEGRADED_SERVE="$sev"
+  fi
+  export EVENTS_PER_EPOCH="$load" MASTER_SEED="$sseed" SLA_MS="$sla"
+  # The relief path and the gateway are faulted only where the mechanism says
+  # so. A -1 leaves the container at its default, which is no fault at all.
+  if [ "$relief" -ge 0 ]; then
+    export DEGRADE_AT_E01="$onset" DEGRADED_SERVE_E01="$relief"
+  else
+    export DEGRADE_AT_E01=0 DEGRADED_SERVE_E01=-1
+  fi
+  if [ "$gwadmit" -ge 0 ]; then
+    export DEGRADE_ADMIT_AT="$onset" DEGRADED_ADMIT="$gwadmit"
+  else
+    export DEGRADE_ADMIT_AT=0 DEGRADED_ADMIT=-1
+  fi
   python3 - "$dir/scenario.json" "$sid" "$mech" "$onset" "$sev" "$load" \
-           "$sseed" "$sla" "$anchor" "$action" "$repeat" "$HORIZON" <<'MANIFEST'
+           "$sseed" "$sla" "$anchor" "$action" "$repeat" "$HORIZON" \
+           "$relief" "$gwadmit" "$edgefault" <<'MANIFEST'
 import json, sys
-(out, sid, mech, onset, sev, load, seed, sla, anchor, action, repeat, horizon) = sys.argv[1:]
+(out, sid, mech, onset, sev, load, seed, sla, anchor, action, repeat, horizon,
+ relief, gwadmit, edgefault) = sys.argv[1:]
 onset, anchor, horizon = int(onset), int(anchor), int(horizon)
 # The regime is a property of the branch's own numbers, not of its anchor index.
 if onset > anchor + horizon:
@@ -245,6 +270,10 @@ json.dump({
     "fault_severity": int(sev), "workload_level": int(load), "seed": int(seed),
     "sla_ms": int(sla), "anchor": anchor, "action": action,
     "repeat": int(repeat), "horizon": horizon, "regime": regime,
+    # -1 means the mechanism declares no such fault. Written for every branch so
+    # no analysis has to infer a mechanism's parameters from its name.
+    "relief_degraded_serve": int(relief), "degraded_admit": int(gwadmit),
+    "edge_faulted": int(edgefault),
 }, open(out, "w"), indent=2, sort_keys=True)
 MANIFEST
   cleanup
