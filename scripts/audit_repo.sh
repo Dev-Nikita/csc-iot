@@ -173,6 +173,11 @@ chk "the fault check verifies the relief path"     grep -q 'edge01 (relief path)
 chk "the fault check verifies the gateway fault"   grep -q 'gateway00/degrade_admit_at_epoch\|degrade_admit_at_epoch", "degraded_admit' scripts/m2prime_nats_matrix.sh
 chk "a mechanism with no fault anywhere is refused" \
   grep -q 'declares neither an edge fault nor a gateway fault' scripts/m2prime_nats_matrix.sh
+# The check looked for node 'gateway00', which is the compose SERVICE name; the
+# node's id is 'gw00'. Both keys read as absent and were compared against a
+# default, so the check could not see its subject.
+chk "a missing observable is refused, not defaulted" \
+  grep -q 'no node reports' scripts/m2prime_nats_matrix.sh
 
 # Protocol 0.5-0.9. Each of these was written after a defect that invalidated a
 # run, and each is here because a stale copy of the file would silently undo it.
