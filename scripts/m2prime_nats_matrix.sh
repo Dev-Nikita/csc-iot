@@ -4,6 +4,9 @@
 # does not reset gateway counters, backlogs, routing, or edge processed state.
 set -euo pipefail
 
+# Derived from this script's own location, never from the caller's cwd.
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.nats.yml}"
 BIN="${BIN:-bin}"
 # Derived here when it is not already in the environment, exactly as
@@ -342,77 +345,16 @@ MANIFEST
   # then every branch would run the same fault while every manifest claimed a
   # different one. Checked on every branch: it costs nothing and the failure it
   # catches would invalidate the whole design.
-  if ! python3 - "$dir" <<'FAULTCHK'
+  if ! python3 - "$dir" "$REPO_ROOT" <<'FAULTCHK'
 import json, sys, os
-d = sys.argv[1]
-want = json.load(open(os.path.join(d, "scenario.json")))
-a = json.load(open(os.path.join(d, "anchor.json")))
-cap = a["state"]["edge_capacity"]
-obs = a.get("observed") or {}
-onset = want["fault_onset"]
-bad = []
-
-
-def pair(src, node, k1, k2, label):
-    """The declared pair as the NODE reported it.
-
-    Resolved by key suffix over whatever node reported it, not by a node id
-    spelled here: the first version of this check looked for 'gateway00', the
-    compose SERVICE name, while the node's id is 'gw00', so the keys read as
-    absent. A missing observable is reported as missing rather than compared
-    against a default, because a default turns a check that cannot see its
-    subject into a check that quietly passes.
-    """
-    got = {}
-    for k in (k1, k2):
-        hits = [v for key, v in src.items()
-                if key == node + "/" + k or key.endswith("/" + k)]
-        if not hits:
-            bad.append("%s: no node reports %s, so the fault cannot be "
-                       "verified at all" % (label, k))
-            return None
-        got[k] = int(hits[0])
-    return (got[k1], got[k2])
-
-
-# The loaded edge. A mechanism that declares NO edge fault must find the edge
-# healthy: a substitution that left a previous scenario's fault in place would
-# otherwise turn a gateway mechanism into an edge mechanism without saying so,
-# and the manifest would still claim the gateway.
-exp = (onset, int(want["fault_severity"])) if int(want["edge_faulted"]) else (0, -1)
-ran = pair(cap, "edge00", "degrade_at_epoch", "degraded_serve", "edge00")
-if ran is not None and ran != exp:
-    bad.append("edge00: declared %s but the node ran %s" % (exp, ran))
-
-# The relief path. D4 exists only because this edge is degraded BELOW the loaded
-# one. If the parameter fails to arrive, rerouting stays beneficial and D4
-# silently becomes D1 -- the exact defect the mechanism was written to remove.
-if int(want["relief_degraded_serve"]) >= 0:
-    exp = (onset, int(want["relief_degraded_serve"]))
-    ran = None
-    k1, k2 = "edge01/degrade_at_epoch", "edge01/degraded_serve"
-    if k1 in cap and k2 in cap:
-        ran = (int(cap[k1]), int(cap[k2]))
-    else:
-        bad.append("edge01 (relief path): the edge reports no degradation "
-                   "parameters, so the relief path cannot be verified")
-    if ran is not None and ran != exp:
-        bad.append("edge01 (relief path): declared %s but the node ran %s"
-                   % (exp, ran))
-
-# The gateway. Reported under observed, not under edge_capacity: an admission
-# cap the operator suffers is not structural service capacity.
-if int(want["degraded_admit"]) >= 0:
-    exp = (onset, int(want["degraded_admit"]))
-    ran = pair(obs, "gw00", "degrade_admit_at_epoch", "degraded_admit",
-               "gateway (gw00)")
-    if ran is not None and ran != exp:
-        bad.append("gateway (gw00): declared %s but the node ran %s" % (exp, ran))
-
-# A branch that declares a fault nowhere is a healthy run wearing a scenario id.
-if not int(want["edge_faulted"]) and int(want["degraded_admit"]) < 0:
-    bad.append("scenario declares neither an edge fault nor a gateway fault")
-
+d, root = sys.argv[1], sys.argv[2]
+# The rule is shared with the accounting audit, in analysis/faultcheck.py. It
+# used to be written out here as well, and the same defect then had to be found
+# three times; see that module's docstring.
+sys.path.insert(0, os.path.join(root, "analysis"))
+import faultcheck
+bad = faultcheck.verify(json.load(open(os.path.join(d, "scenario.json"))),
+                        json.load(open(os.path.join(d, "anchor.json"))))
 if bad:
     for b in bad:
         print(b, file=sys.stderr)
