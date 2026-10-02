@@ -51,7 +51,35 @@ rsync -e "ssh -o IdentitiesOnly=yes -i $SSH_IDENTITY" -avz --delete \
   --exclude '.DS_Store' \
   --filter='protect configs/scenarios-*.json' \
   --filter='protect configs/budgets-*.json' \
+  --filter='protect SOURCE_REVISION' \
   ./ "$HOST:$DEST/"
+
+# The revision the host records for every branch it runs. It was a file kept by
+# hand, last updated at protocol-0.9, and then forgotten: `git rev-parse` fails
+# on the host (.git is not synced), the runner fell back to that file, and every
+# manifest since 2026-09-25 recorded "protocol-0.9" as the commit that produced
+# it. The measurements are unaffected; the provenance label was wrong, which is
+# the one field whose whole purpose is to be right. It is now derived here, on
+# every deploy, from the tree actually being sent -- never typed, never
+# committed, so it cannot go stale and cannot be overwritten by an older copy.
+REVISION="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
+DESCRIBE="$(git describe --tags --always --dirty 2>/dev/null || echo unknown)"
+if [ "$REVISION" = unknown ]; then
+  echo "FAIL: cannot read a git revision for this tree, so the host would record"
+  echo "      an unverifiable provenance for every branch it runs. Deploy from a"
+  echo "      git checkout."
+  exit 2
+fi
+if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
+  echo "note: the tree is dirty; the host will record $DESCRIBE, which says so."
+fi
+echo "recording SOURCE_REVISION=$REVISION on $HOST"
+ssh "${SSH_OPTIONS[@]}" "$HOST" "cat > $DEST/SOURCE_REVISION" <<EOF_REV
+$REVISION
+# Written by scripts/deploy_to_host.sh. Line 1 is what the runner reads.
+# describe: $DESCRIBE
+# deployed: $(date -u +%Y-%m-%dT%H:%M:%SZ) from $(hostname -s 2>/dev/null || echo unknown)
+EOF_REV
 
 echo
 echo "verifying on $HOST"

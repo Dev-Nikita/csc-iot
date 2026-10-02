@@ -180,6 +180,14 @@ chk "a missing observable is refused, not defaulted" grep -q 'no node reports' a
 chk "a mechanism with no fault anywhere is refused" \
   grep -q 'neither an edge fault nor a gateway fault' analysis/faultcheck.py
 chk "the fault rule has its own fixtures"            test -f tests/test_faultcheck.py
+# SOURCE_REVISION was a hand-kept file, last updated at protocol-0.9 and then
+# forgotten, so every manifest produced on the host recorded a tag five protocol
+# versions old as the commit that made it. It is derived on every deploy now.
+chk "the deployed revision is derived, not committed" \
+  bash -c '! git ls-files --error-unmatch SOURCE_REVISION >/dev/null 2>&1'
+chk "the deploy records the revision on the host"    grep -q 'recording SOURCE_REVISION' scripts/deploy_to_host.sh
+chk "the deploy refuses a tree with no revision"     grep -q 'unverifiable provenance' scripts/deploy_to_host.sh
+chk "the generated revision survives rsync --delete" grep -q "protect SOURCE_REVISION" scripts/deploy_to_host.sh
 
 # Protocol 0.5-0.9. Each of these was written after a defect that invalidated a
 # run, and each is here because a stale copy of the file would silently undo it.
