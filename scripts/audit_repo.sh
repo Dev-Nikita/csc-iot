@@ -169,15 +169,17 @@ chk "decision methods can be scored on a second matrix" \
 # a healthy edge -- which is what D5 declares. Loosening it would have let a
 # gateway mechanism run as a healthy prefix; it is mechanism-aware instead, and
 # it now also verifies the relief path, without which D4 degenerates into D1.
-chk "the fault check verifies the relief path"     grep -q 'edge01 (relief path)' scripts/m2prime_nats_matrix.sh
-chk "the fault check verifies the gateway fault"   grep -q 'gateway00/degrade_admit_at_epoch\|degrade_admit_at_epoch", "degraded_admit' scripts/m2prime_nats_matrix.sh
+chk "the fault rule lives in exactly one module"      test -f analysis/faultcheck.py
+chk "the runner delegates to it"                     grep -q 'import faultcheck' scripts/m2prime_nats_matrix.sh
+chk "the accounting audit delegates to it"           grep -q 'faultcheck.verify' analysis/audit_accounting.py
+chk "the fault rule is not written out twice" \
+  bash -c '! grep -q "degraded_serve\", \"edge00" scripts/m2prime_nats_matrix.sh'
+chk "the fault rule verifies the relief path"        grep -q 'relief path' analysis/faultcheck.py
+chk "the fault rule verifies the gateway fault"      grep -q 'degrade_admit_at_epoch' analysis/faultcheck.py
+chk "a missing observable is refused, not defaulted" grep -q 'no node reports' analysis/faultcheck.py
 chk "a mechanism with no fault anywhere is refused" \
-  grep -q 'declares neither an edge fault nor a gateway fault' scripts/m2prime_nats_matrix.sh
-# The check looked for node 'gateway00', which is the compose SERVICE name; the
-# node's id is 'gw00'. Both keys read as absent and were compared against a
-# default, so the check could not see its subject.
-chk "a missing observable is refused, not defaulted" \
-  grep -q 'no node reports' scripts/m2prime_nats_matrix.sh
+  grep -q 'neither an edge fault nor a gateway fault' analysis/faultcheck.py
+chk "the fault rule has its own fixtures"            test -f tests/test_faultcheck.py
 
 # Protocol 0.5-0.9. Each of these was written after a defect that invalidated a
 # run, and each is here because a stale copy of the file would silently undo it.

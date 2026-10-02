@@ -17,6 +17,10 @@ import json
 import os
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import faultcheck
+
 import branches
 
 HIST = "lat_hist_ms_"
@@ -88,20 +92,16 @@ def audit(path, rec):
     if not rec.get("legacy"):
         try:
             with open(os.path.join(path, "anchor.json")) as fh:
-                cap = json.load(fh)["state"]["edge_capacity"]
-        except (OSError, KeyError):
-            cap = None
-        if cap is None:
-            bad.append("no edge_capacity in the anchor state to verify the fault")
+                anchor = json.load(fh)
+        except OSError:
+            anchor = None
+        if anchor is None:
+            bad.append("no anchor.json to verify the fault against")
         else:
-            ran_onset = int(cap.get("edge00/degrade_at_epoch", -1))
-            ran_sev = int(cap.get("edge00/degraded_serve", -1))
-            if ran_onset != rec["fault_onset"]:
-                bad.append(f"declared onset {rec['fault_onset']} but the node ran "
-                           f"{ran_onset}")
-            if ran_sev != rec["fault_severity"]:
-                bad.append(f"declared severity {rec['fault_severity']} but the node "
-                           f"ran {ran_sev}")
+            # The rule itself lives in analysis/faultcheck.py, shared with the
+            # runner. It was written twice before, and the same defect then had
+            # to be found three times -- see that module's docstring.
+            bad.extend(faultcheck.verify(rec, anchor))
 
     # 7b. The declared fault must have HAD AN EFFECT, not merely been declared.
     #     7a compares the configuration the node reports with the manifest, which
