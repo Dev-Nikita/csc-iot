@@ -58,3 +58,7 @@ bin/
 
 # latex scratch
 /paper/*.tmp
+
+# Derived by scripts/deploy_to_host.sh on every deploy; never committed, so it
+# cannot go stale (it once sat at protocol-0.9 for a week of runs).
+SOURCE_REVISION
