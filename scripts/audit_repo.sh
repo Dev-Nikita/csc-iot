@@ -180,6 +180,17 @@ chk "a missing observable is refused, not defaulted" grep -q 'no node reports' a
 chk "a mechanism with no fault anywhere is refused" \
   grep -q 'neither an edge fault nor a gateway fault' analysis/faultcheck.py
 chk "the fault rule has its own fixtures"            test -f tests/test_faultcheck.py
+# The THROTTLE check compared the observed admission limit against the action's
+# value alone and failed all 12 THROTTLE branches of every D5 scenario, which
+# were admitting the tighter of the fault and the action exactly as designed.
+chk "the admission check knows the gateway fault can bind" \
+  grep -qF 'expected = min(expected, fault_cap)' analysis/m2prime_report.py
+chk "the admission limit is named once"              grep -q 'THROTTLE_ADMIT = 50' analysis/m2prime_report.py
+chk "the admission rule has its own fixtures"        test -f tests/test_admit_limit.py
+# intelligence/tests was the only path collected, so analysis/test_features.py
+# and analysis/test_objective.py were never run by `make test`.
+chk "make test collects every python test directory" \
+  grep -q 'pytest intelligence/tests analysis tests' Makefile
 # SOURCE_REVISION was a hand-kept file, last updated at protocol-0.9 and then
 # forgotten, so every manifest produced on the host recorded a tag five protocol
 # versions old as the commit that made it. It is derived on every deploy now.
