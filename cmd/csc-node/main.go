@@ -351,6 +351,16 @@ func runGateway(ctx context.Context, id string, b bus.Bus, ingress, route string
 	// run having ended.
 	acceptedByEpoch := map[int64]int64{}
 	deferredByEpoch := map[int64]int64{}
+	// Deferral split by WHICH limiter bound it. The cost term of the objective
+	// is the realised cost of the ACTION -- C(NO_OP) = 0 by definition, doing
+	// nothing disrupts nothing -- and a gateway admission fault defers work under
+	// every action, including NO_OP. Charging that to the action makes a branch
+	// that intervened in no way carry a cost, which contradicts the definition
+	// the manuscript states. Which cap bound an event is known exactly here, at
+	// the moment of deferral, and nowhere afterwards: the totals alone cannot be
+	// separated, the same identifiability problem as the cumulative rates of 0.10.
+	deferredByActionByEpoch := map[int64]int64{}
+	deferredByFaultByEpoch := map[int64]int64{}
 	var currentRun atomic.Value
 	currentRun.Store("")
 	// Assigned below, once the sequence counter it advances exists; every call
@@ -512,6 +522,17 @@ func runGateway(ctx context.Context, id string, b bus.Bus, ingress, route string
 				deferred += float64(n)
 			}
 		}
+		var deferredByAction, deferredByFault float64
+		for k, n := range deferredByActionByEpoch {
+			if k < readEpoch {
+				deferredByAction += float64(n)
+			}
+		}
+		for k, n := range deferredByFaultByEpoch {
+			if k < readEpoch {
+				deferredByFault += float64(n)
+			}
+		}
 		admitMu.Unlock()
 		limit := float64(effectiveAdmitCap(admitCap.Load(), admitFaultCap.Load()))
 		return nodestate.Report{
@@ -543,6 +564,10 @@ func runGateway(ctx context.Context, id string, b bus.Bus, ingress, route string
 				// non-binding when it binds hard.
 				"ingress_accepted_last_epoch": float64(acceptedByEpoch[readEpoch-1]),
 				"admission_deferred_total": deferred,
+				// The two sum to admission_deferred_total by construction, and
+				// the accounting audit checks that they do.
+				"admission_deferred_by_action_total": deferredByAction,
+				"admission_deferred_by_fault_total":  deferredByFault,
 				"admission_backlog_depth":  residual,
 			},
 		}
@@ -600,6 +625,16 @@ func runGateway(ctx context.Context, id string, b bus.Bus, ingress, route string
 					if deferred {
 						backlog = append(backlog, ev)
 						deferredByEpoch[ev.Tick]++
+						// On a tie the ACTION is charged: at equal caps the
+						// action would have deferred the event by itself, and
+						// the conservative direction is the one that never
+						// flatters the method's own interventions.
+						a, f := admitCap.Load(), admitFaultCap.Load()
+						if f >= 0 && (a < 0 || f < a) {
+							deferredByFaultByEpoch[ev.Tick]++
+						} else {
+							deferredByActionByEpoch[ev.Tick]++
+						}
 					} else {
 						admittedThisEpoch++
 					}

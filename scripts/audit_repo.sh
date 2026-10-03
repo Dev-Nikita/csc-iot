@@ -197,6 +197,22 @@ chk "the effective cap has a go test"                test -f cmd/csc-node/admit_
 # and bounding arrivals by an admission cap compares two different quantities.
 chk "the gateway bound is on forwarded work" \
   grep -q 'forwarded = accepted - residual' analysis/audit_accounting.py
+# A gateway admission fault defers work under every action, NO_OP included, and
+# C(NO_OP) = 0 by definition. The node reports which limiter bound each deferred
+# event, because that is known only at the moment of deferral.
+chk "deferral is attributed to a limiter in the node" \
+  grep -q 'admission_deferred_by_action_total' cmd/csc-node/main.go
+chk "the objective charges only action-caused deferral" \
+  grep -q 'admission_deferred_by_action_total' analysis/jobs.py
+chk "a run without the split is flagged, not silently mixed" \
+  grep -q 'has_deferral_split' analysis/jobs.py
+chk "the split must account for every deferred event" \
+  grep -q 'by fault != ' analysis/audit_accounting.py
+chk "NO_OP charged with displaced work is refused" \
+  grep -q 'C(NO_OP) = 0 by definition' analysis/audit_accounting.py
+chk "the attribution rule has a go test"             grep -q 'TestDeferralAttribution' cmd/csc-node/admit_test.go
+chk "deferral under a declared gateway fault is allowed" \
+  grep -q 'gw_limits_admission' analysis/audit_accounting.py
 # intelligence/tests was the only path collected, so analysis/test_features.py
 # and analysis/test_objective.py were never run by `make test`.
 chk "make test collects every python test directory" \

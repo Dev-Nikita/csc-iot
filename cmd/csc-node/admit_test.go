@@ -33,3 +33,36 @@ func TestEffectiveAdmitCap(t *testing.T) {
 		}
 	}
 }
+
+// Which limiter is charged for a deferred event. The objective's cost term is
+// the realised cost of the ACTION -- C(NO_OP) = 0 by definition -- and a
+// gateway admission fault defers work under every action, NO_OP included.
+// Charging the fault's share to the action gave a branch that intervened in no
+// way a positive cost, contradicting the definition the manuscript states.
+//
+// This mirrors the attribution in the ingress path. On a tie the action is
+// charged: at equal caps the action would have deferred the event by itself,
+// and the conservative direction is the one that never flatters the method.
+func chargedToFault(action, fault int64) bool {
+	return fault >= 0 && (action < 0 || fault < action)
+}
+
+func TestDeferralAttribution(t *testing.T) {
+	for _, c := range []struct {
+		name          string
+		action, fault int64
+		wantFault     bool
+	}{
+		{"NO_OP under a gateway fault -- the case that broke C(NO_OP)=0", -1, 40, true},
+		{"THROTTLE with a tighter fault", 50, 40, true},
+		{"THROTTLE tighter than the fault", 50, 80, false},
+		{"THROTTLE with no fault", 50, -1, false},
+		{"equal caps go to the action", 50, 50, false},
+		{"a fault admitting nothing under NO_OP", -1, 0, true},
+	} {
+		if got := chargedToFault(c.action, c.fault); got != c.wantFault {
+			t.Errorf("%s: chargedToFault(%d, %d) = %v, want %v",
+				c.name, c.action, c.fault, got, c.wantFault)
+		}
+	}
+}

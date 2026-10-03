@@ -79,9 +79,36 @@ def audit(path, rec):
     if above > lat_viol + 1e-9:
         bad.append(f"{above:.0f} events binned at or above {sla_ms} ms but "
                    f"lat_ms_violations is {lat_viol:.0f}")
-    # 6. Only a throttled branch defers work.
-    if action != "THROTTLE" and deferred > 0:
-        bad.append(f"{action} deferred {deferred:.0f} events at the gateway")
+    # 6. Work is deferred at the gateway only where something limits admission:
+    #    the THROTTLE action, or a D5 fault in the gateway's own admission
+    #    capacity. Before D5 the action was the only limiter, so this read
+    #    `action != "THROTTLE"` and reported 24 correct D5 branches as broken --
+    #    860 events deferred under NO_OP is the fault doing exactly its job.
+    #    The invariant still has teeth in the direction that matters: a branch
+    #    with neither limiter must defer nothing.
+    gw_limits_admission = (rec.get("degraded_admit", -1) >= 0
+                           and rec["regime"] != "pre-fault")
+    if action != "THROTTLE" and not gw_limits_admission and deferred > 0:
+        bad.append(f"{action} deferred {deferred:.0f} events at the gateway with "
+                   f"nothing limiting admission: neither the action nor a declared "
+                   f"gateway fault")
+    # 6b. The deferral split must account for every deferred event, and a
+    #     branch with no gateway fault must attribute nothing to one. Without
+    #     this the cost term could silently drop or invent displaced work.
+    by_action = suffix_sum(obs, "/admission_deferred_by_action_total")
+    by_fault = suffix_sum(obs, "/admission_deferred_by_fault_total")
+    has_split = any(k.endswith("/admission_deferred_by_action_total") for k in obs)
+    if has_split:
+        if abs((by_action + by_fault) - deferred) > 1e-9:
+            bad.append(f"deferral split {by_action:.0f} by action + {by_fault:.0f} "
+                       f"by fault != {deferred:.0f} deferred in total")
+        if not gw_limits_admission and by_fault > 0:
+            bad.append(f"{by_fault:.0f} events attributed to a gateway fault on a "
+                       f"branch that declares none in its window")
+        if action == "NO_OP" and by_action > 0:
+            bad.append(f"NO_OP is charged {by_action:.0f} deferred events: "
+                       f"C(NO_OP) = 0 by definition")
+
     # 7a. The fault the node actually ran must be the fault the scenario
     #     declared. The parameters reach the container through compose variable
     #     substitution, which can silently fall back to its defaults: every
