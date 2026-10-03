@@ -74,10 +74,10 @@ def load(root):
             scenario, (anchor, action, repeat) = "s00", parts
         else:
             continue
-        rec = {"branch_name": name, "scenario": scenario, "anchor_name": anchor,
+        rec = {"branch_name": name, "scenario_id": scenario, "anchor_name": anchor,
                "action": action, "repeat": repeat, "dir": directory,
                "refused": os.path.exists(os.path.join(directory, "REFUSED.txt"))}
-        for kind in ("anchor", "outcome", "branch"):
+        for kind in ("anchor", "outcome", "branch", "scenario"):
             path = os.path.join(directory, kind + ".json")
             if os.path.exists(path):
                 rec[kind] = read_json(path)
@@ -112,6 +112,12 @@ def expected_cells(root):
     return meta, expected, actions
 
 
+# The admission limit the THROTTLE action asks for. Named once: it appeared as a
+# bare 50 in the only check that reads it, which is how that check came to be
+# compared against the action alone rather than against what actually binds.
+THROTTLE_ADMIT = 50
+
+
 def mutation_error(record):
     action = record["action"]
     if action == "NO_OP":
@@ -127,8 +133,29 @@ def mutation_error(record):
             return f"outcome route is {route!r}, expected 'edge01'"
     if action == "THROTTLE":
         limit = (state.get("rate_limits") or {}).get("gw00/admit")
-        if limit != 50:
-            return f"outcome admission limit is {limit!r}, expected 50"
+        expected = THROTTLE_ADMIT
+        # D5 degrades the gateway's own admission capacity, and the node applies
+        # whichever of the fault and the action is TIGHTER -- deliberately, since
+        # a fault the operator suffers and a control the operator chose are
+        # different situations and merging them would make them indistinguishable.
+        # This check read the action's value alone and failed all 12 THROTTLE
+        # branches of every D5 scenario for behaving exactly as designed: 40
+        # against an expected 50 where the fault admits 40, 27 where it admits 27.
+        scen = record.get("scenario") or {}
+        fault_cap = int(scen.get("degraded_admit", -1))
+        onset = int(scen.get("fault_onset", -1))
+        read_epoch = (record.get("outcome") or {}).get("epoch")
+        if fault_cap >= 0 and onset >= 0 and read_epoch is not None \
+                and int(read_epoch) >= onset:
+            expected = min(expected, fault_cap)
+        if limit != expected:
+            extra = ""
+            if expected != THROTTLE_ADMIT:
+                extra = (f" (the action asks for {THROTTLE_ADMIT}; the gateway fault"
+                         f" admits {fault_cap} from epoch {onset}, and the tighter"
+                         f" of the two binds)")
+            return (f"outcome admission limit is {limit!r}, expected "
+                    f"{expected}{extra}")
     return None
 
 
@@ -197,7 +224,7 @@ def main():
     # run. The grouping is per (scenario, anchor).
     by_cell = collections.defaultdict(list)
     for rec in records:
-        by_cell[(rec["scenario"], rec["anchor_name"])].append(rec["anchor"]["hash"])
+        by_cell[(rec["scenario_id"], rec["anchor_name"])].append(rec["anchor"]["hash"])
     print("PREFIX REPRODUCIBILITY (per scenario and anchor)")
     bad_prefix = False
     for key in sorted(by_cell):
@@ -238,7 +265,7 @@ def main():
 
     cells = collections.defaultdict(list)
     for rec in records:
-        cells[(rec["scenario"], rec["anchor_name"], rec["action"])].append(
+        cells[(rec["scenario_id"], rec["anchor_name"], rec["action"])].append(
             j_m2_diag(rec["outcome"]))
     within, medians = [], {}
     for cell, values in sorted(cells.items()):

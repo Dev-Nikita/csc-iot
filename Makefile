@@ -23,7 +23,11 @@ build: ## Build all Go services (make build TAGS=nats for the NATS transport)
 .PHONY: test
 test: ## Go tests (race) + Python tests
 	$(GO) test -race ./...
-	$(PY) -m pytest intelligence/tests -q
+	@# intelligence/tests alone was collected here, so analysis/test_features.py
+	@# and analysis/test_objective.py existed and were never run by `make test`,
+	@# and neither were the fixtures for the fault rule and the admission limit.
+	@# A test that nothing runs is documentation.
+	$(PY) -m pytest intelligence/tests analysis tests -q
 
 .PHONY: lint
 lint: ## Static analysis
