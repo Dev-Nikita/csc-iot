@@ -128,7 +128,22 @@ def terms(observed, latency_max_epochs, latency_max_ms):
     # was moved to. Deferral is counted cumulatively: work delayed and later
     # drained was still displaced, and a residual-only reading charged nothing
     # for it.
-    disruption = min(max((deferred + undelivered) / offered, 0.0), 1.0)
+    # Only deferral the ACTION caused counts. A gateway admission fault defers
+    # work under every action, NO_OP included, and C(NO_OP) = 0 by definition --
+    # doing nothing disrupts nothing. Charging the fault's share to the action
+    # gave a branch that intervened in no way a positive cost. The node reports
+    # the split because the binding limiter is known only at the moment of
+    # deferral; the totals cannot be separated afterwards.
+    by_action = sum(v for k, v in observed.items()
+                    if k.endswith("/admission_deferred_by_action_total"))
+    has_split = any(k.endswith("/admission_deferred_by_action_total")
+                    for k in observed)
+    # Runs recorded before this telemetry existed keep their old reading and are
+    # flagged as lacking the split, exactly as 0.10 did for the windowed rates.
+    # They remain readable; they must not be mixed with split-aware runs in one
+    # cost comparison, and the flag is what makes that visible.
+    action_deferred = by_action if has_split else deferred
+    disruption = min(max((action_deferred + undelivered) / offered, 0.0), 1.0)
     # The measured variant. Epoch-quantised waiting is exactly reproducible,
     # which is what makes it useless as an outcome: quantising to logical time
     # erases the timing variation that impairment actually causes, so replay
@@ -140,6 +155,8 @@ def terms(observed, latency_max_epochs, latency_max_ms):
     l_tilde_ms = min(max(mean_lat_ms / latency_max_ms, 0.0), 1.0)
 
     return {"Y": y, "L_tilde": l_tilde, "disruption": disruption,
+            "has_deferral_split": 1.0 if has_split else 0.0,
+            "deferred_by_fault": (deferred - by_action) if has_split else 0.0,
             "mean_wait_epochs": mean_wait, "offered": offered,
             "served": served, "unserved": unserved, "violations": violations,
             "residual": residual, "deferred": deferred,
