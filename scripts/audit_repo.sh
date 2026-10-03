@@ -187,6 +187,16 @@ chk "the admission check knows the gateway fault can bind" \
   grep -qF 'expected = min(expected, fault_cap)' analysis/m2prime_report.py
 chk "the admission limit is named once"              grep -q 'THROTTLE_ADMIT = 50' analysis/m2prime_report.py
 chk "the admission rule has its own fixtures"        test -f tests/test_admit_limit.py
+# The epoch-boundary drain asked for the tighter of the action and the fault;
+# the live ingress path read the action alone, so under NO_OP (action = -1)
+# every arrival was forwarded and the D5 fault did nothing at all.
+chk "both admission paths ask for the effective cap" \
+  bash -c '[ "$(grep -c "effectiveAdmitCap(admitCap.Load(), admitFaultCap.Load())" cmd/csc-node/main.go)" -ge 3 ]'
+chk "the effective cap has a go test"                test -f cmd/csc-node/admit_test.go
+# The cap bounds what the gateway FORWARDED; ingress_accepted counts arrivals,
+# and bounding arrivals by an admission cap compares two different quantities.
+chk "the gateway bound is on forwarded work" \
+  grep -q 'forwarded = accepted - residual' analysis/audit_accounting.py
 # intelligence/tests was the only path collected, so analysis/test_features.py
 # and analysis/test_objective.py were never run by `make test`.
 chk "make test collects every python test directory" \

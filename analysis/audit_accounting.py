@@ -137,11 +137,22 @@ def audit(path, rec):
             degraded = serving - healthy
             offered_rate = rec["workload_level"]
             bound = offered_rate * healthy + gw_admit * degraded
-            if degraded > 0 and accepted > bound * 1.02 + 1:
-                bad.append(f"the gateway accepted {accepted:.0f} but an admission "
-                           f"fault at epoch {onset} capping it to {gw_admit} per "
-                           f"epoch allows at most {bound:.0f} over {serving} "
-                           f"epochs: the declared gateway fault had no effect")
+            # What the cap bounds is what the gateway FORWARDED, not what
+            # arrived at it. `ingress_accepted` counts arrivals -- deferral is
+            # charged cumulatively and a deferred event is still accepted work,
+            # which is what makes the denominator action-independent (0.5).
+            # Bounding arrivals by an admission cap compares two different
+            # quantities and would fail a working fault for admitting less than
+            # it was offered. Every accepted event is either forwarded or still
+            # sitting in the admission backlog, so forwarded = accepted - residual.
+            forwarded = accepted - residual
+            if degraded > 0 and forwarded > bound * 1.02 + 1:
+                bad.append(f"the gateway forwarded {forwarded:.0f} events "
+                           f"(accepted {accepted:.0f}, {residual:.0f} still in the "
+                           f"admission backlog) but an admission fault at epoch "
+                           f"{onset} capping it to {gw_admit} per epoch allows at "
+                           f"most {bound:.0f} over {serving} epochs: the declared "
+                           f"gateway fault had no effect")
         if end_epoch and nominal and edge_faulted:
             onset = rec["fault_onset"]
             serving = max(0, end_epoch - 1)          # epochs that served work

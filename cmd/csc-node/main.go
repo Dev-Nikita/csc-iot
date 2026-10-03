@@ -585,7 +585,15 @@ func runGateway(ctx context.Context, id string, b bus.Bus, ingress, route string
 						}
 						continue
 					}
-					cap := admitCap.Load()
+					// The tighter of the action and the fault, exactly as at
+					// the epoch boundary below. Reading admitCap alone here
+					// made the D5 gateway fault a no-op on arriving events:
+					// under NO_OP the action's cap is -1, so every arrival was
+					// forwarded and the declared fault changed nothing. The
+					// boundary drain used the effective cap and the live
+					// ingress path did not, so the two disagreed about what the
+					// gateway's capacity was.
+					cap := effectiveAdmitCap(admitCap.Load(), admitFaultCap.Load())
 					admitMu.Lock()
 					acceptedByEpoch[ev.Tick]++
 					deferred := cap >= 0 && admittedThisEpoch >= cap
