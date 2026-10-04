@@ -263,6 +263,12 @@ chk "the price of recruited capacity is swept, not assumed" test -f analysis/cos
 chk "the swept price never enters J_obs" \
   bash -c '! grep -q "cost_sensitivity" analysis/jobs.py'
 chk "the sweep says it is an assumption"             grep -q 'ASSUMPTION with a reported range' analysis/cost_sensitivity.py
+# The first sweep divided the price by (EDGES-1), which capped its effect on J
+# below the gap it was meant to close: "no crossing at any price" was then a
+# property of the normaliser. The sweep prints its own ceiling now.
+chk "the price is per recruited edge"               grep -qF 'min(1.0, p * recruited(obs[b]))' analysis/cost_sensitivity.py
+chk "the sweep prints the ceiling a price can reach" grep -q '0.0667 x p' analysis/cost_sensitivity.py
+chk "the sweep has its own fixtures"                test -f tests/test_cost_sensitivity.py
 # analysis/statistics.py is a project module -- make analyze runs it -- and Python
 # puts a script's own directory first on sys.path, so any script in analysis/ that
 # writes `import statistics` gets it instead of the stdlib and dies on pandas.

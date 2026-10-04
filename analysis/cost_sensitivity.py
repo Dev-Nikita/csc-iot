@@ -88,9 +88,11 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("root", help="data/raw/<stack>/<experiment>")
     ap.add_argument("jobs_csv")
-    ap.add_argument("--prices", default="0.0,0.1,0.2,0.3,0.4,0.5,0.7,1.0",
-                    help="declared price of holding one extra edge open, in the "
-                         "same units as the other cost components")
+    ap.add_argument("--prices",
+                    default="0.0,0.2,0.4,0.5,0.6,0.65,0.7,0.8,1.0",
+                    help="declared price of holding ONE extra edge open, in the "
+                         "same units as the other cost components: 1.0 means it "
+                         "costs as much as the worst disruption measurable")
     args = ap.parse_args()
 
     obs = load(args.root)
@@ -113,7 +115,11 @@ def main():
                   f"values {sorted(set(rec[a]))}")
     print("\nMEAN J WITH THE RESOURCE COMPONENT REPLACED BY A DECLARED PRICE")
     print("The measured resource figure is dropped from the mean and the price"
-          "\nterm put in its place, so the two are never counted twice.")
+          "\nterm put in its place, so the two are never counted twice. The price"
+          "\nis per RECRUITED EDGE; 1.0 means holding one extra edge open costs as"
+          "\nmuch as the worst disruption this objective can measure. The cost term"
+          "\ncarries weight 0.2 and the price is one of three components, so the"
+          "\nmost a price of p can add to J is 0.0667 x p.")
     print(f"\n{'price':>6s}  " + "  ".join(f"{a:>9s}" for a in ACTIONS) + "   best")
     flip = None
     for p in prices:
@@ -125,7 +131,14 @@ def main():
                     continue
                 d = float(r["disruption"])
                 bw = float(r["bandwidth"])
-                res = p * recruited(obs[b]) / (len(EDGES) - 1)
+                # The price is PER RECRUITED EDGE, with no division. The first
+                # version divided by (EDGES - 1) = 2, which quietly redefined
+                # "price 1.0" as the cost of recruiting EVERY edge and capped the
+                # price's effect on J at 0.2 x 1/3 x 0.5 = 0.0333 -- below the
+                # 0.0445 gap it was supposed to be able to close. "No crossing at
+                # any price" was then a property of the normaliser, not of the
+                # system. Clipped at 1.0 because every other component is.
+                res = min(1.0, p * recruited(obs[b]))
                 cost = (d + bw + res) / 3.0
                 js.append(W_FAILURE * float(r["Y_ms"])
                           + W_LATENCY * float(r["L_tilde_ms"])
@@ -139,8 +152,11 @@ def main():
             flip = p
     print()
     if flip is None:
-        print("REROUTE remains preferred at every price swept. Report that, and"
-              "\nthe range swept, rather than a crossing that was not observed.")
+        print("REROUTE remains preferred at every price swept. Report that with"
+              "\nthe range, and check the ceiling before believing it: the most a"
+              "\nprice can add to J is 0.0667 x p_max, and if that is smaller than"
+              "\nthe gap at p = 0 then no crossing was ever reachable and the"
+              "\nfinding is a property of the sweep.")
     else:
         print(f"The preferred action stops being REROUTE at a declared price of"
               f" {flip:.2f}.\nBelow it rerouting wins; at and above it the"
