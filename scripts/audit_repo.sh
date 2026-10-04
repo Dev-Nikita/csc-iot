@@ -256,6 +256,13 @@ chk "added_latency is excluded by argument, not dropped" \
   grep -q 'COST_COMPONENT_EXCLUDED_BY_ARGUMENT' analysis/jobs.py
 chk "a silent node leaves the component unmeasured"  grep -q 'if cpu_nodes and not silent' analysis/jobs.py
 chk "the cost term has its own fixtures"             test -f tests/test_cost_term.py
+# The measured resource component moves by 0.0001 between NO_OP and REROUTE: a
+# container's CPU is dominated by its idle loop. The price of holding a node open
+# is therefore an assumption, swept and reported as such, and kept OUT of J_obs.
+chk "the price of recruited capacity is swept, not assumed" test -f analysis/cost_sensitivity.py
+chk "the swept price never enters J_obs" \
+  bash -c '! grep -q "cost_sensitivity" analysis/jobs.py'
+chk "the sweep says it is an assumption"             grep -q 'ASSUMPTION with a reported range' analysis/cost_sensitivity.py
 chk "deferral under a declared gateway fault is allowed" \
   grep -q 'gw_limits_admission' analysis/audit_accounting.py
 # intelligence/tests was the only path collected, so analysis/test_features.py
