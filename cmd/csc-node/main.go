@@ -64,6 +64,14 @@ type ingressEvent struct {
 	Marker bool `json:"marker,omitempty"`
 }
 
+// counted is the bus wrapper whose byte counter feeds the BANDWIDTH component of
+// C(a). Package-level and assigned once during startup, because the roles that
+// read it -- runGateway and runEdge -- are separate functions: declared inside
+// main it compiled for main alone and the build failed at both call sites. This
+// binary runs ONE role in ONE process over ONE bus, so a parameter threaded
+// through four role functions could only ever carry the same value.
+var counted *bus.Counting
+
 func main() {
 	role := flag.String("role", "", "device-sim | gateway | edge | controller")
 	id := flag.String("id", "", "node id, e.g. gw00")
@@ -121,9 +129,6 @@ func main() {
 	// path stays the direct TCP ingress, which is what keeps netem off the
 	// control plane. With -bus "" it runs free and is explicitly not replayable.
 	var b bus.Bus
-	// Non-nil once the bus is dialled; read by the reporters for the bandwidth
-	// component of the objective's cost term.
-	var counted *bus.Counting
 	if *busAddr != "" {
 		var err error
 		for i := 0; i < 40; i++ {
