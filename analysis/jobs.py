@@ -54,7 +54,31 @@ def quantile(values, p):
 
 W_FAILURE, W_LATENCY, W_COST = 0.6, 0.2, 0.2
 SNR_GATE = 3.0  # preregistered in EXPERIMENT_PROTOCOL; applied as written
-COST_COMPONENTS_MEASURED = ("disruption",)
+# Protocol 0.25. Three of the four declared components are now measured. The
+# fourth, added_latency, is deliberately NOT charged here: the latency an action
+# imposes is already the L~ term of the objective, and charging it again in C
+# would count one effect twice. That is an argument, not an omission, and it is
+# stated rather than left as a silent zero.
+COST_COMPONENTS_MEASURED = ("disruption", "resource", "bandwidth")
+COST_COMPONENT_EXCLUDED_BY_ARGUMENT = ("added_latency",)
+
+# Declared normalisers for the two new components. Neither depends on the action
+# taken, which is the only property the comparison needs: C(a) must be
+# comparable across the actions at ONE decision point, and `offered`, the epoch
+# period and the container count are identical across them by construction. The
+# absolute level is therefore a ratio to a declared reference, not a physical
+# absolute, and the paper says so.
+HOPS_REF = 2            # gateway -> edge, edge -> telemetry
+ENVELOPE_REF_BYTES = 512
+
+# The service tier of the declared topology: gw00, gw01, edge00, edge01, edge02.
+# The resource normaliser is this FIXED count, not the number of nodes that
+# happened to do work. Dividing by the nodes that reported turned the component
+# into a mean utilisation, which dilutes rather than charges: recruiting a second
+# edge added a node to the numerator and to the denominator at once, so the one
+# action the component exists to price came out no dearer. That is the same bias
+# as leaving it at zero, one floor further down, and a fixture caught it.
+SERVICE_TIER_NODES = 5
 COST_COMPONENTS_DECLARED = ("added_latency", "resource", "bandwidth", "disruption")
 
 
@@ -67,7 +91,51 @@ def dispersion(values):
     return d[idx]
 
 
-def terms(observed, latency_max_epochs, latency_max_ms):
+def _resource_and_bandwidth(observed, offered, end_epoch, period_ms):
+    """The measured RESOURCE and BANDWIDTH components of C(a), or None each.
+
+    resource  mean CPU utilisation of the service tier over the branch, from each
+              container's own cgroup accounting. An edge that sits idle under the
+              current routing and is recruited by REROUTE shows up here and
+              nowhere else -- which is why REROUTE's cost read 0.000 for every
+              run up to protocol 0.24.
+    bandwidth encoded envelope bytes published on the bus, against a declared
+              reference. A lower bound on wire bytes: transport framing, headers
+              and retransmissions are not counted, and that is stated.
+
+    Either is None when the nodes did not report it. None is not zero: the
+    caller refuses to score a component it cannot see.
+    """
+    nodes = {k.split("/", 1)[0] for k in observed if "/" in k}
+
+    resource = None
+    cpu_nodes = [n for n in nodes
+                 if observed.get(f"{n}/has_cpu_accounting", 0.0) >= 1.0]
+    silent = [n for n in nodes
+              if f"{n}/has_cpu_accounting" in observed
+              and observed[f"{n}/has_cpu_accounting"] < 1.0]
+    # All or nothing. A node present in the report but silent about its own CPU
+    # would understate the total against a fixed denominator, and a cost term
+    # that is quietly low is the defect this component was added to remove.
+    if cpu_nodes and not silent and end_epoch and period_ms:
+        cpu_usec = sum(observed.get(f"{n}/cpu_usec_total", 0.0) for n in cpu_nodes)
+        wall_usec = max(0, end_epoch - 1) * float(period_ms) * 1000.0
+        if wall_usec > 0:
+            resource = min(max(cpu_usec / (SERVICE_TIER_NODES * wall_usec), 0.0), 1.0)
+
+    bandwidth = None
+    bus_nodes = [n for n in nodes
+                 if observed.get(f"{n}/has_bus_accounting", 0.0) >= 1.0]
+    if bus_nodes and offered > 0:
+        by = sum(observed.get(f"{n}/bus_bytes_out_total", 0.0) for n in bus_nodes)
+        ref = offered * HOPS_REF * ENVELOPE_REF_BYTES
+        bandwidth = min(max(by / ref, 0.0), 1.0)
+
+    return resource, bandwidth
+
+
+def terms(observed, latency_max_epochs, latency_max_ms, end_epoch=None,
+          period_ms=None):
     served = sum(v for k, v in observed.items() if k.endswith("/served"))
     if not any(k.endswith("/unserved_eligible") for k in observed):
         # This fallback used to exist and was silent. It cost two full 900-branch
@@ -144,6 +212,15 @@ def terms(observed, latency_max_epochs, latency_max_ms):
     # cost comparison, and the flag is what makes that visible.
     action_deferred = by_action if has_split else deferred
     disruption = min(max((action_deferred + undelivered) / offered, 0.0), 1.0)
+
+    # C(a) is the MEAN of the components that are measured. With disruption
+    # alone that is disruption itself, so every figure recorded before 0.25
+    # keeps the value it had and the definition did not change under them -- what
+    # changed is how many components can be seen.
+    resource, bandwidth = _resource_and_bandwidth(observed, offered, end_epoch,
+                                                  period_ms)
+    measured = [disruption] + [v for v in (resource, bandwidth) if v is not None]
+    cost = sum(measured) / len(measured)
     # The measured variant. Epoch-quantised waiting is exactly reproducible,
     # which is what makes it useless as an outcome: quantising to logical time
     # erases the timing variation that impairment actually causes, so replay
@@ -155,6 +232,10 @@ def terms(observed, latency_max_epochs, latency_max_ms):
     l_tilde_ms = min(max(mean_lat_ms / latency_max_ms, 0.0), 1.0)
 
     return {"Y": y, "L_tilde": l_tilde, "disruption": disruption,
+            "cost": cost,
+            "resource": resource if resource is not None else float("nan"),
+            "bandwidth": bandwidth if bandwidth is not None else float("nan"),
+            "cost_components_measured": float(len(measured)),
             "has_deferral_split": 1.0 if has_split else 0.0,
             "deferred_by_fault": (deferred - by_action) if has_split else 0.0,
             "mean_wait_epochs": mean_wait, "offered": offered,
@@ -162,6 +243,28 @@ def terms(observed, latency_max_epochs, latency_max_ms):
             "residual": residual, "deferred": deferred,
             "gateway_denominator": 1.0 if gateway_denominator else 0.0,
             "Y_ms": y_ms, "L_tilde_ms": l_tilde_ms, "mean_lat_ms": mean_lat_ms}
+
+
+
+def _period_ms(matrix):
+    """The configured epoch period, in milliseconds, or None.
+
+    Recorded per matrix as `period`, which the runner writes as a Go duration
+    string such as "300ms". None where it is absent, and the resource component
+    is then reported as unmeasured rather than scaled by a guess.
+    """
+    v = (matrix or {}).get("period")
+    if v is None:
+        return None
+    text = str(v).strip()
+    try:
+        if text.endswith("ms"):
+            return float(text[:-2])
+        if text.endswith("s"):
+            return float(text[:-1]) * 1000.0
+        return float(text)
+    except ValueError:
+        return None
 
 
 def main():
@@ -216,9 +319,15 @@ def main():
             print(f"REFUSED: {d} has no observed block; rebuild the branches with "
                   "an orchestrator that records outcomes", file=sys.stderr)
             return 2
-        t = terms(observed, args.latency_max_epochs, args.latency_max_ms)
-        j = W_FAILURE * t["Y_ms"] + W_LATENCY * t["L_tilde_ms"] + W_COST * t["disruption"]
-        j_q = W_FAILURE * t["Y"] + W_LATENCY * t["L_tilde"] + W_COST * t["disruption"]
+        # The epoch the outcome was read at and the configured epoch period are
+        # the normalisers for the resource component. Both come from the record,
+        # never from a default: a wrong period would scale CPU utilisation
+        # silently.
+        t = terms(observed, args.latency_max_epochs, args.latency_max_ms,
+                  end_epoch=doc.get("epoch"),
+                  period_ms=_period_ms(matrix))
+        j = W_FAILURE * t["Y_ms"] + W_LATENCY * t["L_tilde_ms"] + W_COST * t["cost"]
+        j_q = W_FAILURE * t["Y"] + W_LATENCY * t["L_tilde"] + W_COST * t["cost"]
         name = os.path.basename(d)
         # The factors come from the branch's own manifest, never from its name.
         rec = branches.read(d, matrix)

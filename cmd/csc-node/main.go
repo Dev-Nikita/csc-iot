@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"github.com/TODO-OWNER/csc-iot/internal/bus"
+	"github.com/TODO-OWNER/csc-iot/internal/sysusage"
 	"github.com/TODO-OWNER/csc-iot/internal/epoch"
 	"github.com/TODO-OWNER/csc-iot/internal/fingerprint"
 	"github.com/TODO-OWNER/csc-iot/internal/nodestate"
@@ -120,6 +121,9 @@ func main() {
 	// path stays the direct TCP ingress, which is what keeps netem off the
 	// control plane. With -bus "" it runs free and is explicitly not replayable.
 	var b bus.Bus
+	// Non-nil once the bus is dialled; read by the reporters for the bandwidth
+	// component of the objective's cost term.
+	var counted *bus.Counting
 	if *busAddr != "" {
 		var err error
 		for i := 0; i < 40; i++ {
@@ -139,6 +143,12 @@ func main() {
 			log.Fatalf("%s: bus unreachable at %s: %v", *id, *busAddr, err)
 		}
 		defer b.Close()
+		// Counted from here on, so every role's publishes land in one counter
+		// and the two adapters cannot disagree about what a byte is. The
+		// bandwidth component of C(a) was reported as zero until now, which is
+		// how the objective came to declare rerouting free.
+		counted = bus.Count(b)
+		b = counted
 		d := b.Descriptor()
 		log.Printf("%s (%s) connected to bus %s [type=%s version=%s config=%s]",
 			*id, *role, *busAddr, d.Type, d.Version, d.ConfigHash())
@@ -295,6 +305,39 @@ func runDeviceSim(ctx context.Context, id, ingress string, devices int, rateHz f
 }
 
 // --- gateway: accepts ingress, forwards to an edge over the bus --------------
+
+
+// usageObserved adds this container's own resource accounting to a report.
+//
+// These two numbers fill the RESOURCE and BANDWIDTH components of the
+// objective's cost term C(a), which were reported as zero for every run up to
+// protocol 0.24. The consequence was measured, not supposed: with only
+// disruption instrumented the calibration split gave C(NO_OP) = 0.000,
+// C(REROUTE) = 0.000, C(THROTTLE) = 1.000, so an action that recruits a second
+// edge cost nothing and won almost every contrast across three matrices.
+//
+// Absence is reported as absence. `has_cpu_accounting` is 0 where no cgroup
+// could be read, and the analysis refuses to score a cost term it cannot see
+// rather than reading the accompanying zero as "no CPU was used".
+func usageObserved(into map[string]float64, counted *bus.Counting) {
+	if usec, src, ok := sysusage.CPUMicroseconds(); ok {
+		into["cpu_usec_total"] = float64(usec)
+		into["has_cpu_accounting"] = 1
+		into["cpu_source_is_cgroup_v2"] = 0
+		if src == sysusage.CPUSourceCgroupV2 {
+			into["cpu_source_is_cgroup_v2"] = 1
+		}
+	} else {
+		into["has_cpu_accounting"] = 0
+	}
+	if counted != nil {
+		into["bus_bytes_out_total"] = float64(counted.BytesOut())
+		into["bus_messages_out_total"] = float64(counted.MessagesOut())
+		into["has_bus_accounting"] = 1
+	} else {
+		into["has_bus_accounting"] = 0
+	}
+}
 
 // effectiveAdmitCap is the tighter of the controller's limit and the capacity
 // the gateway actually has. -1 means unlimited on either side.
@@ -535,22 +578,7 @@ func runGateway(ctx context.Context, id string, b bus.Bus, ingress, route string
 		}
 		admitMu.Unlock()
 		limit := float64(effectiveAdmitCap(admitCap.Load(), admitFaultCap.Load()))
-		return nodestate.Report{
-			Routing: map[string]string{"edge": routeTo.Load().(string)},
-			// The admission LIMIT is future-relevant: THROTTLE changes it and it
-			// governs every later epoch. The count admitted SO FAR in the current
-			// epoch is not: the budget is restored at the next epoch boundary,
-			// before anything further is admitted. Reporting it made two prefixes
-			// that behave identically hash differently -- a false divergence, and
-			// the more dangerous kind, because it inflates measured
-			// nondeterminism rather than hiding it.
-			RateLimits:   map[string]float64{"admit": limit},
-			Queues:       map[string]fingerprint.Queue{"admission_backlog": fingerprint.HashQueue(ids)},
-			SeqPositions: map[string]uint64{"published": atomic.LoadUint64(&seq)},
-			// Never hashed. Each is restricted to work that belonged to an
-			// epoch before the one being read, matching the edge's eligibility
-			// rule exactly, so the two sides of the objective share a horizon.
-			Observed: map[string]float64{
+		gwObs := map[string]float64{
 				// Declared, so the accounting audit can check that a gateway
 				// fault actually reached the container rather than trusting the
 				// scenario file. Observed only, never hashed.
@@ -569,7 +597,26 @@ func runGateway(ctx context.Context, id string, b bus.Bus, ingress, route string
 				"admission_deferred_by_action_total": deferredByAction,
 				"admission_deferred_by_fault_total":  deferredByFault,
 				"admission_backlog_depth":  residual,
-			},
+		}
+		// The RESOURCE and BANDWIDTH components of C(a), measured
+		// rather than reported as zero.
+		usageObserved(gwObs, counted)
+		return nodestate.Report{
+			Routing: map[string]string{"edge": routeTo.Load().(string)},
+			// The admission LIMIT is future-relevant: THROTTLE changes it and it
+			// governs every later epoch. The count admitted SO FAR in the current
+			// epoch is not: the budget is restored at the next epoch boundary,
+			// before anything further is admitted. Reporting it made two prefixes
+			// that behave identically hash differently -- a false divergence, and
+			// the more dangerous kind, because it inflates measured
+			// nondeterminism rather than hiding it.
+			RateLimits:   map[string]float64{"admit": limit},
+			Queues:       map[string]fingerprint.Queue{"admission_backlog": fingerprint.HashQueue(ids)},
+			SeqPositions: map[string]uint64{"published": atomic.LoadUint64(&seq)},
+			// Never hashed. Each is restricted to work that belonged to an
+			// epoch before the one being read, matching the edge's eligibility
+			// rule exactly, so the two sides of the objective share a horizon.
+			Observed: gwObs,
 		}
 	}); err != nil {
 		log.Fatalf("%s: fingerprint service: %v", id, err)
@@ -895,6 +942,10 @@ func runEdge(ctx context.Context, id string, b bus.Bus, servePerEpoch int, slaEp
 		for bin, n := range latHist {
 			obs[fmt.Sprintf("lat_hist_ms_%05d", bin)] = n
 		}
+		// The RESOURCE and BANDWIDTH components of C(a). An edge that is idle
+		// under the current routing and then recruited by REROUTE shows the
+		// difference here and nowhere else.
+		usageObserved(obs, counted)
 		mu.Unlock()
 		// The inbox is reported BY CONTENT. Two edges holding the same number of
 		// different events have different futures, and with a real service rate
