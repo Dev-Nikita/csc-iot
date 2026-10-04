@@ -191,7 +191,11 @@ def audit(path, rec):
             # it was offered. Every accepted event is either forwarded or still
             # sitting in the admission backlog, so forwarded = accepted - residual.
             forwarded = accepted - residual
-            if degraded > 0 and forwarded > bound * 1.02 + 1:
+            # Informative only where at least one epoch is actually bounded by
+            # the cap. With the onset epoch charged at the healthy rate, that
+            # means the branch must run PAST its onset.
+            bounded_epochs = max(0, serving - onset)
+            if bounded_epochs > 0 and forwarded > bound * 1.02 + 1:
                 bad.append(f"the gateway forwarded {forwarded:.0f} events "
                            f"(accepted {accepted:.0f}, {residual:.0f} still in the "
                            f"admission backlog) but an admission fault at epoch "
