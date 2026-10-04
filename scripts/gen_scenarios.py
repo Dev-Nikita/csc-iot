@@ -36,6 +36,18 @@ MECHANISMS = {
     # cannot read.
     "D4": "correlated degradation: the loaded edge and the relief path together",
     "D5": "gateway admission capacity loss (upstream of every edge)",
+    # D6 exists for the same reason D4 and D5 did: a measured defect in the
+    # design. On the D4/D5 transfer set the degenerate ablation that removes the
+    # gate entirely -- which then always takes the cheapest action, NO_OP --
+    # scored 0.955 against CSC's 0.900 and the oracle's 1.000. Doing nothing was
+    # near-optimal. On the earlier D1/D3 matrix the same ablation scored 0.254
+    # and a one-line threshold attained the oracle, because rerouting was almost
+    # always right. The two sets are degenerate in OPPOSITE directions, and
+    # neither poses the problem of choosing among actions. What is missing is a
+    # regime in which THROTTLE is the correct action; without one, C(THROTTLE)
+    # is the largest cost in the objective and the action is never worth paying
+    # for, so a method is never tested on the decision it exists to make.
+    "D6": "correlated degradation of BOTH paths equally (nowhere to reroute)",
 }
 NOT_IMPLEMENTED = {
     "D2": "ingress impairment ramp: requires netem re-application mid-branch",
@@ -95,6 +107,28 @@ def draw(master_seed, n, mechanisms, workloads):
             # capacity puts it strictly below, so rerouting moves work from a
             # node serving `sev` to one serving `sev/2` and is actively harmful.
             rec["relief_degraded_serve"] = max(1, sev // 2)
+        if mech == "D6":
+            # Both routable edges degraded to the SAME surviving capacity. The
+            # contrast with D4 is exactly one character of arithmetic and it is
+            # the whole mechanism: D4 puts the relief path strictly BELOW the
+            # loaded edge, so rerouting is harmful; D6 puts it LEVEL, so
+            # rerouting is pointless rather than harmful, and there is no
+            # escape by routing at all.
+            #
+            # PREREGISTERED EXPECTATION, written before this mechanism was ever
+            # run: THROTTLE is the best of the three actions here. Admitting
+            # everything lets the queue grow without bound, so waiting time
+            # grows without bound and eventually every served event misses the
+            # budget as well as the work left unserved; capping admission sheds
+            # part of the offered work but keeps what is admitted inside the
+            # budget. The objective charges the shed work twice -- once in Y as
+            # undelivered and once in the cost term as displaced -- so the
+            # expectation is a real risk and not a tautology: with weights
+            # 0.6/0.2/0.2 the latency saving has to beat 0.2 x (shed fraction).
+            # If THROTTLE does not win here, that is reported, this mechanism
+            # does not deliver what it was built for, and no parameter of the
+            # objective moves in response.
+            rec["relief_degraded_serve"] = sev
         if mech == "D5":
             # The gateway admits less than is offered, so work is refused before
             # it reaches any edge, and THE EDGES ARE NOT FAULTED AT ALL. That is
