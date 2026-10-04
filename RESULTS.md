@@ -101,6 +101,44 @@ neither prices the one thing rerouting does -- holding a second node open.
 capacity is reported by `analysis/cost_sensitivity.py` as a declared assumption
 swept over a range, and is deliberately absent from `J_obs`.
 
+### 4a. What the ranking depends on, when the price is declared rather than measured
+
+The price is per recruited edge, in the same units as the other cost components;
+1.0 means holding one additional edge open costs as much as the worst disruption
+this objective can measure. The cost term carries weight 0.2 and the price is one
+of three components, so a price of `p` can move `J` by at most `0.0667 p`.
+`recruited` is 0 under NO_OP and THROTTLE and exactly 1 under REROUTE on all 108
+branches.
+
+| price | NO_OP | REROUTE | THROTTLE | preferred |
+|---|---|---|---|---|
+| 0.00 | 0.4619 | **0.4174** | 0.4757 | REROUTE |
+| 0.40 | 0.4619 | **0.4440** | 0.4757 | REROUTE |
+| 0.65 | 0.4619 | **0.4607** | 0.4757 | REROUTE |
+| 0.70 | **0.4619** | 0.4640 | 0.4757 | NO_OP |
+| 1.00 | **0.4619** | 0.4840 | 0.4757 | NO_OP |
+
+Rerouting is preferred while the declared price stays below **0.67** -- the gap of
+0.0445 at zero price divided by the 0.0667 a unit of price moves `J`. Above 0.67
+inaction is preferred; above **0.87** throttling also overtakes rerouting. The
+crossing was predicted at 0.667 from the arithmetic before the sweep was run and
+observed between the 0.65 and 0.70 grid points.
+
+So rerouting does not win merely because it is unpriced. It wins because the
+throughput gain of a second server outweighs any moderate price, and overturning
+it requires pricing one additional node at two thirds of the entire cost scale.
+Whether that is realistic is a deployment question this testbed cannot answer, and
+the bound is what is reported rather than a value.
+
+**Against the sweep itself:** its first version divided the price by the number of
+recruitable edges, which redefined a price of 1.0 as recruiting *every* edge and
+capped the price's effect on `J` at 0.0333 -- below the 0.0445 gap it was meant to
+be able to close. It then reported "REROUTE preferred at every price", which was a
+property of the normaliser and not of the system. A negative result about a
+crossing is only meaningful if the crossing was reachable, so the sweep prints the
+ceiling a price can reach beside its conclusion and a fixture asserts that ceiling
+exceeds the measured gap.
+
 ## 5. The decision layer: two degeneracies in opposite directions
 
 `CRA_eta` against the oracle bound, with `eta_J` from each matrix's own replay
