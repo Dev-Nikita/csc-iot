@@ -242,6 +242,11 @@ chk "the attribution rule has a go test"             grep -q 'TestDeferralAttrib
 # instrumentation, not of the action.
 chk "the node reports its own cpu accounting"        grep -q 'cpu_usec_total' cmd/csc-node/main.go
 chk "the node counts what it publishes"              test -f internal/bus/counting.go
+# The counter is read by runGateway and runEdge, which are separate functions.
+# Declared inside main it compiled for main alone and the build failed at both
+# call sites -- a Go change costs a round trip to the host, which is the only
+# machine in this workflow with a toolchain.
+chk "the bus counter is visible to every role"       grep -q '^var counted \*bus.Counting' cmd/csc-node/main.go
 chk "cpu accounting reads both cgroup versions"      grep -q 'cpuacct.usage' internal/sysusage/cpu.go
 chk "an unreadable cgroup is reported, not zeroed"   grep -q 'CPUSourceNone' internal/sysusage/cpu.go
 chk "the cost term composes the measured components" grep -q 'COST_COMPONENTS_MEASURED = ("disruption", "resource", "bandwidth")' analysis/jobs.py
