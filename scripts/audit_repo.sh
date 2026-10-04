@@ -263,6 +263,13 @@ chk "the price of recruited capacity is swept, not assumed" test -f analysis/cos
 chk "the swept price never enters J_obs" \
   bash -c '! grep -q "cost_sensitivity" analysis/jobs.py'
 chk "the sweep says it is an assumption"             grep -q 'ASSUMPTION with a reported range' analysis/cost_sensitivity.py
+# analysis/statistics.py is a project module -- make analyze runs it -- and Python
+# puts a script's own directory first on sys.path, so any script in analysis/ that
+# writes `import statistics` gets it instead of the stdlib and dies on pandas.
+# jobs.py already carried a local mean() with a comment naming this; the next file
+# was written without reading it, so the rule is a guard now rather than a comment.
+chk "no analysis script imports a shadowed stdlib module" \
+  python3 scripts/check_stdlib_shadowing.py
 chk "deferral under a declared gateway fault is allowed" \
   grep -q 'gw_limits_admission' analysis/audit_accounting.py
 # intelligence/tests was the only path collected, so analysis/test_features.py

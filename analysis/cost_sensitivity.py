@@ -42,11 +42,23 @@ import csv
 import glob
 import json
 import os
-import statistics as st
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import branches
+
+def mean(values):
+    """Local, because analysis/statistics.py shadows the stdlib module here.
+
+    Python puts a script's own directory first on sys.path, so every script in
+    analysis/ that writes `import statistics` gets the project's paired-comparison
+    module instead -- which imports pandas and fails. analysis/jobs.py already
+    carried this workaround with a comment naming the cause; this file was written
+    without reading it.
+    """
+    v = list(values)
+    return sum(v) / len(v) if v else float("nan")
+
 
 W_FAILURE, W_LATENCY, W_COST = 0.6, 0.2, 0.2
 EDGES = ("edge00", "edge01", "edge02")
@@ -97,7 +109,7 @@ def main():
         rec[r["action"]].append(recruited(obs[b]))
     for a in ACTIONS:
         if rec[a]:
-            print(f"  {a:10s} mean {st.mean(rec[a]):.3f}   "
+            print(f"  {a:10s} mean {mean(rec[a]):.3f}   "
                   f"values {sorted(set(rec[a]))}")
     print("\nMEAN J WITH THE RESOURCE COMPONENT REPLACED BY A DECLARED PRICE")
     print("The measured resource figure is dropped from the mean and the price"
@@ -119,7 +131,7 @@ def main():
                           + W_LATENCY * float(r["L_tilde_ms"])
                           + W_COST * cost)
             if js:
-                means[a] = st.mean(js)
+                means[a] = mean(js)
         best = min(means, key=means.get)
         print(f"{p:6.2f}  " + "  ".join(f"{means.get(a, float('nan')):9.4f}"
                                        for a in ACTIONS) + f"   {best}")
