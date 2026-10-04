@@ -235,6 +235,22 @@ chk "the split must account for every deferred event" \
 chk "NO_OP charged with displaced work is refused" \
   grep -q 'C(NO_OP) = 0 by definition' analysis/audit_accounting.py
 chk "the attribution rule has a go test"             grep -q 'TestDeferralAttribution' cmd/csc-node/admit_test.go
+# C(a) is declared over added latency, resource, bandwidth and disruption, and
+# only disruption was ever measured. The calibration split then reported
+# C(REROUTE) = 0.000 -- the objective declared rerouting free, and REROUTE won
+# almost every contrast on three matrices. That is a property of the
+# instrumentation, not of the action.
+chk "the node reports its own cpu accounting"        grep -q 'cpu_usec_total' cmd/csc-node/main.go
+chk "the node counts what it publishes"              test -f internal/bus/counting.go
+chk "cpu accounting reads both cgroup versions"      grep -q 'cpuacct.usage' internal/sysusage/cpu.go
+chk "an unreadable cgroup is reported, not zeroed"   grep -q 'CPUSourceNone' internal/sysusage/cpu.go
+chk "the cost term composes the measured components" grep -q 'COST_COMPONENTS_MEASURED = ("disruption", "resource", "bandwidth")' analysis/jobs.py
+chk "the resource normaliser is a declared tier size, not the nodes that answered" \
+  grep -qF 'cpu_usec / (SERVICE_TIER_NODES * wall_usec)' analysis/jobs.py
+chk "added_latency is excluded by argument, not dropped" \
+  grep -q 'COST_COMPONENT_EXCLUDED_BY_ARGUMENT' analysis/jobs.py
+chk "a silent node leaves the component unmeasured"  grep -q 'if cpu_nodes and not silent' analysis/jobs.py
+chk "the cost term has its own fixtures"             test -f tests/test_cost_term.py
 chk "deferral under a declared gateway fault is allowed" \
   grep -q 'gw_limits_admission' analysis/audit_accounting.py
 # intelligence/tests was the only path collected, so analysis/test_features.py
