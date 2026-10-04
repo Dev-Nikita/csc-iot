@@ -197,6 +197,17 @@ chk "the effective cap has a go test"                test -f cmd/csc-node/admit_
 # and bounding arrivals by an admission cap compares two different quantities.
 chk "the gateway bound is on forwarded work" \
   grep -q 'forwarded = accepted - residual' analysis/audit_accounting.py
+# The onset epoch is charged at the healthy rate: the gateway's fault limits
+# ARRIVALS, which can reach it before the boundary that applies the fault, so
+# charging that epoch at the cap made the bound one cap too tight and refused
+# 228 correct branches. The edge bound keeps onset-1: it limits SERVING, which
+# happens at the boundary with the fault already in force.
+chk "the gateway bound is a testable function"       grep -q 'def gateway_forward_bound' analysis/audit_accounting.py
+chk "the gateway bound charges the onset epoch as healthy" \
+  grep -qF 'healthy = min(serving, onset)' analysis/audit_accounting.py
+chk "the edge bound still charges from onset-1" \
+  grep -qF 'healthy_epochs = min(serving, max(0, onset - 1))' analysis/audit_accounting.py
+chk "the gateway bound has its own fixtures"         test -f tests/test_gateway_bound.py
 # A gateway admission fault defers work under every action, NO_OP included, and
 # C(NO_OP) = 0 by definition. The node reports which limiter bound each deferred
 # event, because that is known only at the moment of deferral.

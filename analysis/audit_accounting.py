@@ -160,10 +160,28 @@ def audit(path, rec):
         if end_epoch and gw_admit is not None and gw_admit >= 0:
             onset = rec["fault_onset"]
             serving = max(0, end_epoch - 1)
-            healthy = min(serving, max(0, onset - 1))
-            degraded = serving - healthy
-            offered_rate = rec["workload_level"]
-            bound = offered_rate * healthy + gw_admit * degraded
+            # The ONSET epoch is a transition epoch and is charged at the healthy
+            # rate; only epochs strictly after it are bounded by the cap.
+            #
+            # This is not a tolerance: it is where the fault acts. The gateway's
+            # fault limits ARRIVALS, and an event tagged with epoch T can reach
+            # the gateway before the epoch boundary at which the fault for T is
+            # applied -- the device simulator emits ahead of the boundary. So the
+            # events of the onset epoch are admitted partly under the old cap.
+            # Measured overshoot on d45-matrix-v1 was exactly one cap's worth,
+            # 1840 forwarded against a bound of 1800, on 228 branches.
+            #
+            # The edge bound below keeps `onset - 1` because an edge fault limits
+            # SERVING, which happens at the boundary itself, after the fault for
+            # that epoch is in force. Different bounds because the two faults act
+            # on different sides of the boundary, not because one needed slack.
+            #
+            # The check keeps its teeth: a fault that never binds at all forwards
+            # the full offered rate for every epoch, which exceeds this bound by
+            # far -- that is how the dead fault of 0.20 was caught (2700 against
+            # 2160) and it would still be caught here.
+            bound = gateway_forward_bound(rec["workload_level"], gw_admit,
+                                          onset, end_epoch)
             # What the cap bounds is what the gateway FORWARDED, not what
             # arrived at it. `ingress_accepted` counts arrivals -- deferral is
             # charged cumulatively and a deferred event is still accepted work,
@@ -213,6 +231,18 @@ def audit(path, rec):
             bad.append(f"pre-fault NO_OP missed the epoch deadline {sla_viol:.0f} times")
     return bad
 
+
+
+def gateway_forward_bound(offered_rate, gw_admit, onset, end_epoch):
+    """Most events a gateway with an admission fault can have forwarded.
+
+    One-sided. Forwarding LESS is ordinary: an action may refuse work and an
+    unsaturated gateway forwards only what arrives. Only the upper bound carries
+    information, and what it detects is a declared fault that did nothing.
+    """
+    serving = max(0, end_epoch - 1)
+    healthy = min(serving, onset)
+    return offered_rate * healthy + gw_admit * max(0, serving - onset)
 
 def rows_are_legacy(dirs, matrix):
     for d in dirs:
