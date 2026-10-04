@@ -208,6 +208,11 @@ chk "the gateway bound charges the onset epoch as healthy" \
 chk "the edge bound still charges from onset-1" \
   grep -qF 'healthy_epochs = min(serving, max(0, onset - 1))' analysis/audit_accounting.py
 chk "the gateway bound has its own fixtures"         test -f tests/test_gateway_bound.py
+# Extracting the bound left a NameError in the function that calls it, and the
+# fixtures for the bound could not see it: a test of a helper is not a test of
+# the code path. audit() is now executed against synthetic branches.
+chk "audit() itself is exercised by fixtures"        test -f tests/test_audit_end_to_end.py
+chk "the fixtures call audit, not only its helpers"  grep -q 'A.audit(' tests/test_audit_end_to_end.py
 # A gateway admission fault defers work under every action, NO_OP included, and
 # C(NO_OP) = 0 by definition. The node reports which limiter bound each deferred
 # event, because that is known only at the moment of deferral.
