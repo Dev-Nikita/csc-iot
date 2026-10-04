@@ -159,6 +159,14 @@ chk "accuracy when acting is reported separately" grep -q 'CRA_eta_acted' analys
 # D1 and D3 alone made rerouting almost always right, so a one-line threshold
 # attained the oracle bound and the comparison had nothing to separate.
 chk "a mechanism where rerouting is harmful exists"  grep -q 'D4' scripts/gen_scenarios.py
+# Neither D1/D3 nor D4/D5 contains a regime where THROTTLE is correct, so the one
+# action with a non-zero cost was never worth paying for and no method was tested
+# on the decision it exists to make. D6 removes the routing escape entirely.
+chk "a mechanism where throttling is correct exists"  grep -q '"D6"' scripts/gen_scenarios.py
+chk "D6 levels the two paths rather than lowering one" \
+  grep -qF 'rec["relief_degraded_serve"] = sev' scripts/gen_scenarios.py
+chk "D6 states its expected best action before it ran" \
+  grep -q 'PREREGISTERED EXPECTATION' scripts/gen_scenarios.py
 chk "a mechanism upstream of every edge exists"      grep -q 'degrade-admit-at-epoch' cmd/csc-node/main.go
 chk "the gateway fault is not the throttle action"   grep -q 'func effectiveAdmitCap' cmd/csc-node/main.go
 chk "the audit skips the edge bound when no edge is faulted" \
