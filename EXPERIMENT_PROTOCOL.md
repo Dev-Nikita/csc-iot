@@ -549,3 +549,42 @@ unresolved and is left unresolved: the state that produced it was never committe
 and cannot be recovered. The figures now reported are reproducible, which is the
 property the paper needs; the provenance of the ones they replace is not, which is
 why they were replaced.
+
+## Amendment 0.30 (2026-10-05) -- the A2 row, and a third result against the method
+
+**The gate from 0.28 is closed.** `analysis/evaluate.py` was re-run on the
+analysis host over `b5-matrix-v2` with `d45-matrix-v1` as the transfer block. It
+reproduced every previously reported figure for B6 and A1b exactly, and the two
+A2 figures the manuscript carried with no record anywhere -- 0.589 and 0.428 --
+came back identical. They were right; what was missing was the evidence that they
+were. The full output is now in `RESULTS.md` and
+`paper/check_transcribed.py` reports no unrecorded figure.
+
+**What the re-run surfaced that had not been read.** A2 removes
+minimum-necessary selection and nothing else: inside the same admissible set it
+takes the lowest-risk action instead of the cheapest. The gate is untouched, so
+its abstention rate is identical to CSC's on all four blocks and the two methods
+act at exactly the same decision points. On that comparison A2 is **never worse**:
+it ties in-distribution and on transfer, wins on both shifted blocks (0.589 vs
+0.583 and 0.428 vs 0.399), wins by a wide margin among decisions where both act
+under mechanism shift (0.951 vs 0.885), and has lower regret on three blocks of
+four.
+
+Minimum-necessary intervention is one of the mechanisms this work specifies. The
+measurement does not support it on these fault families. That is a **third result
+against the method**, and it had been sitting in a table row that no sentence in
+the manuscript discussed. For a paper whose claim is that adverse results appear
+in the same table as the rest, printing the row and saying nothing about it is
+the failure mode, not the safeguard. Section V-F now states it as the third
+reading, and Supplement S9 gives the full table with the intervention counts,
+regret and common-anchor rates.
+
+**What it does not establish.** Not that minimum-necessary intervention is wrong
+in general. A cheapest-admissible rule can only beat a lowest-risk rule where the
+cost it minimises is measured, and two of the four cost components were not. The
+rule was ranking on a cost term carrying disruption and little else, which is the
+third identifiability limit reached from the other side.
+
+**Also recorded.** PFR has no denominator on the transfer block and WIR has none
+wherever a method never intervenes. Both now print as n/a rather than 0, because
+reporting an absent measurement as zero would make it flattering.
