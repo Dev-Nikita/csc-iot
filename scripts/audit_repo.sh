@@ -318,7 +318,25 @@ echo
 if [ -f paper/main.tex ]; then
   echo "manuscript invariants"
   chk "transcribed table figures match RESULTS.md"  python3 paper/check_transcribed.py
-  chk "supplement cross-references are current"     python3 paper/check_supplement_refs.py
+  # This one needs paper/supplement.aux, which only exists where the supplement
+  # has been compiled. On a host with no LaTeX -- the analysis host, for one --
+  # the input cannot exist, so failing here would fail the deploy over a file
+  # that machine is not supposed to have. A stale aux is a different matter and
+  # is caught, because a macro checked against an aux older than the source is
+  # not checked at all.
+  if [ ! -f paper/supplement.aux ]; then
+    echo "  skip  supplement cross-references (supplement not built on this host)"
+  elif [ paper/supplement.tex -nt paper/supplement.aux ]; then
+    chk "supplement cross-references are current" bash -c '
+      echo "supplement.tex is newer than supplement.aux, so the macro check would" >&2
+      echo "read section numbering from a stale build. Rebuild the supplement:" >&2
+      echo "    cd paper && latexmk -pdf supplement.tex" >&2
+      echo "If the content did not actually change, latexmk will decline to run" >&2
+      echo "and this will keep failing; force it with latexmk -g -pdf." >&2
+      exit 1'
+  else
+    chk "supplement cross-references are current"   python3 paper/check_supplement_refs.py
+  fi
   chk "every citation resolves"                     python3 paper/check_citations.py
   chk "the 12-page version is still archived"       test -f paper/archive/v1-12pages/main.pdf
   chk "no placeholder table in the generated set"  bash -c '! grep -rl "No Experiment Has Been Run" paper/generated_tables 2>/dev/null | grep -q .'
