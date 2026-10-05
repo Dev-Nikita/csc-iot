@@ -360,7 +360,13 @@ if [ "$n" -gt 0 ]; then
 fi
 if [ -f paper/generated_tables/table_prediction.as-reported ]; then
   printf '  TODO  regenerate table_prediction.tex on the analysis host under the\n'
-  printf '        stable-sort fix, then delete table_prediction.as-reported (protocol 0.27)\n'
+  printf '        stable-sort fix, then delete table_prediction.as-reported (protocol 0.28)\n'
+  blockers=$((blockers+1))
+fi
+# the canonical prediction table is the one both hosts agree on; 0.1174 was the
+# pre-fix time-only control and must not come back through a stale copy
+if grep -q '0\.1174' paper/main.tex paper/generated_tables/table_prediction.tex 2>/dev/null; then
+  printf '  TODO  the pre-fix time-only control 0.1174 is back in the manuscript\n'
   blockers=$((blockers+1))
 fi
 if grep -q 'peer-reviewed version' paper/references.bib; then
