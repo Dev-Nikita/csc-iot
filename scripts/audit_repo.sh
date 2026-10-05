@@ -307,6 +307,49 @@ chk "features exclude the fault schedule"          grep -q 'FORBIDDEN_SUBSTRINGS
 chk "a time-only baseline exists"                  grep -q 'TIME_ONLY' analysis/features.py
 chk "leakage folds are held out by design point"   grep -q 'held out by DESIGN POINT' analysis/leakage_tests.py
 chk "pre-fault needs a strict inequality"          grep -q 'onset > anchor + horizon' analysis/branches.py
+chk "no internal reminder in a printing bib note field" bash -c '! grep -E "^[[:space:]]*note[[:space:]]*=" paper/references.bib | grep -qiE "check|todo|fixme|verify|preprint;"'
+chk "neighbour selection uses a stable sort"       grep -qF 'kind="stable"' analysis/leakage_tests.py
+chk "no live argpartition in the leakage harness"  bash -c '! grep -E "^[^#]*argpartition" analysis/leakage_tests.py'
+echo
+# The manuscript is not part of this repository until the paper is accepted (see
+# .gitignore), so these run only where a working copy of it is present. They are
+# skipped, not failed, in a clean clone: a check that cannot see its input must
+# say so rather than pass or fail.
+if [ -f paper/main.tex ]; then
+  echo "manuscript invariants"
+  chk "transcribed table figures match RESULTS.md"  python3 paper/check_transcribed.py
+  chk "supplement cross-references are current"     python3 paper/check_supplement_refs.py
+  chk "every citation resolves"                     python3 paper/check_citations.py
+  chk "the 12-page version is still archived"       test -f paper/archive/v1-12pages/main.pdf
+else
+  echo "manuscript invariants: skipped (no working copy of the manuscript here)"
+fi
+# Submission blockers. These are not regressions, so they do not fail the audit;
+# they are things that must be true before the manuscript is submitted and are
+# printed every run so that none of them is submitted by being forgotten.
+echo
+if [ ! -f paper/main.tex ]; then
+  echo "submission blockers: skipped (no working copy of the manuscript here)"
+else
+echo "submission blockers"
+blockers=0
+n=$(grep -o 'AUTHORCHECK{' paper/main.tex | wc -l | tr -d ' ')
+if [ "$n" -gt 0 ]; then
+  printf '  TODO  %s author placeholder(s) in paper/main.tex (affiliation, two biographies)\n' "$n"
+  blockers=$((blockers+1))
+fi
+if [ -f paper/generated_tables/table_prediction.as-reported ]; then
+  printf '  TODO  regenerate table_prediction.tex on the analysis host under the\n'
+  printf '        stable-sort fix, then delete table_prediction.as-reported (protocol 0.27)\n'
+  blockers=$((blockers+1))
+fi
+if grep -q 'peer-reviewed version' paper/references.bib; then
+  printf '  TODO  references.bib still flags preprints to re-check before submission\n'
+  blockers=$((blockers+1))
+fi
+if [ "$blockers" -eq 0 ]; then echo "  none"; fi
+fi
+
 echo
 if [ "$fail" -eq 0 ]; then echo "REPO AUDIT OK"; else
   echo "REPO AUDIT FAILED -- a fixed file has probably been overwritten by an older copy."; fi

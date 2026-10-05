@@ -98,7 +98,13 @@ def knn_cv(rows, names, actions, groups, k=10, permute=False, seed=20260927):
         sd[sd == 0] = 1.0
         xt, xv = (xt - mu) / sd, (xv - mu) / sd
         dist = ((xv[:, None, :] - xt[None, :, :]) ** 2).sum(-1)
-        idx = np.argpartition(dist, min(k, xt.shape[0] - 1), axis=1)[:, :k]
+        # argpartition leaves the order among equal distances undefined, so
+        # which of several tied neighbours is taken depends on the numpy build.
+        # Regenerating this table on a different host moved the reported MAE in
+        # the fourth decimal for that reason alone. A stable sort breaks ties by
+        # row index, which is fixed by the input ordering, so the figure is now
+        # reproducible across platforms (amendment 0.27).
+        idx = np.argsort(dist, axis=1, kind="stable")[:, :k]
         errs.append(np.abs(yt[idx].mean(1) - y[te]))
     return float(np.mean(np.concatenate(errs)))
 

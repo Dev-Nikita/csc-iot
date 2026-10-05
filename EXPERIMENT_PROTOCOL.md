@@ -431,3 +431,37 @@ reported; this section says what will be done with it.
 | 2026-09-22 | **0.6 latency budget calibrated per event and frozen at 750 ms.** Edges report a 25 ms per-event latency histogram as an observed outcome. The budget is derived by a declared rule on a dedicated calibration run of healthy `NO_OP` branches, then frozen and applied to a new confirmatory matrix with the analysis unchanged; `budget-cal` gives 750 ms. `docker-compose.nats.yml` hardcoded 500 ms on `edge01` and `edge02` while only `edge00` read `SLA_MS`, so an action that moves work between edges would have been scored against a stricter budget than its own baseline; all three now read the same variable, and the runner refuses a budget other than the frozen one or a compose file that hardcodes one. **m2prime-901 at 500 ms remains the preregistered result and is reported as run**; it is not re-scored, and it is unaffected by the edge defect because every edge used 500 ms. | m2prime-901: healthy `NO_OP` `J_obs` 0.28-0.32 with no unserved work implied that a large share of a working system's events were over budget; `budget-cal` measured the share at 31%. The 0.4 rule had been applied to the wrong distribution. |
 | 2026-09-17 | **0.5 objective denominator corrected.** `Y`, `L̃` and the cost term are computed over work accepted at the gateway ingress, not over work that reached an edge. The gateway now reports `ingress_accepted`, `admission_deferred_total` and `admission_backlog_depth` as observed outcomes; deferral is charged cumulatively; a gateway backlog standing at the horizon counts as undelivered. `analysis/jobs.py` refuses a set that mixes the two denominators. **Every `J_obs` figure produced before this date is superseded and must not be reported**, including the m2prime-900 series; its integrity and dispersion results (branch admissibility, prefix equivalence, `η_J` mechanics) stand, its action comparisons do not. | Defect found in the m2prime-900 analysis: `analysis/jobs.py` read `admission_backlog` from the observed block, but the gateway wrote it to the structural `Queues` map, so the deferred term was identically zero; and `offered` differed per action (a01 `NO_OP` 900 vs `THROTTLE` 500). Both errors flattered `THROTTLE`, the action under test. |
 | 2026-09-15 | **0.4 testbed configuration frozen.** §2a added: offered load, emission pacing, edge capacities, fault depth and timing, horizon, healthy/degraded anchor partition, latency budget, `Y` denominator and repeat count, each with its derivation. Calibration restricted to `NO_OP` branches. | Pilot series v1–v5 on stack `afbcb298cb97ee18`; diagnostics only, never reused as findings. |
+
+## Amendment 0.27 (2026-10-05) -- the prediction table was host-dependent
+
+**What happened.** Regenerating the paper's tables on a second machine
+reproduced `table_bands_single.tex`, `table_bands_factored.tex` and
+`table_spanning.tex` byte for byte, and did *not* reproduce
+`table_prediction.tex`: the telemetry kNN MAE read 0.0258 instead of 0.0261 and
+the permuted control 0.1610 instead of 0.1607.
+
+**Cause.** `knn_cv` selected neighbours with `np.argpartition`, which leaves the
+order among equal distances undefined. Which of several tied neighbours enters
+the k-nearest set therefore depended on the numpy build, not on the data. The
+harness was already seeded and was deterministic run-to-run on either host; the
+instability was only across hosts.
+
+**Fix.** Neighbour selection uses a stable sort, which breaks ties by row index.
+Row order is fixed by the recorded branch ordering, so the figure is now a
+function of the data alone. `scripts/audit_repo.sh` refuses `argpartition` in
+this file.
+
+**What was NOT done.** The number in the manuscript was not replaced with the
+one measured on the second host. The reported figures come from the documented
+analysis host, and this amendment does not license reporting a figure that the
+documented pipeline did not produce. **Action required before submission:** run
+`analysis/make_tables.py` once on the analysis host with the fix in place and
+take whatever it then emits. Until that is done, `table_prediction.tex` carries
+pre-fix figures and is the one table in the paper not yet regenerated under the
+current code.
+
+**Does any claim move?** No. The drift is in the fourth decimal. The stated
+comparisons are the reduction against a time-only predictor (78 per cent at
+either value) and the factor by which permuting the telemetry raises the error
+(6.2 at either value). Neither changes, and no conclusion rests on the fourth
+decimal of this figure.
