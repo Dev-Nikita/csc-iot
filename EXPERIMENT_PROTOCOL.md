@@ -614,3 +614,43 @@ The audit now distinguishes three states rather than two:
 The general rule, which the `pdftotext` checks already followed: a check skips
 where its input genuinely cannot exist on that machine, and fails where the input
 could exist and does not match. Conflating the two turns a guard into an outage.
+
+## Amendment 0.32 (2026-10-05) -- the last figures with no script, and one of them was imprecise
+
+The archived data package was verified against the manuscript: every figure in
+the cost table reproduces from `d6-pilot-v2/jobs.csv` to four decimals, the gap
+at zero price is 0.0445 and the crossing 0.667 exactly as reported, the three
+branch counts sum to the 8118 the abstract states, and every checksum verifies.
+
+A sweep of every decimal stated in prose rather than printed in a table then
+found two figures traceable to nothing: the per-anchor rerouting contrasts of
+Section V-D. They had been computed once by hand and never scripted.
+`analysis/action_contrasts.py` now produces them, refuses a factored matrix
+(where "the deepest anchor" is not one thing), and its output is recorded in
+`RESULTS.md`.
+
+**One of the two was imprecise.** The manuscript said the contrast "rises to
+0.264 at an intermediate anchor". 0.2636 is the value at anchor a10 and rounds to
+that, so the figure was not wrong about a10 -- but the sentence read as if it
+were the maximum, and it is not: the contrast keeps rising to **0.2769 at a11**.
+The manuscript now reports the peak, with the peak and deepest intervals stated
+as non-overlapping, which they are. The other figure, 0.174 at the deepest
+anchor, is 0.1741 and was exact.
+
+Two further figures are now stated where the prose had a qualitative phrase:
+throttling reaches 45 times the band at the shallowest anchor and 2.3 times at
+the deepest, below the preregistered 3x gate, which is what "becomes
+indistinguishable from inaction" meant.
+
+**The check this produced.** `paper/check_transcribed.py` previously examined
+only the tables. It now also takes every decimal literal stated in prose in both
+documents and requires it to appear in `RESULTS.md` or a generated table,
+allowing for rounding and for a rate written as a fraction in one place and a
+percentage in the other. Writing that rounding window is itself worth recording:
+the first version appended a digit to the three-decimal literal, which covers
+0.2770 to 0.2779 and misses 0.2769 -- the very value it was written for.
+
+**Consistency follow-through.** The abstract claimed two adverse results and
+there are three, so it now states the third. Section III stated the argument for
+minimum-necessary intervention four pages before the measurement that does not
+support it, and now points forward to it.

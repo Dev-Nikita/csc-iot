@@ -168,6 +168,39 @@ Spanning holdout: 0.0348 with spanning branches allowed in training, 0.0479 with
 them removed, 0.0479 with the test branch's fault setting also removed, against
 0.1922 for a constant predictor.
 
+## 4c. What the actions do, per anchor
+
+From `m2prime-903` (900 branches, one fault setting, 30 anchors), emitted by
+`analysis/action_contrasts.py` against the preregistered pooled band
+`eta_J = 0.0164`. These were the last figures in the manuscript with no script
+behind them; recomputing them by hand once is how the peak came to be reported as
+the value at an intermediate anchor rather than the maximum.
+
+| finding | anchor | value | bootstrap CI |
+|---|---|---|---|
+| pre-fault null, NO_OP minus REROUTE | a01 | -0.0001 | [-0.0002, +0.0050] |
+| **peak** rerouting contrast | a11 | **+0.2769** | [+0.2722, +0.2851] |
+| deepest anchor | a30 | **+0.1741** | [+0.1675, +0.1806] |
+
+The peak and deepest intervals do not overlap.
+
+Throttling, as THROTTLE minus NO_OP:
+
+| anchor | contrast | multiples of eta_J | resolvable at the 3x gate |
+|---|---|---:|---|
+| a01 (shallowest) | +0.7375 | 45.0 | yes |
+| a30 (deepest) | +0.0377 | 2.3 | no |
+
+Throttling is harmful wherever it resolves and most harmful earliest, at 45 times
+the band. It stops being distinguishable from inaction at the deepest anchors not
+because it stops hurting -- the contrast is still positive -- but because inaction
+has caught up with it.
+
+**Correction, 2026-10-05.** Earlier drafts said the contrast "rises to 0.264 at an
+intermediate anchor". 0.2636 is the value at a10; the contrast keeps rising to
+0.2769 at a11. The figure was not wrong about a10, but the sentence read as if it
+were the maximum, and it was not. The manuscript now reports the peak.
+
 ## 5. The decision layer: two degeneracies in opposite directions
 
 `CRA_eta` against the oracle bound, with `eta_J` from each matrix's own replay
