@@ -7,10 +7,11 @@
 # them one failed build at a time was not. This runs in a second.
 set -uo pipefail
 fail=0
+failed_checks=()
 chk() { # chk <description> <test-command...>
   local desc="$1"; shift
   if "$@" >/dev/null 2>&1; then printf '  ok    %s\n' "$desc"
-  else printf '  FAIL  %s\n' "$desc"; fail=1; fi
+  else printf '  FAIL  %s\n' "$desc"; fail=1; failed_checks+=("$desc"); fi
 }
 
 echo "repository invariants"
@@ -396,6 +397,12 @@ if [ "$blockers" -eq 0 ]; then echo "  none"; fi
 fi
 
 echo
-if [ "$fail" -eq 0 ]; then echo "REPO AUDIT OK"; else
-  echo "REPO AUDIT FAILED -- a fixed file has probably been overwritten by an older copy."; fi
+if [ "$fail" -eq 0 ]; then
+  echo "REPO AUDIT OK"
+else
+  echo "REPO AUDIT FAILED -- ${#failed_checks[@]} check(s):"
+  for d in "${failed_checks[@]}"; do printf '  - %s\n' "$d"; done
+  echo "Usually a fixed file has been overwritten by an older copy. The names"
+  echo "above say which, so the last few lines of output are enough to act on."
+fi
 exit $fail
