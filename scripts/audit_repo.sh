@@ -333,9 +333,10 @@ if [ ! -f paper/main.tex ]; then
 else
 echo "submission blockers"
 blockers=0
-n=$(grep -o 'AUTHORCHECK{' paper/main.tex | wc -l | tr -d ' ')
+n=$(grep -c '^- \[ \]' PRESUBMISSION.md || true)
 if [ "$n" -gt 0 ]; then
-  printf '  TODO  %s author placeholder(s) in paper/main.tex (affiliation, two biographies)\n' "$n"
+  printf '  TODO  %s open gate(s) in PRESUBMISSION.md\n' "$n"
+  grep -n '^- \[ \] ' PRESUBMISSION.md | sed 's/^/        /' | cut -c1-110
   blockers=$((blockers+1))
 fi
 if [ -f paper/generated_tables/table_prediction.as-reported ]; then
