@@ -10,11 +10,15 @@ submit.
 
 ## Gate 1 -- provenance of every reported figure (blocking)
 
-- [ ] **0.589 and 0.428** (ablation A2, parameter-shift and mechanism-shift
-      blocks of Table III) have no provenance anywhere in this repository.
-      `paper/check_transcribed.py` lists them. Find them in the run log on the
-      analysis host, add them to `RESULTS.md`, then delete their entries from
-      `UNRECORDED` in that script.
+- [x] **0.589 and 0.428 recomputed** on the analysis host 2026-10-05. Every B6
+      and A1b figure was reproduced exactly and both A2 figures came back
+      identical to the manuscript. The full `evaluate.py` output is in
+      `RESULTS.md`; `paper/check_transcribed.py` now reports no unrecorded
+      figure, across 84 checked figures in both documents.
+- [x] **The re-run surfaced a third result against the method** and it is now
+      stated: A2, which removes minimum-necessary selection and nothing else, is
+      never worse than CSC and better on both shifted blocks. See amendment 0.30,
+      Section V-F and Supplement S9.
 - [x] **Regenerated on the analysis host** under the stable-sort fix. Both hosts
       now emit the same table to the digit (amendment 0.29), the pinned pre-fix
       copy is deleted, and `scripts/audit_repo.sh` fails if the pre-fix time-only
@@ -102,7 +106,15 @@ Expect this to add 0.2--0.4 page. It happens **before** Gate 5.
       assessed, which is the insurance; confirm anyway.
 - [ ] Check the submission form's abstract word limit against the current
       abstract.
-- [ ] **Publish the reported matrices' derived data** (Zenodo version 0.2).
+- [ ] **Re-publish the derived data (Zenodo 0.3).** Version 0.2 is defective and
+      must be superseded: the packaging script copied every generated table and so
+      shipped two files captioned "Placeholder --- No Experiment Has Been Run"
+      into the archive of a paper reporting 8118 branches, and its `RESULTS.md`
+      predates the prediction figures and the A2 table. The script is fixed and
+      now refuses to finish if a placeholder reaches the package. Deploy to the
+      analysis host first so the packaged `RESULTS.md` is the current one, then
+      re-run it, then upload as a new Zenodo version.
+- [ ] (superseded) Publish the reported matrices' derived data.
       Supplement S9 currently says the branch data for the three reported
       matrices is held on the analysis host and is not in the artifact
       repository. For a paper whose contribution is that an evaluation must be

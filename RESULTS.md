@@ -182,13 +182,40 @@ dispersion.
 
 Abstention under B6: 0.367 / 0.383 / 0.558 / 0.490 across the four sets.
 
-**A2 (`A2_no_mni`, minimum-necessary selection removed) is missing from this
-table.** The manuscript reports it as 0.633 / 0.589 / 0.428 / 0.900, and 0.589 and
-0.428 appear nowhere in this repository: `paper/check_transcribed.py` lists them
-as unrecorded. They are to be read off the `evaluate.py` output on the analysis
-host and written here before submission, or recomputed. Until then they are two
-figures in the manuscript with no provenance in the record, which is a blocking
-pre-submission gate.
+### The full `evaluate.py` output, including A2
+
+Recomputed on the analysis host 2026-10-05 (`logs/decision_eval.log`) after the
+A2 row was found to have no record anywhere. Every previously reported figure for
+B6 and A1b was reproduced exactly, and the two A2 figures the manuscript carried
+(0.589, 0.428) were confirmed. `n` is decision points, `acted` the subset where
+the method intervened.
+
+| block | method | n | CRA_eta | acted | CRA\|acting | Reg_eta | PFR | WIR | abst |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| in-distribution | B6 CSC | 60 | 0.633 | 38 | 0.974 | 0.0612 | 0.714 | 0.000 | 0.367 |
+| | A1b no gate | 60 | 0.533 | 60 | 0.533 | 0.0770 | 0.000 | n/a | 0.000 |
+| | A2 no MNI | 60 | 0.633 | 38 | 0.974 | 0.0612 | 0.714 | 0.000 | 0.367 |
+| parameter shift | B6 CSC | 180 | 0.583 | 111 | 0.946 | 0.0791 | 0.760 | 0.000 | 0.383 |
+| | A1b no gate | 180 | 0.461 | 180 | 0.461 | 0.1007 | 0.000 | n/a | 0.000 |
+| | **A2 no MNI** | 180 | **0.589** | 111 | **0.955** | **0.0785** | 0.800 | 0.000 | 0.383 |
+| mechanism shift | B6 CSC | 138 | 0.399 | 61 | 0.885 | 0.1072 | 0.607 | 0.023 | 0.558 |
+| | A1b no gate | 138 | 0.254 | 138 | 0.254 | 0.1376 | 0.000 | n/a | 0.000 |
+| | **A2 no MNI** | 138 | **0.428** | 61 | **0.951** | **0.1020** | 0.750 | 0.019 | 0.558 |
+| transfer D4/D5 | B6 CSC | 200 | 0.900 | 102 | 0.863 | 0.0047 | n/a | 0.154 | 0.490 |
+| | **A1b no gate** | 200 | **0.955** | 200 | 0.955 | **0.0009** | n/a | n/a | 0.000 |
+| | A2 no MNI | 200 | 0.900 | 102 | 0.863 | 0.0055 | n/a | 0.137 | 0.490 |
+
+**A2 is never worse than the full method and is better on two blocks.** Removing
+minimum-necessary intervention leaves the gate and the abstention rate untouched
+and replaces the cheapest admissible action with the lowest-risk one. It matches
+CSC in-distribution and on transfer, beats it on both shifted blocks, and has
+lower regret on three of four. Minimum-necessary intervention is one of the
+mechanisms this work specifies, and on these fault families the measurement does
+not support it. This is the third result against the method and it is reported in
+the manuscript beside the other two.
+
+`PFR` is undefined on the transfer block and `WIR` is undefined wherever a method
+never intervenes; those cells read n/a rather than zero.
 
 Two readings, both against the method:
 
