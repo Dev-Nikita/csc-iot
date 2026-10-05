@@ -321,6 +321,7 @@ if [ -f paper/main.tex ]; then
   chk "supplement cross-references are current"     python3 paper/check_supplement_refs.py
   chk "every citation resolves"                     python3 paper/check_citations.py
   chk "the 12-page version is still archived"       test -f paper/archive/v1-12pages/main.pdf
+  chk "no placeholder table in the generated set"  bash -c '! grep -rl "No Experiment Has Been Run" paper/generated_tables 2>/dev/null | grep -q .'
   # The submission folder is a copy and goes stale silently. Uploading a stale
   # copy is the one mistake that cannot be corrected after the fact.
   if [ -d paper/submission-ready ]; then

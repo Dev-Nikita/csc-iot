@@ -36,8 +36,20 @@ for root in "$@"; do
   echo "packaged $name: $n branches"
 done
 
+# Only the tables the manuscript actually uses. A blanket copy put two
+# placeholders captioned "No Experiment Has Been Run" into the archive of a paper
+# that reports 8118 branches, which is worse than shipping nothing.
 mkdir -p "$out/generated_tables"
-cp paper/generated_tables/*.tex "$out/generated_tables/" 2>/dev/null || true
+for t in table_bands_merged table_bands_single table_bands_factored \
+         table_prediction table_spanning table_runs; do
+  [ -f "paper/generated_tables/$t.tex" ] && \
+    cp "paper/generated_tables/$t.tex" "$out/generated_tables/"
+done
+if grep -rl 'Placeholder\|No Experiment Has Been Run' "$out" >/dev/null 2>&1; then
+  echo "REFUSED: a placeholder reached the data package" >&2
+  grep -rl 'Placeholder\|No Experiment Has Been Run' "$out" >&2
+  exit 1
+fi
 cp RESULTS.md EXPERIMENT_PROTOCOL.md "$out/" 2>/dev/null || true
 
 ( cd "$out" && find . -type f ! -name SHA256SUMS -print0 | sort -z \
