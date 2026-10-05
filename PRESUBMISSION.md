@@ -16,8 +16,22 @@ submit.
       analysis host, add them to `RESULTS.md`, then delete their entries from
       `UNRECORDED` in that script.
 - [ ] **Regenerate `table_prediction.tex` on the analysis host** under the
-      stable-sort fix of amendment 0.27, and take whatever it emits. Then delete
-      `paper/generated_tables/table_prediction.as-reported`.
+      stable-sort fix, and take whatever it emits (amendments 0.27 and 0.28).
+      Then delete `paper/generated_tables/table_prediction.as-reported`.
+
+      This is no longer a fourth-decimal matter. Verified on two hosts: the fix
+      moves the **time-only leakage control from 0.1174 to 0.1011**, because the
+      time-only feature set is low-cardinality and a large share of training
+      points sit at identical distance, so which of them entered the neighbour
+      set was arbitrary. Three further figures (0.0261, 0.0257, 0.0367) are not
+      reproduced by either host under any code version and must be replaced by
+      the reproducible ones.
+
+- [ ] **After that regeneration, update the prose in Section V-C**, which states
+      the reduction against the time-only control. At the figures now in the
+      manuscript it reads 78 per cent; at the reproducible ones it is 74. The
+      permutation factor stays 6.2. Do not edit these by hand before the
+      regeneration: take the table first, then rewrite the sentence from it.
 
 This gate is blocking in a stronger sense than the others. The paper's own
 contribution is that an evaluation must be auditable before it is interpreted. A

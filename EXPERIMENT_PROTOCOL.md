@@ -465,3 +465,56 @@ comparisons are the reduction against a time-only predictor (78 per cent at
 either value) and the factor by which permuting the telemetry raises the error
 (6.2 at either value). Neither changes, and no conclusion rests on the fourth
 decimal of this figure.
+
+## Amendment 0.28 (2026-10-05) -- 0.27 named the wrong cause, and the real one moves a reported figure
+
+**What 0.27 claimed.** That the prediction table failed to reproduce because
+`np.argpartition` leaves the order among equal distances undefined, so the
+reported figures depended on the numpy build.
+
+**Why that is wrong.** Running the pre-fix code on a second host reproduced the
+first host's output *exactly*, including the figures that differ from the
+manuscript. Two independent environments agree with each other and disagree with
+the table. Tie handling across builds therefore does not explain that difference,
+and 0.27 asserted a cause from a single observation. The claim is withdrawn.
+
+**What the difference actually is, as far as it can be established.** The
+manuscript's prediction table was produced by a state that no longer exists.
+`git log` shows no change to `analysis/features.py`, `analysis/branches.py` or
+`analysis/leakage_tests.py` since 2026-09-27, and the matrix's `jobs.csv` has not
+been rewritten since 2026-09-27 either, so neither the committed analysis code nor
+the data accounts for it. The generated table was never committed -- the
+`paper/generated_tables/*.tex` pattern is in `.gitignore` -- so the state that
+produced it cannot be recovered. **It is reported as unresolved rather than
+explained.** Current output, agreed by both hosts, differs from the manuscript in
+the fourth decimal on three figures:
+
+| figure | in the manuscript | reproduced now |
+|---|---|---|
+| telemetry kNN MAE | 0.0261 | 0.0258 |
+| permuted control | 0.1607 | 0.1610 |
+| post-onset MAE | 0.0257 | 0.0259 |
+| spanning MAE | 0.0367 | 0.0364 |
+
+**What the stable sort does change, and it is not a fourth decimal.** Holding the
+host fixed, replacing `argpartition` with a stable sort moves exactly one figure:
+the **time-only leakage control**, from 0.1174 to 0.1011. Nothing else in the
+table moves. This is where tie handling was always going to matter most: the
+time-only feature set is the elapsed epoch and the candidate action, both of low
+cardinality, so a large share of training points sit at identical distance and
+*which* of them enters the neighbour set was arbitrary. The fixed figure is the
+correct one; the previous one was partly an artifact of that arbitrariness.
+
+**Consequence for the manuscript.** The reduction against the time-only control
+is a reported claim. At the figures in the manuscript it is 78 per cent; at the
+reproducible figures it is 74 per cent. The permutation factor is 6.2 either way.
+Both the figures and the percentage must be taken from a regeneration under the
+fixed code on the analysis host, and that regeneration is a pre-submission gate.
+No conclusion changes: the telemetry model still beats the clock by a wide margin
+and the permutation control still fails by a factor of six.
+
+**Rule this establishes.** A figure that two independent environments cannot
+reproduce does not go in the paper, whatever its provenance. The reproducible
+value replaces it even when the difference is immaterial, because in a paper about
+auditable evaluation the property that matters is that the number can be produced
+again, not that it is the first one obtained.
