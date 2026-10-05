@@ -139,6 +139,35 @@ crossing is only meaningful if the crossing was reachable, so the sweep prints t
 ceiling a price can reach beside its conclusion and a fixture asserts that ceiling
 exceeds the measured gap.
 
+## 4b. Action-conditioned prediction, and its two leakage controls
+
+From `b5-matrix-v1` (2880 branches), folds held out by fault design point. Emitted
+by `analysis/make_tables.py`; produced identically on the analysis host and on a
+second machine under the committed code (protocol 0.29), which is what makes these
+the reported figures rather than the earlier ones they replace.
+
+| predictor | MAE | time-only | permuted | constant |
+|---|---|---|---|---|
+| telemetry, kNN | **0.0258** | 0.1011 | 0.1610 | 0.2008 |
+| telemetry, ridge (linear) | 0.3216 | --- | --- | --- |
+| post-onset (n=1560) | 0.0259 | --- | --- | 0.1615 |
+| pre-fault (n=600) | 0.0122 | --- | --- | 0.2362 |
+| spanning (n=720) | 0.0364 | --- | --- | 0.1624 |
+
+The telemetry model cuts the error against a time-only predictor by 74 per cent,
+and permuting the telemetry raises it by a factor of 6.2. Both controls must pass
+before any prediction figure is reported.
+
+The time-only control reads 0.1011 and not the 0.1174 of earlier drafts: its
+feature set is the elapsed epoch and the candidate action, both low-cardinality,
+so a large share of training points sit at identical distance and which of them
+entered the neighbour set was arbitrary until neighbour selection was made
+deterministic. See protocol amendments 0.27 to 0.29.
+
+Spanning holdout: 0.0348 with spanning branches allowed in training, 0.0479 with
+them removed, 0.0479 with the test branch's fault setting also removed, against
+0.1922 for a constant predictor.
+
 ## 5. The decision layer: two degeneracies in opposite directions
 
 `CRA_eta` against the oracle bound, with `eta_J` from each matrix's own replay
@@ -150,6 +179,16 @@ dispersion.
 | parameter shift (180) | 1.000 | 0.972 | 1.000 | 0.583 \| 0.946 acting | 0.461 | 1.000 |
 | mechanism shift (138) | 0.993 | 0.978 | 0.993 | 0.399 \| 0.885 acting | 0.254 | 1.000 |
 | **transfer, D4/D5 (200)** | 0.890 | 0.890 | 0.890 | 0.900 \| 0.863 acting | **0.955** | 1.000 |
+
+Abstention under B6: 0.367 / 0.383 / 0.558 / 0.490 across the four sets.
+
+**A2 (`A2_no_mni`, minimum-necessary selection removed) is missing from this
+table.** The manuscript reports it as 0.633 / 0.589 / 0.428 / 0.900, and 0.589 and
+0.428 appear nowhere in this repository: `paper/check_transcribed.py` lists them
+as unrecorded. They are to be read off the `evaluate.py` output on the analysis
+host and written here before submission, or recomputed. Until then they are two
+figures in the manuscript with no provenance in the record, which is a blocking
+pre-submission gate.
 
 Two readings, both against the method:
 

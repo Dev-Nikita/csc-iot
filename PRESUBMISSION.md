@@ -15,28 +15,16 @@ submit.
       `paper/check_transcribed.py` lists them. Find them in the run log on the
       analysis host, add them to `RESULTS.md`, then delete their entries from
       `UNRECORDED` in that script.
-- [ ] **Regenerate `table_prediction.tex` on the analysis host** under the
-      stable-sort fix, and take whatever it emits (amendments 0.27 and 0.28).
-      Then delete `paper/generated_tables/table_prediction.as-reported`.
+- [x] **Regenerated on the analysis host** under the stable-sort fix. Both hosts
+      now emit the same table to the digit (amendment 0.29), the pinned pre-fix
+      copy is deleted, and `scripts/audit_repo.sh` fails if the pre-fix time-only
+      control 0.1174 reappears.
+- [x] **Section V-C rewritten from it.** The reduction against the time-only
+      control reads 74 per cent, not 78: the control itself moved from 0.1174 to
+      0.1011 once neighbour ties stopped being broken arbitrarily. The
+      permutation factor is 6.2 either way and no conclusion changed.
 
-      This is no longer a fourth-decimal matter. Verified on two hosts: the fix
-      moves the **time-only leakage control from 0.1174 to 0.1011**, because the
-      time-only feature set is low-cardinality and a large share of training
-      points sit at identical distance, so which of them entered the neighbour
-      set was arbitrary. Three further figures (0.0261, 0.0257, 0.0367) are not
-      reproduced by either host under any code version and must be replaced by
-      the reproducible ones.
-
-- [ ] **After that regeneration, update the prose in Section V-C**, which states
-      the reduction against the time-only control. At the figures now in the
-      manuscript it reads 78 per cent; at the reproducible ones it is 74. The
-      permutation factor stays 6.2. Do not edit these by hand before the
-      regeneration: take the table first, then rewrite the sentence from it.
-
-This gate is blocking in a stronger sense than the others. The paper's own
-contribution is that an evaluation must be auditable before it is interpreted. A
-figure in it whose provenance cannot be produced on request is the same class of
-defect the paper is about. Do not submit with either item open.
+This gate is otherwise still open on the first item.
 
 ## Gate 2 -- the bibliography (blocking, and it is a content gap)
 

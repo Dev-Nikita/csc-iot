@@ -518,3 +518,34 @@ reproduce does not go in the paper, whatever its provenance. The reproducible
 value replaces it even when the difference is immaterial, because in a paper about
 auditable evaluation the property that matters is that the number can be produced
 again, not that it is the first one obtained.
+
+## Amendment 0.29 (2026-10-05) -- the prediction table is canonical
+
+The fix of 0.27 was deployed to the analysis host and
+`analysis/make_tables.py` re-run there. It emitted, to the digit, what the second
+machine emits:
+
+| figure | value |
+|---|---|
+| telemetry kNN MAE | 0.0258 |
+| time-only control | 0.1011 |
+| permuted control | 0.1610 |
+| constant | 0.2008 |
+| post-onset / pre-fault / spanning | 0.0259 / 0.0122 / 0.0364 |
+
+Two independent hosts now agree under the committed code, so this table is the
+reported one and the gate opened by 0.27 is closed. `table_prediction.tex` is
+regenerated from it and the pinned pre-fix copy is deleted.
+
+The manuscript's prose is rewritten from these figures: the reduction against the
+time-only control reads **74 per cent**, not 78, because the control itself moved
+from 0.1174 to 0.1011 once neighbour ties stopped being broken arbitrarily. The
+permutation factor is 6.2 (6.24) as before. No conclusion changes.
+`scripts/audit_repo.sh` fails if 0.1174 reappears in the manuscript or the table,
+which is how a stale copy would announce itself.
+
+**What remains open from 0.28.** Why the superseded table read 0.0261 is still
+unresolved and is left unresolved: the state that produced it was never committed
+and cannot be recovered. The figures now reported are reproducible, which is the
+property the paper needs; the provenance of the ones they replace is not, which is
+why they were replaced.
