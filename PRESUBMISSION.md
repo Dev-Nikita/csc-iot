@@ -1,0 +1,85 @@
+# Pre-submission gates
+
+Ordered. Each one is either done or it is not; nothing here is a judgement call.
+`scripts/audit_repo.sh` prints the open ones on every run.
+
+The order matters and is not the obvious one. Page count is computed **last**,
+because two of the gates below add text. Measuring the manuscript before the
+bibliography is final tells you the length of a document you are not going to
+submit.
+
+## Gate 1 -- provenance of every reported figure (blocking)
+
+- [ ] **0.589 and 0.428** (ablation A2, parameter-shift and mechanism-shift
+      blocks of Table III) have no provenance anywhere in this repository.
+      `paper/check_transcribed.py` lists them. Find them in the run log on the
+      analysis host, add them to `RESULTS.md`, then delete their entries from
+      `UNRECORDED` in that script.
+- [ ] **Regenerate `table_prediction.tex` on the analysis host** under the
+      stable-sort fix of amendment 0.27, and take whatever it emits. Then delete
+      `paper/generated_tables/table_prediction.as-reported`.
+
+This gate is blocking in a stronger sense than the others. The paper's own
+contribution is that an evaluation must be auditable before it is interpreted. A
+figure in it whose provenance cannot be produced on request is the same class of
+defect the paper is about. Do not submit with either item open.
+
+## Gate 2 -- the bibliography (blocking, and it is a content gap)
+
+- [ ] Expand from 19 to roughly 35 verified references. A reviewer will read 19
+      as thin, but the real problem is evidentiary: the paper asserts a
+      validation gap in the literature, and 19 references is a weak base for a
+      claim about a literature.
+- [ ] Re-check `ye2026nesyedge` and `desilva2026aurora`: both are arXiv
+      preprints. Replace with the peer-reviewed version if one now exists.
+- [ ] Every new entry verified at the source and recorded in
+      `docs/literature.csv` before it enters `references.bib`. No exceptions, and
+      no DOI that has not been seen at the publisher.
+
+Expect this to add 0.3--0.6 page. It happens **before** Gate 5.
+
+## Gate 3 -- authorship
+
+- [ ] R. Zinko confirms co-authorship, the affiliation as printed, and the author
+      contributions paragraph.
+- [ ] Both authors read the AI-use statement and confirm it matches what actually
+      happened, including work done outside the sessions it was written from.
+
+## Gate 4 -- front and back matter
+
+- [x] Funding, conflict of interest, data and code availability with the Zenodo
+      DOI, author contributions, AI use.
+- [x] Biographies deliberately absent: IEEE collects biosketches with the final
+      files on acceptance.
+- [ ] **Reserve about 0.3 page for them in the camera-ready budget.** TNSM counts
+      biographies and author pictures inside the ten pages it provides free of
+      charge, so removing them now defers the space, it does not create it.
+- [ ] Confirm in ScholarOne that TNSM accepts supplementary material, and under
+      which file designation. Neither ComSoc policy page documents it. The main
+      text is written so that no claim in it requires the supplement to be
+      assessed, which is the insurance; confirm anyway.
+- [ ] Check the submission form's abstract word limit against the current
+      abstract.
+
+## Gate 5 -- final page count, computed last
+
+- [ ] Rebuild after Gates 2 and 3 and read the page count then.
+      - 9.7--9.9 pages: submit as is.
+      - exactly 10.0: submit as is.
+      - 10.4 or more: cut now, from the revision reserve named in the header
+        comment of `paper/main.tex`, in the order R1, R2, R4, R3. Do not plan to
+        fix it after review.
+- [ ] One final PDF freeze. After it, stop rewriting the paper for style.
+
+## How a revision is absorbed
+
+A reviewer can demand that something be clarified **in the main manuscript**, and
+answering that it is in the supplement will not do. The working model is:
+
+- the main text gets the 2--5 sentences that close the criticism directly;
+- the supplement gets the table, the sensitivity analysis or the full experiment;
+- the response letter carries the argument.
+
+That is usually 200--400 words of main-text growth per reviewer, which is what
+the R1--R4 reserve is sized for. The supplement is not an automatic escape from
+a major revision; it is what keeps the growth to sentences instead of pages.
