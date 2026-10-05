@@ -41,13 +41,44 @@ This gate is otherwise still open on the first item.
 - [ ] Weight the additions toward the venue's own audience: TNSM first, then
       TMC, TON, TPDS, IoT-J, TSC, JSAC and strong ACM venues. Citing TNSM papers
       shows the editor the manuscript is talking to this Transactions.
-- [ ] Re-check `ye2026nesyedge` and `desilva2026aurora`: both are arXiv
-      preprints. Replace with the peer-reviewed version if one now exists.
+- [ ] **Three entries still open after the 2026-10-05 verification sweep.** All
+      nineteen were checked against the record; none is invented and none has a
+      wrong author list, venue or page range. Three could not be settled from
+      here and need a check on IEEE Xplore, which this environment cannot read:
+      - `siew2022fire`: dblp lists **six** authors, the arXiv metadata lists
+        **eight**, and Xplore document 11223793 looks like a published version in
+        IEEE Trans. Mobile Computing. Fix the author list and switch to the
+        published citation if it exists.
+      - `wu2021dtn`: the only record seen was another paper's reference list.
+        Confirm DOI 10.1109/JIOT.2021.3079510 on Crossref or Xplore.
+      - `ye2026nesyedge`: possibly in the 2026 IEEE EDGE proceedings. Unconfirmed,
+        so do not change it until seen.
+      Settled and already applied: `gibbs2021aci` now cites the NeurIPS 2021
+      record rather than the preprint; `bonilla2026slr` carries the author
+      spellings and article number the Crossref record has;
+      `angelopoulos2021gentle` stays an arXiv citation, because the first author's
+      own publication list gives no journal version.
+- [ ] `desilva2026aurora` and `huang2025cascades` have no peer-reviewed version;
+      re-check at submission time.
 - [ ] Every new entry verified at the source and recorded in
       `docs/literature.csv` before it enters `references.bib`. No exceptions, and
       no DOI that has not been seen at the publisher.
 
 Expect this to add 0.2--0.4 page. It happens **before** Gate 5.
+
+## Gate 2b -- originality screening
+
+- [ ] **Run the manuscript through iThenticate or Turnitin** via the university.
+      This cannot be done from the project environment and no substitute for it
+      exists here. What was done instead: the distinctive terminology of the paper
+      ("reconstructible fork-and-replay", "transport-quiescent common anchors",
+      "minimum-necessary intervention" in this sense) returns no matching text
+      anywhere on the web, which is consistent with originality but is not a
+      similarity report.
+- [ ] **Check overlap against your own other manuscripts**, which is what an
+      editor's similarity report will flag first. Several share this project's
+      lineage and vocabulary. Text reused from your own unpublished or published
+      work has to be rewritten or cited, not carried over.
 
 ## Gate 3 -- authorship
 
