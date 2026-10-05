@@ -311,6 +311,8 @@ chk "pre-fault needs a strict inequality"          grep -q 'onset > anchor + hor
 chk "no internal reminder in a printing bib note field" bash -c '! grep -E "^[[:space:]]*note[[:space:]]*=" paper/references.bib | grep -qiE "check|todo|fixme|verify|preprint;"'
 chk "neighbour selection uses a stable sort"       grep -qF 'kind="stable"' analysis/leakage_tests.py
 chk "no live argpartition in the leakage harness"  bash -c '! grep -E "^[^#]*argpartition" analysis/leakage_tests.py'
+chk "the per-anchor contrasts have a script"      test -f analysis/action_contrasts.py
+chk "that script refuses a factored matrix"       grep -q "is not one thing" analysis/action_contrasts.py
 echo
 # The manuscript is not part of this repository until the paper is accepted (see
 # .gitignore), so these run only where a working copy of it is present. They are
