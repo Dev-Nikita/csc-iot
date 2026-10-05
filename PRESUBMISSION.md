@@ -69,14 +69,25 @@ Expect this to add 0.2--0.4 page. It happens **before** Gate 5.
       assessed, which is the insurance; confirm anyway.
 - [ ] Check the submission form's abstract word limit against the current
       abstract.
-- [ ] **Publish the reported matrices' derived data.** Supplement S9 says the
-      branch data for the three reported matrices is held on the analysis host
-      and is not in the artifact repository. For a paper whose contribution is
-      that an evaluation must be auditable, that is an invitation to ask why the
-      headline data is the part that is missing. Raw logs need not be published,
-      but the per-branch derived outcomes (`jobs.csv`), the run manifests, the
-      generated tables and checksums for all three should go to the Zenodo
-      record, and S9 should then say so instead of saying the opposite.
+- [ ] **Publish the reported matrices' derived data** (Zenodo version 0.2).
+      Supplement S9 currently says the branch data for the three reported
+      matrices is held on the analysis host and is not in the artifact
+      repository. For a paper whose contribution is that an evaluation must be
+      auditable, that is an invitation to ask why the headline data is the part
+      that is missing. Run `scripts/make_data_package.sh` on the analysis host
+      over the three reported matrix roots; it packages `jobs.csv`, the run
+      manifests, a branch index, the generated tables and SHA-256 sums, and
+      leaves the raw logs where they are.
+- [ ] **Only after that upload**, replace the sentence in Supplement S9 and the
+      matching one in the main manuscript's data-availability statement. Until
+      the upload exists the current wording is the true one, and changing it
+      first would make the paper claim something that is not yet so. The
+      replacement:
+
+      > Derived per-branch outcome tables, run manifests and checksums for all
+      > three reported matrices are archived with the artifact; raw execution
+      > logs are retained on the analysis host and are available from the
+      > corresponding author.
 - [ ] Neither PDF contains `[?]`. Check with `pdftotext file.pdf - | grep '\[?\]'`,
       not by reading the LaTeX log: an undefined citation in a document with no
       bibliography at all produces no warning to grep for. That is how eight of
