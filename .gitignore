@@ -62,3 +62,11 @@ bin/
 # Derived by scripts/deploy_to_host.sh on every deploy; never committed, so it
 # cannot go stale (it once sat at protocol-0.9 for a week of runs).
 SOURCE_REVISION
+
+# The manuscript. This repository is the reproducibility artifact: the code, the
+# protocol with its amendment log, the analysis that produces every reported
+# figure, the tests and the audit. The manuscript itself -- prose, figures,
+# bibliography, the supplement, the LaTeX build -- is not needed to reproduce
+# anything, and it is the part that can be scooped before the paper is accepted.
+# It is added here together with the camera-ready version, on acceptance.
+/paper/

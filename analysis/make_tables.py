@@ -28,8 +28,13 @@ def provenance(root):
             a = json.load(open(p))
             commit, stack = a.get("git_commit", "?"), a.get("runtime_stack_id", "?")
             break
+    # The revision label was maintained by hand until amendment 0.18 derived it
+    # from the deployment, so for runs started on or after 2026-09-25 the label
+    # is stale. The recorded start date is what bounds the revision against the
+    # commit history, so every table carries it beside the label.
     return {"experiment": m.get("experiment", os.path.basename(root)),
             "stack": stack, "commit": commit,
+            "started": (m.get("started_utc") or "?")[:10],
             "branches": len([x for x in d if os.path.isdir(x)])}
 
 
@@ -91,6 +96,7 @@ def main():
     args = ap.parse_args()
     os.makedirs(args.out_dir, exist_ok=True)
 
+    merged = {}
     for tag, root in (("single", args.single_scenario_root),
                       ("factored", args.factored_root)):
         prov = provenance(root)
@@ -103,7 +109,7 @@ def main():
         caption = ("Replay dispersion and action resolvability on the audited "
                    f"single-scenario run (\\texttt{{{prov['experiment']}}}, "
                    f"{prov['branches']} branches, stack "
-                   f"\\texttt{{{prov['stack'][:8]}}}, {prov['commit']}). "
+                   f"\\texttt{{{prov['stack'][:8]}}}, {prov['commit']}, run {prov['started']}). "
                    "The preregistered band is the pooled one; the others are "
                    "reported because a band that holds on average and fails in "
                    "one cell is not a band."
@@ -111,7 +117,7 @@ def main():
                    "Action resolvability on the scenario-factored matrix "
                    f"(\\texttt{{{prov['experiment']}}}, {prov['branches']} "
                    f"branches, {scenarios} scenarios, stack "
-                   f"\\texttt{{{prov['stack'][:8]}}}, {prov['commit']}).")
+                   f"\\texttt{{{prov['stack'][:8]}}}, {prov['commit']}, run {prov['started']}).")
         write(os.path.join(args.out_dir, f"table_bands_{tag}.tex"), f"""\
 \\begin{{table}}[!t]
 \\centering
@@ -135,6 +141,38 @@ Contrasts resolvable, pooled band & {counts['pooled']}/{total} \\\\
 \\end{{tabular}}
 \\end{{table}}
 """)
+        merged[tag] = dict(prov=prov, pooled=pooled, worst=worst,
+                           counts=counts, total=total, scenarios=scenarios)
+
+    if {"single", "factored"} <= set(merged):
+        rows = []
+        for tag in ("single", "factored"):
+            m = merged[tag]
+            rows.append(
+                "\\texttt{%s} & %d & %d & %s & %s & %d/%d & \\textbf{%d/%d} \\\\"
+                % (m["prov"]["experiment"], m["prov"]["branches"],
+                   m["scenarios"], fmt(m["pooled"]), fmt(m["worst"]),
+                   m["counts"]["pooled"], m["total"],
+                   m["counts"]["all"], m["total"]))
+        write(os.path.join(args.out_dir, "table_bands_merged.tex"),
+              """\\begin{table}[!t]
+\\caption{Replay Dispersion and Action Resolvability on the Two Matrices Whose
+Dispersion Was Measured. The Preregistered Band Is the Pooled One; the Final
+Column Is the Set Surviving All Four Bands.}
+\\label{tab:bands}
+\\centering
+\\scriptsize
+\\setlength{\\tabcolsep}{2.6pt}
+\\begin{tabular}{@{}lrrrrrr@{}}
+\\toprule
+Run & Br. & Sc. & $\\eta_J$ & $\\eta_J$ & Resolv. & Robust\\\\
+    &     &     & pooled & worst & pooled & all four\\\\
+\\midrule
+%s
+\\bottomrule
+\\end{tabular}
+\\end{table}
+""" % "\n".join(rows))
 
     # Prediction table. The harness writes its figures as JSON and this reads
     # that: parsing its prose broke on the first line that ended in a word.
@@ -160,10 +198,12 @@ Contrasts resolvable, pooled band & {counts['pooled']}/{total} \\\\
 \\caption{{Action-conditioned prediction of $J_{{\\mathrm{{obs}}}}$ from
 decision-time telemetry, with folds held out by fault design point
 (\\texttt{{{prov['experiment']}}}, {prov['branches']} branches,
-{prov['commit']}). The time-only and permutation rows are leakage controls:
+{prov['commit']}, run {prov['started']}). The time-only and permutation rows are leakage controls:
 the first asks how much of the skill is the clock, the second whether the
 skill comes from the telemetry at all.}}
 \\label{{tab:prediction}}
+\\footnotesize
+\\setlength{{\\tabcolsep}}{{3pt}}
 \\begin{{tabular}}{{lrrrr}}
 \\toprule
 Predictor & MAE & Time-only & Permuted & Constant \\\\
