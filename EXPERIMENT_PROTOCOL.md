@@ -588,3 +588,29 @@ third identifiability limit reached from the other side.
 **Also recorded.** PFR has no denominator on the transfer block and WIR has none
 wherever a method never intervenes. Both now print as n/a rather than 0, because
 reporting an absent measurement as zero would make it flattering.
+
+## Amendment 0.31 (2026-10-05) -- a guard that failed where its input cannot exist
+
+`make deploy` aborted on the analysis host with `REPO AUDIT FAILED`. Nothing was
+wrong with the deployed tree: the rsync had already completed, and the audit then
+failed on "supplement cross-references are current", which runs
+`paper/check_supplement_refs.py`. That script compares the hand-set supplement
+numbers in `main.tex` against `paper/supplement.aux`, and it exits non-zero when
+the aux is missing -- deliberately, because a macro nobody checked is the defect
+it guards. The analysis host has no LaTeX, so that file cannot exist there, and
+the guard was failing a machine for not having something it is not supposed to
+have.
+
+The audit now distinguishes three states rather than two:
+
+- no `supplement.aux`: **skip**, with a reason. The input cannot exist here.
+- `supplement.tex` newer than `supplement.aux`: **fail**. The supplement was
+  edited and not rebuilt, so the check would compare the macros against stale
+  numbering and pass on it, which is worse than not checking. The message names
+  the rebuild command, including `latexmk -g` for the case where only the
+  timestamp moved and latexmk declines to run.
+- otherwise: **run the check**.
+
+The general rule, which the `pdftotext` checks already followed: a check skips
+where its input genuinely cannot exist on that machine, and fails where the input
+could exist and does not match. Conflating the two turns a guard into an outage.
