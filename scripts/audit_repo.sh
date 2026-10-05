@@ -334,6 +334,9 @@ if [ -f paper/main.tex ]; then
   if command -v pdftotext >/dev/null 2>&1; then
     chk "no unresolved citation in the manuscript PDF"  bash -c '! pdftotext paper/main.pdf - 2>/dev/null | grep -q "\[?\]"'
     chk "no unresolved citation in the supplement PDF"  bash -c '! pdftotext paper/supplement.pdf - 2>/dev/null | grep -q "\[?\]"'
+    # A control word swallows the space after it, so "\SupImpl gives" typesets as
+    # "S4gives". Four of these reached a PDF that compiled without a warning.
+    chk "no cross-reference glued to the next word"     bash -c '! pdftotext paper/main.pdf - 2>/dev/null | grep -qE "S[0-9]+(-[A-Z])?[a-z]"'
   else
     echo "  skip  unresolved-citation check (pdftotext not installed)"
   fi
