@@ -321,6 +321,22 @@ if [ -f paper/main.tex ]; then
   chk "supplement cross-references are current"     python3 paper/check_supplement_refs.py
   chk "every citation resolves"                     python3 paper/check_citations.py
   chk "the 12-page version is still archived"       test -f paper/archive/v1-12pages/main.pdf
+  # The submission folder is a copy and goes stale silently. Uploading a stale
+  # copy is the one mistake that cannot be corrected after the fact.
+  if [ -d paper/submission-ready ]; then
+    chk "the submission folder matches the working copy" bash -c '
+      for f in main.tex supplement.tex references.bib table_related.tex table_scenarios.tex; do
+        cmp -s "paper/$f" "paper/submission-ready/$f" || exit 1
+      done'
+  fi
+  # Grepping the LaTeX log does not catch this: a \cite in a document with no
+  # bibliography at all raises no warning, it just typesets [?]. Read the PDF.
+  if command -v pdftotext >/dev/null 2>&1; then
+    chk "no unresolved citation in the manuscript PDF"  bash -c '! pdftotext paper/main.pdf - 2>/dev/null | grep -q "\[?\]"'
+    chk "no unresolved citation in the supplement PDF"  bash -c '! pdftotext paper/supplement.pdf - 2>/dev/null | grep -q "\[?\]"'
+  else
+    echo "  skip  unresolved-citation check (pdftotext not installed)"
+  fi
 else
   echo "manuscript invariants: skipped (no working copy of the manuscript here)"
 fi

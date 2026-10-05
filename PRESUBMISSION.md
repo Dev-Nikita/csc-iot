@@ -26,17 +26,26 @@ defect the paper is about. Do not submit with either item open.
 
 ## Gate 2 -- the bibliography (blocking, and it is a content gap)
 
-- [ ] Expand from 19 to roughly 35 verified references. A reviewer will read 19
-      as thin, but the real problem is evidentiary: the paper asserts a
-      validation gap in the literature, and 19 references is a weak base for a
-      claim about a literature.
+- [ ] Expand from 19 to roughly **24--27** verified references: five to nine
+      additions, not fifteen. The target is coverage of the nearest prior art,
+      not a count. Padding to 35--50 would eat the page reserve, dilute Related
+      Work and read as citation padding, which is its own reviewer comment.
+- [ ] The additions exist to defend one sentence: *"No prior approach, to our
+      knowledge, jointly ranks candidate interventions, selects the cheapest one
+      admitted by a calibrated safety criterion, and validates that ranking
+      against alternative futures that were actually executed."* Every candidate
+      reference is judged by whether it bears on that claim. If it does not, it
+      does not go in.
+- [ ] Weight the additions toward the venue's own audience: TNSM first, then
+      TMC, TON, TPDS, IoT-J, TSC, JSAC and strong ACM venues. Citing TNSM papers
+      shows the editor the manuscript is talking to this Transactions.
 - [ ] Re-check `ye2026nesyedge` and `desilva2026aurora`: both are arXiv
       preprints. Replace with the peer-reviewed version if one now exists.
 - [ ] Every new entry verified at the source and recorded in
       `docs/literature.csv` before it enters `references.bib`. No exceptions, and
       no DOI that has not been seen at the publisher.
 
-Expect this to add 0.3--0.6 page. It happens **before** Gate 5.
+Expect this to add 0.2--0.4 page. It happens **before** Gate 5.
 
 ## Gate 3 -- authorship
 
@@ -60,6 +69,18 @@ Expect this to add 0.3--0.6 page. It happens **before** Gate 5.
       assessed, which is the insurance; confirm anyway.
 - [ ] Check the submission form's abstract word limit against the current
       abstract.
+- [ ] **Publish the reported matrices' derived data.** Supplement S9 says the
+      branch data for the three reported matrices is held on the analysis host
+      and is not in the artifact repository. For a paper whose contribution is
+      that an evaluation must be auditable, that is an invitation to ask why the
+      headline data is the part that is missing. Raw logs need not be published,
+      but the per-branch derived outcomes (`jobs.csv`), the run manifests, the
+      generated tables and checksums for all three should go to the Zenodo
+      record, and S9 should then say so instead of saying the opposite.
+- [ ] Neither PDF contains `[?]`. Check with `pdftotext file.pdf - | grep '\[?\]'`,
+      not by reading the LaTeX log: an undefined citation in a document with no
+      bibliography at all produces no warning to grep for. That is how eight of
+      them survived a build that reported zero problems.
 
 ## Gate 5 -- final page count, computed last
 

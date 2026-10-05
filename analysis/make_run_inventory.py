@@ -60,7 +60,7 @@ def main():
         (r["run"].replace("_", "\\_"), r["started"], r["stack"], r["branches"],
          "RESULTS.md" if r["source"] == "RESULTS.md" else "manifest")
         for r in rows)
-    out = """\\begin{table}[!t]
+    out = """\\begin{table}[!htb]
 \\caption{Every Matrix Run in This Work. The Three Rows Sourced From
 \\texttt{RESULTS.md} Are the Matrices the Main Manuscript Reports; Their Branch
 Data Is Held on the Analysis Host. The Remaining Rows Are Pilots, Calibration
