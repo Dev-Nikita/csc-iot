@@ -70,3 +70,8 @@ SOURCE_REVISION
 # anything, and it is the part that can be scooped before the paper is accepted.
 # It is added here together with the camera-ready version, on acceptance.
 /paper/
+
+# The submission folder is a generated copy of the manuscript; it is rebuilt by
+# scripts/make_submission_folder.sh and follows paper/ out of the repository.
+/paper/submission-ready/
+/paper/submission-ready-keep/

@@ -232,7 +232,9 @@ Telemetry, ridge (linear) & {fmt(vals.get('ridge', float('nan')))} & --- & --- &
 \\caption{{Spanning-regime holdout. In this regime the fault arrives inside the
 horizon and nothing in the state at the decision instant carries it. The strict
 row trains on no branch that spans a fault and on no branch sharing the test
-branch's fault setting, so it is the only row that supports a claim.
+branch's fault setting; it is the leakage-resistant estimate the corresponding
+claim is stated against, and the other rows show how much the looser training
+sets add.
 ($n={sp['n_test']}$ branches, MAE in $J_{{\\mathrm{{obs}}}}$ units.)}}
 \\label{{tab:spanning}}
 \\begin{{tabular}}{{lr}}
