@@ -654,3 +654,51 @@ the first version appended a digit to the three-decimal literal, which covers
 there are three, so it now states the third. Section III stated the argument for
 minimum-necessary intervention four pages before the measurement that does not
 support it, and now points forward to it.
+
+## Amendment 0.33 (2026-10-07) -- the literature search defeated part of the novelty claim
+
+The bibliography went from 19 to 25 entries, but the point of the search was not
+the count. It was run against one sentence -- the claim that no prior approach
+jointly ranks candidate interventions, selects the cheapest admitted by a
+calibrated criterion, and validates that ranking against alternatives that were
+actually executed -- and it found that two thirds of that conjunction is now
+published.
+
+**What was found.** Safe remediation cast as a risk-constrained intervention
+decision bounds a false-remediation rate under a constrained Markov process and
+rejects candidate repairs on blast radius, reversibility and epistemic
+uncertainty, evaluated over injected faults on a microservice benchmark
+(arXiv:2607.20005). OpenTwin admits an Open RAN xApp action only when its entire
+conformal prediction set lies inside the operator's safe region
+(arXiv:2605.24662), which is the closest published use of distribution-free
+calibration to authorise an intervention rather than to produce a prediction set.
+Between them, ranking and calibrated gating are both taken.
+
+**What the claim now rests on.** The third element alone: executing the rejected
+actions from the decision's own state and scoring the decision against what they
+did. Counterfactual evaluation of system policies against logged traces is
+established (CausalSim, NSDI 2023) and deterministic replay of distributed
+executions older still (DEMi, NSDI 2016), and chaos engineering injects faults to
+exercise recovery (CHESS, SEAMS 2023) -- but none of them executes the
+alternatives of a decision in order to score that decision. The Related Work
+section now says this in that order, and "no prior approach" is a statement about
+that element rather than about the conjunction.
+
+**Two entries carry an explicit limit on what may be said about them.** Both 2026
+works were assessed from their abstracts and stated evaluations, not from a full
+reading. Supplement Table S1's own caption says a capability is marked absent only
+where the work was read and it was absent, so neither was given a row in it, and
+`docs/literature.csv` records the limitation against both. Reading them in full is
+a pre-submission gate, and if either turns out to execute rejected alternatives
+the claim changes again.
+
+**One candidate was dropped rather than cited.** Sayer (SoCC 2021) is a good fit
+for the counterfactual-evaluation strand, but its author list could not be
+confirmed at a source this environment can reach. The project's rule is that a
+reference enters `references.bib` only after its bibliographic identity is
+verified at the source, and an unverifiable entry is dropped, not guessed.
+
+**Also.** The identifiability framing now cites its networking precedent, bounds
+on failure identifiability by Boolean network tomography (IEEE/ACM ToN 2020), so
+the paper is not presenting the idea that telemetry may not determine a quantity
+as if it were new.
