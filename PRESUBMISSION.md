@@ -32,19 +32,29 @@ This gate is otherwise still open on the first item.
 
 ## Gate 2 -- the bibliography (blocking, and it is a content gap)
 
-- [ ] Expand from 19 to roughly **24--27** verified references: five to nine
-      additions, not fifteen. The target is coverage of the nearest prior art,
-      not a count. Padding to 35--50 would eat the page reserve, dilute Related
-      Work and read as citation padding, which is its own reviewer comment.
-- [ ] The additions exist to defend one sentence: *"No prior approach, to our
-      knowledge, jointly ranks candidate interventions, selects the cheapest one
-      admitted by a calibrated safety criterion, and validates that ranking
-      against alternative futures that were actually executed."* Every candidate
-      reference is judged by whether it bears on that claim. If it does not, it
-      does not go in.
-- [ ] Weight the additions toward the venue's own audience: TNSM first, then
-      TMC, TON, TPDS, IoT-J, TSC, JSAC and strong ACM venues. Citing TNSM papers
-      shows the editor the manuscript is talking to this Transactions.
+- [x] **Expanded from 19 to 25**, by a search run against the novelty sentence
+      rather than for coverage. Six entries added, each verified at the source and
+      recorded in `docs/literature.csv`: `dai2026saferemediation`,
+      `zhang2026opentwin`, `alomar2023causalsim`, `scott2016demi`,
+      `malik2023chess`, `bartolini2020identifiability`. A seventh candidate
+      (Sayer, SoCC 2021) was dropped: its author list could not be confirmed at
+      the source, and the project's rule is that this is disqualifying.
+- [x] **The novelty sentence is narrowed, because the search defeated part of
+      it.** Ranking remediation actions and gating them on a risk criterion are
+      both now published: a constrained-MDP formulation bounds a false-remediation
+      rate and rejects repairs on blast radius, reversibility and epistemic
+      uncertainty \[dai2026saferemediation\], and a conformal gate admits an Open
+      RAN action only when its whole prediction set lies in the safe region
+      \[zhang2026opentwin\]. The claim now rests on the third element alone --
+      executing the rejected actions from the decision's own state -- which
+      nothing found does. "No prior approach" became a statement about that
+      element, not about the conjunction.
+- [ ] **Read both 2026 preprints in full before submission.** They were assessed
+      from their abstracts and stated evaluations. Supplement Table S1's rule is
+      that a capability is denied only where the work was read and it was absent,
+      so neither was given a row there, and the main text says only what the
+      abstracts establish. If a full reading shows either executes rejected
+      alternatives, the gap claim has to change again.
 - [ ] **Three entries still open after the 2026-10-05 verification sweep.** All
       nineteen were checked against the record; none is invented and none has a
       wrong author list, venue or page range. Three could not be settled from
@@ -84,6 +94,13 @@ Expect this to add 0.2--0.4 page. It happens **before** Gate 5.
       lineage and vocabulary. Text reused from your own unpublished or published
       work has to be rewritten or cited, not carried over.
 
+      *This box was ticked on 2026-10-06 and has been un-ticked. Nothing in the
+      repository records the comparison being made, and it is a check only an
+      author can perform. If you did it, tick it again and say against which
+      manuscripts; if you have not, it is still open. A checklist that records an
+      unperformed verification is the failure this project exists to avoid, and
+      it would be a strange one to commit in this paper of all papers.*
+
 ## Gate 3 -- authorship
 
 - [ ] R. Zinko confirms co-authorship, the affiliation as printed, and the author
@@ -104,8 +121,12 @@ Expect this to add 0.2--0.4 page. It happens **before** Gate 5.
       which file designation. Neither ComSoc policy page documents it. The main
       text is written so that no claim in it requires the supplement to be
       assessed, which is the insurance; confirm anyway.
-- [ ] Check the submission form's abstract word limit against the current
-      abstract.
+- [x] Abstract length checked against the policy, not the submission form.
+      TNSM requires "a 75 to 200 word abstract"; the rendered abstract is **175
+      words** (counted from `pdftotext main.pdf`, which is the form the editor
+      sees). The 232-word abstract this replaced was over the limit, and that is
+      a formal violation this checklist had listed and nobody had executed.
+      Re-count after any further edit: the margin is 25 words.
 - [ ] **Re-publish the derived data (Zenodo 0.3).** Version 0.2 is defective and
       must be superseded: the packaging script copied every generated table and so
       shipped two files captioned "Placeholder --- No Experiment Has Been Run"

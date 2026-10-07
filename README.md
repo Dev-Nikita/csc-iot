@@ -9,7 +9,7 @@ predict that one is likely. Neither tells you what a *specific* recovery action
 would do to *this* system, or whether taking it is worth the disruption. The
 machinery here makes that checkable: a reconstructible **fork-and-replay**
 environment with exact, transport-quiescent anchors. From the same decision state
-and deterministic input specification, every candidate action is executed in its
+and deterministic input specification, each benchmark action is executed in its
 own branch while residual runtime nondeterminism is measured, so a predicted
 ranking is scored against outcomes that were actually observed.
 
@@ -24,8 +24,8 @@ it was tested:
 2. **The capacity of a path carrying no traffic is not identifiable from
    telemetry of the path in use.** The structural predictor reproduces 96 of 101
    resolvable signs, and every failure is a rerouting onto a target degraded
-   unobservably. No instrumentation removes this; the quantity is unsampled
-   rather than under-sampled.
+   unobservably. Finer measurement of the path in use cannot remove this; the
+   target requires a configured value, an active probe, or its own health report.
 3. **The resource cost of an action is not identifiable from container
    accounting dominated by idle work.** Recruiting a second node moves the
    measured figure by 0.0001.
