@@ -101,6 +101,41 @@ Expect this to add 0.2--0.4 page. It happens **before** Gate 5.
       unperformed verification is the failure this project exists to avoid, and
       it would be a strange one to commit in this paper of all papers.*
 
+## Gate 2c -- raised by the 2026-10-12 independent review
+
+- [x] **Reference [24] corrected.** The review found that the published PDF's
+      title page lists six authors and the entry carried five. Verified: the
+      USENIX catalogue page omits Aurojit Panda, the title page does not. Fixed in
+      `references.bib` and `docs/literature.csv`, with the reason recorded there.
+      A publisher's catalogue page is not the paper.
+- [x] **The three limits are no longer presented as one kind.** Limits 1 and 2 are
+      structural -- distinct configurations give the same observation, or the
+      quantity does not enter it. Limit 3 is a resolution limit: the quantity does
+      move the measurement, by 0.0001, and is dominated by a term independent of
+      the action. Section V-G now says so, and the contributions define the term
+      where it is first claimed. This was the review's strongest point.
+- [x] **The AI statement no longer reads as self-contradictory.** It now
+      distinguishes writing code from generating data explicitly.
+- [ ] **Confirm the Zenodo record resolves and lists its files.** The review
+      reported it could not retrieve the archive contents through the DOI; this
+      environment was rate-limited and could not check either. Open
+      `https://doi.org/10.5281/zenodo.23165225` yourself, confirm the files are
+      listed and downloadable, and confirm the description does not imply that raw
+      branch logs are public when they are not.
+- [ ] **Register and record ORCID for both authors.** The review states TNSM
+      requires it. The ComSoc policy pages this environment could read do not
+      mention ORCID, so the requirement is unconfirmed here -- but it costs nothing
+      and IEEE asks for it at submission.
+- [ ] **Decision overhead.** Still not measured, and it is the most obvious
+      reviewer question about a runtime mechanism. A single instrumented run on
+      the existing testbed would answer it. Either do it or state in the Discussion
+      why it is out of scope for a decision-quality study.
+- [ ] **An independent audit of the CRC construction** -- that the finite-sample
+      rule applies to this run-level loss and to taking the largest admissible
+      threshold, and that adaptive selection from the admissible set is covered
+      under every realised fallback. The guarantee is stated conservatively, but
+      it has not been checked by anyone outside this work.
+
 ## Gate 3 -- authorship
 
 - [ ] R. Zinko confirms co-authorship, the affiliation as printed, and the author
