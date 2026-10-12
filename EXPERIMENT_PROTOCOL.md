@@ -702,3 +702,45 @@ verified at the source, and an unverifiable entry is dropped, not guessed.
 on failure identifiability by Boolean network tomography (IEEE/ACM ToN 2020), so
 the paper is not presenting the idea that telemetry may not determine a quantity
 as if it were new.
+
+## Amendment 0.34 (2026-10-12) -- an independent review found a wrong author list and one overreach
+
+**The author list of [24] was wrong, and the way it got wrong is worth recording.**
+The entry was taken from the USENIX catalogue page, which lists five authors for
+"Minimizing Faulty Executions of Distributed Systems". The published PDF's title
+page lists six: Aurojit Panda is on the paper and not in the catalogue. Verified
+directly against the title page and corrected in `references.bib` and
+`docs/literature.csv`. **A publisher's catalogue page is not the paper.** Every
+future entry takes its author list from the title page where one is reachable.
+
+**The three limits were being presented as one kind of thing, and they are not.**
+Limits 1 and 2 are structural: cumulative counters are a function of the arrival
+rate and the epoch index alone, so distinct onset-severity pairs give the same
+observation; and the capacity of a path carrying nothing does not enter the
+observation of the path in use at all. In both, the observation does not determine
+the quantity, which is non-identifiability in the strict sense. Limit 3 is not
+that. The resource component does respond to recruiting a node -- by 0.0001 -- and
+the obstruction is that the response is negligible beside a term independent of
+the action. That is a resolution limit, and calling it the same thing as the first
+two invites a reviewer to answer that all three are measurement limitations.
+Section V-G now draws the distinction where the third limit is claimed, and the
+contributions define the term where it is first used. The title is unchanged: the
+claim it makes is true of all three under the definition now given.
+
+**The AI statement read as if it contradicted itself.** It said the assistant
+wrote the analysis scripts and then that no result was produced by an AI system.
+Both are true, and the distinction -- writing code that is executed, versus
+emitting a number in place of a measurement -- is now on the page rather than left
+to the reader.
+
+**What the review asked for that this environment cannot do, recorded as gates
+rather than silently skipped.** Confirming the Zenodo record resolves and lists
+its files (the fetch was rate-limited here and the reviewer also failed to read
+it); registering ORCID for both authors; measuring decision overhead, which is
+still the most obvious question about a runtime mechanism; and an independent
+audit of the conformal-risk-control construction, which is stated conservatively
+but has been checked by nobody outside this work.
+
+**Page budget.** Taking R1, R2 and R4 from the revision reserve brought the last
+page to 624 words of roughly a thousand, so about 0.38 page is free. Two
+biographies at camera-ready take roughly 0.3. R3 remains unspent.
