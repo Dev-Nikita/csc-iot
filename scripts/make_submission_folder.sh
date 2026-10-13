@@ -17,7 +17,7 @@ for f in table_bands_merged table_prediction table_bands_single \
          table_bands_factored table_spanning table_runs; do
   cp "$src/generated_tables/$f.tex" "$dst/generated_tables/"
 done
-for keep in README.md cover_letter.md; do
+for keep in README.md cover_letter.md cover_letter.docx; do
   [ -f "$src/submission-ready-keep/$keep" ] && cp "$src/submission-ready-keep/$keep" "$dst/"
 done
 cd "$dst"

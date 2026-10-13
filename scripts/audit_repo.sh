@@ -351,6 +351,24 @@ if [ -f paper/main.tex ]; then
         cmp -s "paper/$f" "paper/submission-ready/$f" || exit 1
       done'
   fi
+  # The archive DOI printed in the paper once pointed at version 0.1 in three
+  # documents at once, and the correction was then undone: the cover letter was
+  # fixed in paper/submission-ready/, which make_submission_folder.sh wipes and
+  # re-copies from submission-ready-keep/. Editing a generated file is not an
+  # edit. This greps every document a reader can receive for the superseded
+  # version DOI, so the next person to fix the wrong copy is told about it.
+  chk "no superseded archive DOI in any document" bash -c '
+    hits=$(grep -rln "zenodo\.23165225" \
+             paper/main.tex paper/supplement.tex \
+             paper/submission-ready-keep paper/submission-ready \
+             README.md CITATION.cff 2>/dev/null || true)
+    if [ -n "$hits" ]; then
+      echo "these name version 0.1 instead of the concept DOI 10.5281/zenodo.23165224:" >&2
+      echo "$hits" >&2
+      echo "the cover letter source is paper/submission-ready-keep/cover_letter.md," >&2
+      echo "not the generated copy under paper/submission-ready/." >&2
+      exit 1
+    fi'
   # Grepping the LaTeX log does not catch this: a \cite in a document with no
   # bibliography at all raises no warning, it just typesets [?]. Read the PDF.
   if command -v pdftotext >/dev/null 2>&1; then

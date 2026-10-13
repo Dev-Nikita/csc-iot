@@ -950,3 +950,38 @@ make the build pass. The check now refuses only `0.1174` appearing on a line
 *without* `0.1011`, which is a stale reading rather than a documented one, and
 the refusal prints the offending line numbers. Tested both ways before being
 committed.
+
+## Amendment 0.39 (2026-10-13) -- the DOI correction was undone by editing a generated file
+
+**A fix that did not survive its own build step.** Amendment 0.35 recorded that
+the archive DOI was corrected in the manuscript, the README and the cover letter.
+Two of those held. The third did not: the cover letter was edited in
+`paper/submission-ready/`, which is a *generated* directory --
+`make_submission_folder.sh` deletes it and re-copies the letter from
+`paper/submission-ready-keep/`. Every rebuild since has quietly restored the
+version-0.1 DOI, and the submission package carried it until a third-party review
+read the letter and found it. The protocol says a correction is not made until it
+is made where the file comes from; this is the first time that rule was broken by
+me rather than by a tool.
+
+**Fixed at the source, and guarded.** The letter's source now carries the concept
+DOI with the version named. `scripts/audit_repo.sh` gained
+*no superseded archive DOI in any document*: it greps the manuscript, the
+supplement, both submission directories, the README and `CITATION.cff` for
+`zenodo.23165225`, and on a hit prints the files and the sentence that would have
+saved an hour -- that the cover letter's source is `submission-ready-keep/`, not
+the generated copy. Tested in both directions before being committed: it fails on
+a planted occurrence and passes once removed.
+
+**Why a grep for one dead identifier is worth a permanent check.** It is not
+about this DOI. Three documents named the wrong archive version for a week, the
+correction was applied to a build artifact, and nothing in a successful build
+said so -- the same shape as the placeholder tables that reached version 0.2 and
+the eight `[?]` citations in a cleanly compiling supplement. The cheap guard goes
+in where the expensive lesson was learned.
+
+**A Word version of the letter.** ScholarOne takes a cover letter as pasted text
+or as a file; `cover_letter.docx` is now generated beside the Markdown source and
+copied into the submission folder, one page, with the same text. The Markdown
+remains the source of record: if the letter changes, change the Markdown and
+rebuild the Word file, not the other way round.

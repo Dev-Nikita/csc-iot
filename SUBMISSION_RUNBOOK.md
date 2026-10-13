@@ -285,12 +285,17 @@ From `paper/submission-ready/`:
 |---|---|
 | `main.pdf` | Main Document |
 | `supplement.pdf` | Supplementary Material (confirm the designation in Step 5) |
-| `cover_letter.md` → paste as text | Cover Letter |
+| `cover_letter.docx` | Cover Letter (or paste `cover_letter.md` as text) |
 
 Do **not** upload: the `.tex` sources (not at submission; they are asked for at
 acceptance), `PRESUBMISSION.md`, `EXPERIMENT_PROTOCOL.md`, the data tarball.
 The protocol and the data reach reviewers through the Zenodo DOI in the paper,
 which is the point of having it.
+
+If you edit the letter, edit `paper/submission-ready-keep/cover_letter.md` — the
+copy under `paper/submission-ready/` is generated and is overwritten on every
+rebuild. That is how the DOI correction was lost once already; the audit now
+catches it.
 
 Form fields that are easy to get wrong:
 
