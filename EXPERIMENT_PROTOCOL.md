@@ -744,3 +744,83 @@ but has been checked by nobody outside this work.
 **Page budget.** Taking R1, R2 and R4 from the revision reserve brought the last
 page to 624 words of roughly a thousand, so about 0.38 page is free. Two
 biographies at camera-ready take roughly 0.3. R3 remains unspent.
+
+## Amendment 0.35 (2026-10-13) -- the archive DOI pointed at version 0.1, and the two closest works have now been read
+
+**The DOI printed in the paper was the wrong one, and it had been wrong in three
+documents at once.** A second independent review reported a mismatch between the
+Zenodo DOI in the manuscript and the one in the cover letter. There was no
+mismatch between those two documents: both printed
+`10.5281/zenodo.23165225`, as did the README. Zenodo itself could not be reached
+from the working environment (HTTP 429), so the identifiers were read from the
+DataCite metadata API, which settles what each one is:
+`...23165224` is the concept DOI covering all versions, `...23165225` is version
+**0.1**, `...23169891` is 0.2, and `...23321904` is version 0.3, issued
+2026-10-12. The paper was therefore directing a reader to version 0.1 -- which
+predates the corrected prediction table and the A2 row -- as the archive backing
+its figures. All three documents now print the concept DOI and name version 0.3
+explicitly, so the identifier survives the next release instead of freezing on a
+superseded one. Consistency across documents is not correctness; here it only
+meant the same error three times.
+
+**ORCID is required, and this protocol had recorded the opposite.** Amendment
+0.34 recorded the requirement as unconfirmed because the ComSoc policy pages read
+at the time did not mention it. The TNSM submission page states that all IEEE
+publications require an ORCID for all authors, and that a registered ORCID is
+needed to submit a manuscript or review a proof. It is a blocker on the
+submission form.
+
+**The two closest prior works have been read in full, and the novelty claim
+survives for a reason that can be checked.** Both were previously assessed from
+their abstracts, which is why they were kept out of the capability table: that
+table's rule is that a mark is withheld only where the work was read. They now
+have rows, and supplement S2 states the grounds.
+- Risk-constrained remediation learns its policy entirely from logged decision
+  data. Candidate actions *are* executed, which the abstract did not say, but
+  only while the labelled dataset is built and each in an isolated replica after
+  a full state reset; at decision time the alternatives are valued by learned
+  estimators, and the escalation gate is trained without counterfactual labels.
+  A reset is not a fork from the state at which a decision was taken, no
+  equivalence between compared starting states is checked, and the reported
+  variance does not separate environment noise from training noise.
+- OpenTwin scores candidate actions in a calibrated forward model and explicitly
+  not on the network. Its gate updates an admission radius online against the
+  realised error, which bounds a long-run average false-approval rate, where the
+  rule used here is a finite-sample bound on an exchangeable calibration set.
+  Their own results show the difference: under short post-onset windows the
+  coverage they report falls to 0.843 and 0.852 against a 0.90 target.
+- OpenTwin also reports, independently of this work, that matching telemetry does
+  not establish that a configuration was recovered. That is this paper's first
+  limit arrived at from the other direction, and the manuscript now says so. It
+  is the strongest external support the identifiability sections have.
+
+**The transcription check learned to tell a quoted figure from a measurement.**
+Writing another group's coverage figures into the supplement failed the check,
+correctly: it asserts that every decimal in prose is in `RESULTS.md`, which
+records what this project ran. The fix is not an exception list. A figure may now
+be declared as quoted from a cited work, and the check accepts it only in a
+sentence that cites that work -- so the mechanism cannot pass one of our own
+numbers, and it caught the first draft of the sentence, where the citation sat in
+the sentence before. Declared figures are printed on every successful run.
+
+**Bibliography: two open items closed, one narrowed.**
+- The Digital Twin Networks survey had been seen only in another paper's
+  reference list. Its DOI now resolves, through OpenAlex, to a record whose
+  title, three authors in order, journal, volume, issue, page range and year
+  match the entry field for field. Closed.
+- The two 2026 preprints in the self-healing line carry no journal reference,
+  DOI or acceptance note on their listings as of today, so the arXiv entries are
+  the citable ones. Re-check at proof.
+- FIRE remains open but narrower. The arXiv listing (v4, 2025-10-19) gives eight
+  authors in the order cited and carries no journal reference, so the preprint is
+  the citable version and the six-author third-party index does not override the
+  paper's own title page. Whether IEEE Xplore document 11223793 is a published
+  version cannot be determined from this environment.
+
+**Page budget, measured rather than estimated.** The additions above cost about
+0.12 page, bringing the last page to 748 words of roughly a thousand. Rather than
+estimate whether biographies then fit, a camera-ready build was made with two
+biographies of realistic length: the manuscript stays at **10 pages**, both
+without photographs (844 words on the last page) and with the photograph space
+reserved (852). The reviewer's advice not to cut another half page on an estimate
+was right. R3 remains unspent.

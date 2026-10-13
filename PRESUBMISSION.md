@@ -49,24 +49,37 @@ This gate is otherwise still open on the first item.
       executing the rejected actions from the decision's own state -- which
       nothing found does. "No prior approach" became a statement about that
       element, not about the conjunction.
-- [ ] **Read both 2026 preprints in full before submission.** They were assessed
-      from their abstracts and stated evaluations. Supplement Table S1's rule is
-      that a capability is denied only where the work was read and it was absent,
-      so neither was given a row there, and the main text says only what the
-      abstracts establish. If a full reading shows either executes rejected
-      alternatives, the gap claim has to change again.
-- [ ] **Three entries still open after the 2026-10-05 verification sweep.** All
+- [x] **Both 2026 preprints read in full (2026-10-13).** The gap claim survives,
+      and now for a checkable reason rather than for want of a reading. One does
+      execute candidate actions -- which its abstract did not say -- but only
+      while its training set is built, each in an isolated replica after a full
+      state reset, and at decision time its alternatives are valued by learned
+      estimators. The other scores candidates in a calibrated forward model and
+      states that it does not run them on the network. Neither verifies that
+      compared branches start from the same state, and neither reports how much
+      of a measured difference between actions is nondeterminism. Both now have
+      rows in Table S1, S2 states the grounds for every mark, and the main text's
+      gap sentence names what each one does instead of asserting a negative.
+      Amendment 0.35 records it. One of them also reports independently that
+      matching telemetry does not establish configuration recovery, which is
+      this paper's first limit from the other direction and is now cited where
+      the limits are introduced.
+- [ ] **One entry still open after two verification sweeps** (was three). All
       nineteen were checked against the record; none is invented and none has a
       wrong author list, venue or page range. Three could not be settled from
       here and need a check on IEEE Xplore, which this environment cannot read:
-      - `siew2022fire`: dblp lists **six** authors, the arXiv metadata lists
-        **eight**, and Xplore document 11223793 looks like a published version in
-        IEEE Trans. Mobile Computing. Fix the author list and switch to the
-        published citation if it exists.
-      - `wu2021dtn`: the only record seen was another paper's reference list.
-        Confirm DOI 10.1109/JIOT.2021.3079510 on Crossref or Xplore.
-      - `ye2026nesyedge`: possibly in the 2026 IEEE EDGE proceedings. Unconfirmed,
-        so do not change it until seen.
+      - `siew2022fire`: STILL OPEN, narrowed. The arXiv listing (v4, 2025-10-19)
+        gives the eight authors in the order cited and carries no journal
+        reference, so the preprint is the citable version and the six-author
+        third-party index does not override the paper's own front matter.
+        Whether Xplore document 11223793 is a published version still cannot be
+        read from here; check it at proof.
+      - `wu2021dtn`: CLOSED 2026-10-13. The DOI resolves to a record whose
+        title, three authors in order, journal, volume 8, issue 18, pages
+        13789-13804 and year match the entry field for field.
+      - `ye2026nesyedge`: CLOSED for now. Its listing carries no journal
+        reference, DOI or acceptance note, so the suspected IEEE EDGE 2026
+        version is not announced; re-check at proof.
       Settled and already applied: `gibbs2021aci` now cites the NeurIPS 2021
       record rather than the preprint; `bonilla2026slr` carries the author
       spellings and article number the Crossref record has;
@@ -116,20 +129,41 @@ Expect this to add 0.2--0.4 page. It happens **before** Gate 5.
       where it is first claimed. This was the review's strongest point.
 - [x] **The AI statement no longer reads as self-contradictory.** It now
       distinguishes writing code from generating data explicitly.
-- [ ] **Confirm the Zenodo record resolves and lists its files.** The review
-      reported it could not retrieve the archive contents through the DOI; this
-      environment was rate-limited and could not check either. Open
-      `https://doi.org/10.5281/zenodo.23165225` yourself, confirm the files are
-      listed and downloadable, and confirm the description does not imply that raw
-      branch logs are public when they are not.
-- [ ] **Register and record ORCID for both authors.** The review states TNSM
-      requires it. The ComSoc policy pages this environment could read do not
-      mention ORCID, so the requirement is unconfirmed here -- but it costs nothing
-      and IEEE asks for it at submission.
+- [x] **The archive DOI printed in the paper was the wrong one.** Zenodo was
+      unreachable from here, so the identifiers were read from the DataCite
+      metadata API instead, which settles it: `10.5281/zenodo.23165224` is the
+      concept DOI (all versions), `...23165225` is version **0.1**,
+      `...23169891` is 0.2 and `...23321904` is 0.3, published 2026-10-12. The
+      manuscript, the cover letter and the README all printed `...23165225` --
+      that is, they pointed a reader at version 0.1, which predates the corrected
+      prediction table, rather than at the data that backs the figures. Now
+      corrected everywhere to the concept DOI, with version 0.3 named explicitly.
+      The 2026-10-13 review called this a mismatch between the manuscript and the
+      cover letter; there was no mismatch between those two documents -- both were
+      consistently wrong in the same way, which is worse.
+- [ ] **Confirm by eye that version 0.3 lists and serves the right files.** The
+      DataCite record carries no file manifest and Zenodo itself refused this
+      environment (HTTP 429). Open `https://doi.org/10.5281/zenodo.23321904`,
+      confirm the files are listed and downloadable, confirm `RESULTS.md` in the
+      package is the current one and that no file captioned "Placeholder" is in
+      it, and confirm the description does not imply that raw branch logs are
+      public when they are not.
+- [ ] **Register and record ORCID for both authors. Confirmed required.** The
+      TNSM submission page states: "All IEEE publications require an Open
+      Researcher and Contributor ID (ORCID) for all authors," and that a
+      registered ORCID is needed to submit a manuscript or review a proof. An
+      earlier note here recorded this as unconfirmed; it is confirmed, and it is a
+      hard blocker on the submission form, not a recommendation.
 - [ ] **Decision overhead.** Still not measured, and it is the most obvious
       reviewer question about a runtime mechanism. A single instrumented run on
       the existing testbed would answer it. Either do it or state in the Discussion
-      why it is out of scope for a decision-quality study.
+      why it is out of scope for a decision-quality study. If it is measured,
+      report the online path only -- feature extraction, the RPC, the model, the
+      counterfactual scoring and the gate -- with p50/p95/p99 and a deadline-miss
+      rate, and keep the offline fork-and-replay benchmark out of that figure:
+      replay is how the decisions were *evaluated*, and charging its cost to the
+      online decision would overstate the latency by orders of magnitude. The
+      2026-10-13 review raised this distinction and it is the right one.
 - [ ] **An independent audit of the CRC construction** -- that the finite-sample
       rule applies to this run-level loss and to taking the largest admissible
       threshold, and that adaptive selection from the admissible set is covered
@@ -149,9 +183,14 @@ Expect this to add 0.2--0.4 page. It happens **before** Gate 5.
       DOI, author contributions, AI use.
 - [x] Biographies deliberately absent: IEEE collects biosketches with the final
       files on acceptance.
-- [ ] **Reserve about 0.3 page for them in the camera-ready budget.** TNSM counts
-      biographies and author pictures inside the ten pages it provides free of
-      charge, so removing them now defers the space, it does not create it.
+- [x] **Measured, not estimated: they fit.** TNSM counts biographies and author
+      pictures inside the ten free pages, so removing them now defers the space
+      rather than creating it -- which is why the fit was built rather than
+      guessed. A camera-ready build with two biographies of realistic length
+      stays at 10 pages both without photographs (844 words on the last page of
+      roughly a thousand) and with the photograph space reserved (852). Rebuild
+      this test after any further growth of the main text; the slack is about
+      150 words, not a page.
 - [ ] Confirm in ScholarOne that TNSM accepts supplementary material, and under
       which file designation. Neither ComSoc policy page documents it. The main
       text is written so that no claim in it requires the supplement to be
