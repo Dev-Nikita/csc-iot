@@ -141,13 +141,26 @@ Expect this to add 0.2--0.4 page. It happens **before** Gate 5.
       The 2026-10-13 review called this a mismatch between the manuscript and the
       cover letter; there was no mismatch between those two documents -- both were
       consistently wrong in the same way, which is worse.
-- [ ] **Confirm by eye that version 0.3 lists and serves the right files.** The
-      DataCite record carries no file manifest and Zenodo itself refused this
-      environment (HTTP 429). Open `https://doi.org/10.5281/zenodo.23321904`,
-      confirm the files are listed and downloadable, confirm `RESULTS.md` in the
-      package is the current one and that no file captioned "Placeholder" is in
-      it, and confirm the description does not imply that raw branch logs are
-      public when they are not.
+- [x] **The package itself is verified -- independently, file by file.** The
+      tarball built by `scripts/package_reported_matrices.sh` on 2026-10-13 was
+      extracted and checked away from the host that produced it:
+      all **17** `SHA256SUMS` lines `OK`; `jobs.csv` row counts
+      6210 + 1800 + 108 = **8118**, each matching its own `branch_index.txt`;
+      no file containing "Placeholder" or "No Experiment Has Been Run"; six
+      generated tables present; `RESULTS.md` and `EXPERIMENT_PROTOCOL.md`
+      present. Two reported figures were then recomputed from `jobs.csv` alone,
+      without the analysis scripts: the NO_OP-to-REROUTE gap in $J$ is
+      **0.0445** and the implied crossing price **0.667**, both exactly as
+      printed; the resource movement is 0.000057, which is the 0.0001 the paper
+      reports at four decimals. The archive does back the paper.
+- [ ] **Upload that tarball as a new Zenodo version, then confirm the record.**
+      The verified package is `dist/csc-iot-data.tar.gz` (470 KB), already copied
+      to the Mac. Zenodo record -> New version -> upload -> publish. It mints a
+      new version DOI, which changes nothing in the manuscript: the paper cites
+      the concept DOI `10.5281/zenodo.23165224`, which resolves to the newest
+      version. Afterwards open the record and confirm the files are **listed and
+      downloadable** -- that is the one thing a verified local tarball does not
+      prove, because a failed or partial upload looks like nothing from here.
 - [ ] **Register and record ORCID for both authors. Confirmed required.** The
       TNSM submission page states: "All IEEE publications require an Open
       Researcher and Contributor ID (ORCID) for all authors," and that a

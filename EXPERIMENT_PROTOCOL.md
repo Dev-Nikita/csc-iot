@@ -924,3 +924,29 @@ rendered PDF for `[?]`, which is the failure no LaTeX warning reports -- it is
 how eight unresolved citations once reached a supplement that compiled cleanly.
 Install poppler there (`brew install poppler`) so the check runs on the machine
 where the PDFs are actually built.
+
+## Amendment 0.38 (2026-10-13) -- the archive verified off the host, and a check that cried wolf
+
+**The package was verified away from the machine that built it.** The tarball
+`scripts/package_reported_matrices.sh` produced was extracted on a different
+machine and checked without any of this repository's analysis code: 17 of 17
+`SHA256SUMS` lines `OK`; `jobs.csv` row counts of 6210, 1800 and 108 summing to
+8118, each equal to its own `branch_index.txt`; no file containing "Placeholder"
+or "No Experiment Has Been Run"; the six generated tables, `RESULTS.md` and
+`EXPERIMENT_PROTOCOL.md` present. Then two reported figures were recomputed from
+`jobs.csv` alone: the NO_OP-to-REROUTE gap in $J$ is 0.0445 and the implied
+crossing price 0.667, both exactly as printed, and the resource movement is
+0.000057, which is the reported 0.0001 at four decimals. A reader with the
+archive and no other access can reach the paper's numbers.
+
+**A check that cried wolf, and why it was the check that was wrong.** The
+packaging script asserted that the packaged `RESULTS.md` does not contain
+`0.1174`, the superseded reading of the time-only control. It does contain it --
+in the sentence that says the figure is now 0.1011 *and not* the 0.1174 of
+earlier drafts, pointing at amendments 0.27 to 0.29. A record that explains its
+own history is the entire point of keeping one, and a guard that forbids naming a
+corrected value would pressure the next person to delete the correction note to
+make the build pass. The check now refuses only `0.1174` appearing on a line
+*without* `0.1011`, which is a stale reading rather than a documented one, and
+the refusal prints the offending line numbers. Tested both ways before being
+committed.

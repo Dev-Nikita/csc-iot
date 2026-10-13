@@ -114,8 +114,12 @@ bash scripts/package_reported_matrices.sh
 It finds the three matrix roots itself, refuses if a reported matrix appears
 under no stack id or under more than one, and prints its own verification: the
 three roots with their branch counts, the tarball, the branch total (**must be
-8118**), the `RESULTS.md` check (`0.1011` present, `0.1174` absent) and a
-placeholder scan that must print nothing.
+8118**), the `RESULTS.md` check and a placeholder scan that must print nothing.
+
+Run 2026-10-13 and verified off the host: 17/17 checksums `OK`, 6210 + 1800 + 108
+= 8118 rows each matching its branch index, no placeholder, and the gap 0.0445
+and crossing 0.667 recomputed from `jobs.csv` alone. The tarball is 470 KB and is
+already in `~/Downloads`. **Only the upload is left.**
 
 Do not type a stack-id by hand. They are content-derived hashes, several of them
 look alike, and two of the directories under `data/raw` are a quarantine and a

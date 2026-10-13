@@ -53,11 +53,21 @@ echo
 echo "branch total across the three (must be 8118):"
 cat dist/zenodo-data/*/branch_index.txt | wc -l
 echo
-echo "RESULTS.md in the package must be the corrected one."
-echo "0.1011 occurrences (expect at least 1):"
-grep -c '0\.1011' dist/zenodo-data/RESULTS.md 2>/dev/null || echo "  RESULTS.md not in the package -- check make_data_package.sh"
-echo "0.1174 occurrences (expect 0):"
-grep -c '0\.1174' dist/zenodo-data/RESULTS.md 2>/dev/null || true
+# The packaged RESULTS.md must be the corrected one. Checking that 0.1174 is
+# absent was wrong: the file documents the correction in a sentence that names
+# both figures, and a record that explains its own history is the point of having
+# one. What must not appear is 0.1174 WITHOUT 0.1011 beside it -- that is a stale
+# reading rather than a documented one.
+r=dist/zenodo-data/RESULTS.md
+[ -f "$r" ] || { echo "REFUSED: RESULTS.md is not in the package" >&2; exit 1; }
+grep -q '0\.1011' "$r" || { echo "REFUSED: $r does not carry the corrected time-only control (0.1011)" >&2; exit 1; }
+stale=$(grep -n '0\.1174' "$r" | grep -v '0\.1011' || true)
+if [ -n "$stale" ]; then
+  echo "REFUSED: $r states the superseded 0.1174 outside the correction note:" >&2
+  echo "$stale" >&2
+  exit 1
+fi
+echo "RESULTS.md: corrected (0.1011 present; 0.1174 only in the correction note)"
 echo
 echo "placeholder scan (must print nothing):"
 grep -rl "No Experiment Has Been Run" dist/zenodo-data || true
