@@ -880,3 +880,47 @@ against the 75-200 limit. The margin is 14 words, not 25.
 **Page budget is now the binding constraint.** With the camera-ready biography
 test rebuilt after these edits the paper is still 10 pages, but the last page
 holds 969 words of roughly a thousand. The next addition of any size spends R3.
+
+## Amendment 0.37 (2026-10-13) -- a runbook command with a placeholder in it is a command that gets pasted
+
+**What happened.** The runbook's packaging step read
+`data/raw/<stack-id>/b5-matrix-v2`, expecting the reader to substitute three
+hashes found by eye from a listing of twenty-three directories. It was pasted
+verbatim, three times. Bash read `<stack-id>` as a redirection from a file that
+does not exist, the packager never ran, and the `tar` and `scp` that followed
+failed against a `dist/` that was never created. No data was harmed and nothing
+reached the archive, which is the only reason this is an amendment about
+documentation rather than about a corrupted release.
+
+**Why the placeholder was the defect and not the paste.** The stack-id
+directories are content-derived hashes; several differ only in the middle. Two of
+the entries under `data/raw` are `_quarantine` and a legacy copy that must never
+be packaged. Asking a person to transcribe one of twenty-three hashes into three
+positions, under time pressure, with two traps in the listing, is asking for the
+wrong directory to be packaged eventually -- and the failure mode of *that* is
+silent: a figure attributed to a substrate that did not produce it.
+
+**The fix is a script, consistent with how this repository has handled every
+other such case.** `scripts/package_reported_matrices.sh` discovers the three
+reported matrix roots itself and refuses rather than guesses: a matrix name found
+under no stack id, or under more than one, stops the run with the candidates
+printed, because two copies under different stack ids means two substrates
+produced it. It then verifies what it built: the branch total against 8118, the
+packaged `RESULTS.md` for the corrected figure (`0.1011` present, `0.1174`
+absent), and a placeholder scan. The runbook step is now one command.
+
+**A real defect found while writing it.** `make_data_package.sh` copied
+`RESULTS.md` and `EXPERIMENT_PROTOCOL.md` with `2>/dev/null || true`, so a
+package built without `RESULTS.md` would have succeeded silently. The
+manuscript's transcribed tables are checked against that file and the supplement
+tells a reader the archive is what lets them recompute the reported figures. Both
+files are now required and their absence refuses the package. This is the same
+class of error as the placeholder tables that reached version 0.2: a packaging
+step that tolerates a missing input.
+
+**One check is being skipped on the laptop.** `make audit` on the Mac reports
+`skip  unresolved-citation check (pdftotext not installed)`. That check reads the
+rendered PDF for `[?]`, which is the failure no LaTeX warning reports -- it is
+how eight unresolved citations once reached a supplement that compiled cleanly.
+Install poppler there (`brew install poppler`) so the check runs on the machine
+where the PDFs are actually built.

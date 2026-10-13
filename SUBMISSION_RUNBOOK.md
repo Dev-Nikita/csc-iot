@@ -42,6 +42,15 @@ python3 paper/check_citations.py
 python3 paper/check_supplement_refs.py
 ```
 
+If the audit prints `skip  unresolved-citation check (pdftotext not installed)`,
+install poppler first — that skipped check is the one that catches a `[?]` in a
+rendered PDF, which no LaTeX warning reports:
+
+```bash
+brew install poppler
+make audit        # the line must now read ok, not skip
+```
+
 Expect, in order: `transcription check ok` (plus two lines marked QUOTED FROM A
 CITED WORK — those are OpenTwin's figures and are supposed to be there),
 `citation check passed (25 keys cited, 25 defined)`, `supplement reference check
@@ -81,7 +90,10 @@ Decide with Zinko whether he belongs there as a contributor to the code or data 
 the paper's author list and the archive's creator list are separate metadata.
 Zenodo lets you edit metadata without issuing a new version.
 
-### Step 1b — only if Step 1 failed (host, then web)
+### Step 1b — rebuild and re-upload the package (host, then web)
+
+Needed if Step 1 found anything wrong, and needed anyway if the package has no
+`RESULTS.md` or an old one.
 
 On the **Mac**, push the current tree to the host first, so the packaged
 `RESULTS.md` is the current one:
@@ -91,24 +103,25 @@ cd "$P"
 make deploy HOST=cybernord
 ```
 
-Then on the **host**:
+Then on the **host** — one command, no placeholders to fill in:
 
 ```bash
 ssh cybernord
 cd ~/csc-iot
-ls data/raw/                 # the stack-id directories; find the three matrix roots
-bash scripts/make_data_package.sh \
-  data/raw/<stack-id>/b5-matrix-v2 \
-  data/raw/<stack-id>/d45-matrix-v1 \
-  data/raw/<stack-id>/d6-pilot-v2
-tar -czf dist/csc-iot-data.tar.gz -C dist zenodo-data
-ls -la dist/
+bash scripts/package_reported_matrices.sh
 ```
 
-Each matrix root is the directory holding `matrix.json` and `jobs.csv`; the
-script refuses a root missing either rather than packaging half a matrix. The
-script refuses to finish if a placeholder file reaches the package, so a
-successful exit is itself part of the check. Copy the tarball back to the Mac:
+It finds the three matrix roots itself, refuses if a reported matrix appears
+under no stack id or under more than one, and prints its own verification: the
+three roots with their branch counts, the tarball, the branch total (**must be
+8118**), the `RESULTS.md` check (`0.1011` present, `0.1174` absent) and a
+placeholder scan that must print nothing.
+
+Do not type a stack-id by hand. They are content-derived hashes, several of them
+look alike, and two of the directories under `data/raw` are a quarantine and a
+legacy copy that must not be packaged — the script excludes both.
+
+Copy the tarball to the Mac:
 
 ```bash
 exit

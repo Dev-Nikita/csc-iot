@@ -50,7 +50,14 @@ if grep -rl 'Placeholder\|No Experiment Has Been Run' "$out" >/dev/null 2>&1; th
   grep -rl 'Placeholder\|No Experiment Has Been Run' "$out" >&2
   exit 1
 fi
-cp RESULTS.md EXPERIMENT_PROTOCOL.md "$out/" 2>/dev/null || true
+# RESULTS.md is not optional decoration: the manuscript's transcribed tables are
+# checked against it, and the supplement tells a reader the archive is what lets
+# them recompute the reported figures. `|| true` here once meant a package could
+# be built without it and nothing would say so.
+for f in RESULTS.md EXPERIMENT_PROTOCOL.md; do
+  [ -f "$f" ] || { echo "REFUSED: $f is missing from the working tree" >&2; exit 1; }
+  cp "$f" "$out/"
+done
 
 ( cd "$out" && find . -type f ! -name SHA256SUMS -print0 | sort -z \
     | xargs -0 shasum -a 256 > SHA256SUMS )
