@@ -824,3 +824,59 @@ biographies of realistic length: the manuscript stays at **10 pages**, both
 without photographs (844 words on the last page) and with the photograph space
 reserved (852). The reviewer's advice not to cut another half page on an estimate
 was right. R3 remains unspent.
+
+## Amendment 0.36 (2026-10-13) -- three claims scoped down after a second reading of the same review
+
+**The comparison with OpenTwin's coverage figures was too strong, and in a way
+that would have been caught by a referee.** The supplement said their realised
+coverage of 0.843 and 0.852 under short windows "is the behaviour a long-run
+average permits and a finite-sample bound on a held-out set does not." The second
+clause does not follow. The bound used here is on the expectation of a run-level
+loss over runs drawn from the calibration distribution; it constrains an
+expectation, not the realised rate inside any particular short window, and a
+short window here could fall below its level too. The two guarantees are stated
+in different units and neither dominates the other. The figures stay as their
+empirical result; the implication that this construction is immune to the same
+behaviour is removed. Quoting another group's weakest number and implying your
+own method excludes it is the kind of overreach this paper is about.
+
+**"Provably equivalent state" claimed more than the mechanism establishes.** The
+anchor protocol aborts unless queue content digests, retry sets with attempt
+counts and backoff deadlines, rate-limiter tokens, timeout deadlines, placement,
+replica state, fault phase and action history match exactly. That is a strong
+check on the state the implementation records; it is not a proof that no state
+outside that list exists. The abstract now says "a verified-equivalent state", the
+contributions say "verified equivalent in every future-relevant respect the
+recorded state exposes", and Section~IV states the bound explicitly: an
+engineering guarantee about this stack, not a theorem about distributed systems,
+with the residual-dispersion audit named as where unrecorded state would show up.
+For a software-emulated testbed the guarantee is defensible at that scope and
+indefensible at any wider one.
+
+**Supplement S9 had gone stale the moment version 0.3 was published.** It still
+said only that branch data for the three reported matrices is held on the analysis
+host and is not in the artifact repository, which was true before the upload and
+misleading after it. The wording now separates three things that were being
+collapsed: the derived data that *is* published (per-branch `jobs.csv`, run
+manifests, branch index, generated tables, SHA-256 sums -- enough to recompute
+every reported figure), the raw per-branch execution logs that are *not* (retained
+on the analysis host, available from the corresponding author), and what
+`RESULTS.md` holds (the aggregated readings the manuscript is transcribed
+against). If the uploaded package turns out to lack any of the four published
+items, this paragraph is the sentence that becomes false, and the presubmission
+gate says so.
+
+**Archive authorship.** The DataCite record for 0.3 lists one creator. That is
+separate metadata from the paper's author list, and if the second author
+contributed to the code or the data it should name him. Recorded as a gate; Zenodo
+metadata can be edited without issuing a new version.
+
+**Abstract word count was recorded wrong, in the safe direction.** The checklist
+said 175 words, counted with `pdftotext` over the whole first page -- which in a
+two-column layout interleaves the second column and is therefore not a count of
+the abstract at all. Counted properly, over the left column only, it is 186 words
+against the 75-200 limit. The margin is 14 words, not 25.
+
+**Page budget is now the binding constraint.** With the camera-ready biography
+test rebuilt after these edits the paper is still 10 pages, but the last page
+holds 969 words of roughly a thousand. The next addition of any size spends R3.

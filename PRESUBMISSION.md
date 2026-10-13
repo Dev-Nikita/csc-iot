@@ -187,47 +187,55 @@ Expect this to add 0.2--0.4 page. It happens **before** Gate 5.
       pictures inside the ten free pages, so removing them now defers the space
       rather than creating it -- which is why the fit was built rather than
       guessed. A camera-ready build with two biographies of realistic length
-      stays at 10 pages both without photographs (844 words on the last page of
-      roughly a thousand) and with the photograph space reserved (852). Rebuild
-      this test after any further growth of the main text; the slack is about
-      150 words, not a page.
+      stays at 10 pages with the photograph space reserved. **Re-measured
+      2026-10-13 after the scope and data-tier edits: still 10 pages, but the
+      last page now holds 969 words of roughly a thousand.** The slack is about
+      30 words. The next addition of any size spends R3 from the revision
+      reserve; do not add a sentence to the main text without rebuilding this
+      test. Test build: `/tmp/crtest` (biography filler of realistic length, not
+      real biographies).
 - [ ] Confirm in ScholarOne that TNSM accepts supplementary material, and under
       which file designation. Neither ComSoc policy page documents it. The main
       text is written so that no claim in it requires the supplement to be
       assessed, which is the insurance; confirm anyway.
 - [x] Abstract length checked against the policy, not the submission form.
-      TNSM requires "a 75 to 200 word abstract"; the rendered abstract is **175
-      words** (counted from `pdftotext main.pdf`, which is the form the editor
-      sees). The 232-word abstract this replaced was over the limit, and that is
-      a formal violation this checklist had listed and nobody had executed.
-      Re-count after any further edit: the margin is 25 words.
-- [ ] **Re-publish the derived data (Zenodo 0.3).** Version 0.2 is defective and
-      must be superseded: the packaging script copied every generated table and so
-      shipped two files captioned "Placeholder --- No Experiment Has Been Run"
-      into the archive of a paper reporting 8118 branches, and its `RESULTS.md`
-      predates the prediction figures and the A2 table. The script is fixed and
-      now refuses to finish if a placeholder reaches the package. Deploy to the
-      analysis host first so the packaged `RESULTS.md` is the current one, then
-      re-run it, then upload as a new Zenodo version.
-- [ ] (superseded) Publish the reported matrices' derived data.
-      Supplement S9 currently says the branch data for the three reported
-      matrices is held on the analysis host and is not in the artifact
-      repository. For a paper whose contribution is that an evaluation must be
-      auditable, that is an invitation to ask why the headline data is the part
-      that is missing. Run `scripts/make_data_package.sh` on the analysis host
-      over the three reported matrix roots; it packages `jobs.csv`, the run
-      manifests, a branch index, the generated tables and SHA-256 sums, and
-      leaves the raw logs where they are.
-- [ ] **Only after that upload**, replace the sentence in Supplement S9 and the
-      matching one in the main manuscript's data-availability statement. Until
-      the upload exists the current wording is the true one, and changing it
-      first would make the paper claim something that is not yet so. The
-      replacement:
-
-      > Derived per-branch outcome tables, run manifests and checksums for all
-      > three reported matrices are archived with the artifact; raw execution
-      > logs are retained on the analysis host and are available from the
-      > corresponding author.
+      TNSM requires "a 75 to 200 word abstract"; the rendered abstract is **186
+      words**, counted on 2026-10-13 from the left column of page 1 of the PDF:
+      `pdftotext -f 1 -l 1 -x 0 -y 0 -W 306 -H 792 main.pdf -`. The earlier
+      figure recorded here, 175, came from a count over the whole page, which in
+      a two-column layout interleaves the second column and is not a count of
+      the abstract; it was wrong in the safe direction. The 232-word abstract
+      this replaced was over the limit, and that was a formal violation this
+      checklist had listed and nobody had executed. Margin is now 14 words --
+      re-count after any edit to the abstract, with the command above.
+- [x] **Derived data re-published as Zenodo 0.3.** Version 0.2 was defective --
+      the packaging script copied every generated table and so shipped two files
+      captioned "Placeholder --- No Experiment Has Been Run" into the archive of a
+      paper reporting 8118 branches, and its `RESULTS.md` predated the prediction
+      figures and the A2 table. The script refuses to finish on a placeholder now.
+      Version 0.3 was issued 2026-10-12 (`10.5281/zenodo.23321904`, concept DOI
+      `...23165224`), which DataCite confirms. **Still to confirm by eye, and it is
+      not a formality:** that 0.3 actually lists and serves `jobs.csv`, the
+      manifests, the branch index, the generated tables and `SHA256SUMS`, that the
+      packaged `RESULTS.md` is the current one, and that no placeholder file is in
+      it. A registered DOI proves a record exists, not what is inside it.
+- [x] **Supplement S9 and the data-availability statement now separate the three
+      tiers.** They had said only that branch data for the three reported matrices
+      is held on the analysis host, which was true before the upload and stale
+      after it. The wording now distinguishes what is published (derived
+      per-branch tables, manifests, branch index, generated tables, SHA-256 sums
+      -- enough to recompute every reported figure), what is not (raw per-branch
+      execution logs, retained on the analysis host, available from the
+      corresponding author), and what `RESULTS.md` holds (the aggregated readings
+      the manuscript is transcribed against). Re-read this against the actual
+      contents of 0.3 when you check it: if the package lacks any of the four
+      published items, this wording is the thing that becomes false.
+- [ ] **Archive authorship.** The DataCite record for 0.3 lists one creator,
+      N. Tarasov. If R. Zinko contributed to the code or the data rather than to
+      the manuscript alone, the archive's creator list should say so; it is
+      separate metadata from the paper's author list and nobody checks it for you.
+      Raised by the 2026-10-13 review. Decide with him, then edit the Zenodo
+      record -- metadata can be edited without a new version.
 - [ ] Neither PDF contains `[?]`. Check with `pdftotext file.pdf - | grep '\[?\]'`,
       not by reading the LaTeX log: an undefined citation in a document with no
       bibliography at all produces no warning to grep for. That is how eight of
