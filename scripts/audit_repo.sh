@@ -369,10 +369,18 @@ if [ -f paper/main.tex ]; then
       echo "not the generated copy under paper/submission-ready/." >&2
       exit 1
     fi'
+  # Authorship and affiliation are the one class of fact nobody may invent, so
+  # they are carried as a named absence until the person named supplies them.
+  # The marker is loud in the rendered page AND refused here, because a draft
+  # with an unconfirmed author line is exactly the file that gets uploaded at
+  # one in the morning.
+  chk "no unconfirmed authorship placeholder in the source" bash -c '
+    ! grep -n "UNCONFIRMED{" paper/main.tex paper/supplement.tex 2>/dev/null'
   # Grepping the LaTeX log does not catch this: a \cite in a document with no
   # bibliography at all raises no warning, it just typesets [?]. Read the PDF.
   if command -v pdftotext >/dev/null 2>&1; then
     chk "no unresolved citation in the manuscript PDF"  bash -c '! pdftotext paper/main.pdf - 2>/dev/null | grep -q "\[?\]"'
+    chk "no unconfirmed authorship placeholder in the PDF" bash -c '! pdftotext paper/main.pdf - 2>/dev/null | grep -q "UNCONFIRMED"'
     chk "no unresolved citation in the supplement PDF"  bash -c '! pdftotext paper/supplement.pdf - 2>/dev/null | grep -q "\[?\]"'
     # A control word swallows the space after it, so "\SupImpl gives" typesets as
     # "S4gives". Four of these reached a PDF that compiled without a warning.

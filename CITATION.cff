@@ -2,13 +2,16 @@ cff-version: 1.2.0
 title: "Counterfactual Shadow Control (CSC)"
 message: "If you use this software or its experimental artifacts, please cite the accompanying paper once published."
 type: software
+# The creator list of the software archive is separate metadata from the paper's
+# author list: it names who contributed to the code and the data, which is not
+# automatically everyone on the manuscript. Decide each entry deliberately.
 authors:
   - family-names: Tarasov
     given-names: Nikita
     affiliation: "Lviv Polytechnic National University"
-    # orcid: TODO
+    # orcid: TODO -- required by IEEE for all manuscript authors; also add here
 license: MIT
-repository-code: "TODO"
+repository-code: "https://github.com/Dev-Nikita/csc-iot"
 abstract: >-
   Uncertainty-aware proactive self-healing for mobile edge IoT systems.
   Evaluates action-conditioned counterfactual futures before intervening,

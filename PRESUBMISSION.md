@@ -185,10 +185,29 @@ Expect this to add 0.2--0.4 page. It happens **before** Gate 5.
 
 ## Gate 3 -- authorship
 
+- [ ] **Four authors now, and three of the four gates below are theirs.**
+      V. Oksentiuk (Scopus 58178836600) and O. Oborska (Scopus 55816397200) were
+      added to the author list on 2026-10-16. Three things about them are
+      **unknown here and were not invented**; each is carried in the manuscript
+      as a loud `[UNCONFIRMED: ...]` marker that the repository audit refuses, so
+      the paper cannot be submitted until they are supplied:
+      - their **affiliations and e-mail addresses** (the thanks footnote);
+      - **what each of them contributed**, in their own words, for the author
+        contributions paragraph. IEEE and COPE authorship means a substantial
+        contribution, approval of the submitted version, and accountability for
+        it. A name added without a stated contribution is the thing editors ask
+        about, and this paper argues for its own evidence being checkable;
+      - the **Latin spelling of both names** as their Scopus profiles publish
+        them. "Oksentiuk" and "Oborska" here follow the official Ukrainian
+        transliteration; if Scopus indexes them as "Oksentyuk" or "Oborskaya",
+        match Scopus, or the published paper will not attach to their profiles.
 - [ ] R. Zinko confirms co-authorship, the affiliation as printed, and the author
       contributions paragraph.
-- [ ] Both authors read the AI-use statement and confirm it matches what actually
-      happened, including work done outside the sessions it was written from.
+- [ ] **All four** authors read the AI-use statement and confirm it matches what
+      actually happened, including work done outside the sessions it was written
+      from. Adding authors does not make this easier: each of them is
+      accountable for a declaration about work they did not watch, which is a
+      reason to show them the statement rather than summarise it.
 
 ## Gate 4 -- front and back matter
 
@@ -196,7 +215,14 @@ Expect this to add 0.2--0.4 page. It happens **before** Gate 5.
       DOI, author contributions, AI use.
 - [x] Biographies deliberately absent: IEEE collects biosketches with the final
       files on acceptance.
-- [x] **Measured, not estimated: they fit.** TNSM counts biographies and author
+- [x] **Re-measured for four authors: without photographs they fit, with
+      photographs they do not.** Four biographies of realistic length give
+      **10 pages** with `IEEEbiographynophoto` (page 10 at 1060 words of roughly
+      a thousand) and **11 pages** with the photograph space reserved, where page
+      11 carries only 47 words. So the choice at camera-ready is explicit: omit
+      the author photographs, or pay US$220 for one overlength page. Omitting
+      them is free and normal. Test build: `/tmp/crtest4`.
+- [x] **Earlier measurement, two authors, superseded by the line above.** TNSM counts biographies and author
       pictures inside the ten free pages, so removing them now defers the space
       rather than creating it -- which is why the fit was built rather than
       guessed. A camera-ready build with two biographies of realistic length

@@ -3,7 +3,7 @@
 One file, in order, copy-paste ready. Written 2026-09-27 at protocol 0.10.
 
 **Legend.** `[SERVER]` = paste on `cybernord`, in `~/csc-iot`. `[MAC]` = paste in
-the project folder on the laptop. `[CLAUDE]` = I do it, you do nothing.
+the project folder on the laptop. `[ASSISTED]` = I do it, you do nothing.
 
 **One rule that is worth more than it looks.** `make deploy` syncs with
 `rsync --delete`, so anything generated on the server inside a synced directory
@@ -239,7 +239,7 @@ is what it was.
 
 ---
 
-## Phase 2 — The decision layer  `[CLAUDE]`, runs in parallel with Phase 1
+## Phase 2 — The decision layer  `[ASSISTED]`, runs in parallel with Phase 1
 
 This is the largest piece of code still missing and it needs no server, so it
 gets written while the matrix runs. Nothing for you to do here.
@@ -358,7 +358,7 @@ scp cybernord:/tmp/b5v2-results.tgz ~/Downloads/
 
 ---
 
-## Phase 4 — Fill the paper  `[CLAUDE]`
+## Phase 4 — Fill the paper  `[ASSISTED]`
 
 With Phase 3's numbers I close the twelve remaining TODO blocks: six results
 subsections, the two figures, the abstract and the closing sentence. Tables come
@@ -391,7 +391,7 @@ appeared to fit. The style file is now inside `paper/`.
 
 ---
 
-## Phase 5 — Submission package  `[MAC]` and `[CLAUDE]`
+## Phase 5 — Submission package  `[MAC]` and `[ASSISTED]`
 
 ### 5.1 Two things only you can supply
 

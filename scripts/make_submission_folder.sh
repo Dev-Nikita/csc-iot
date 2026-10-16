@@ -8,6 +8,17 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 src=paper; dst=paper/submission-ready
+
+# Checked BEFORE the old folder is deleted: a refusal must leave the previous
+# package intact rather than a half-built one. An unconfirmed author line is not
+# a formatting problem, and this folder is the thing that gets uploaded.
+if grep -q 'UNCONFIRMED{' "$src/main.tex" 2>/dev/null; then
+  echo "REFUSED: main.tex still carries an UNCONFIRMED authorship placeholder." >&2
+  grep -n 'UNCONFIRMED{' "$src/main.tex" >&2
+  echo "Affiliations and author contributions come from the people named." >&2
+  exit 1
+fi
+
 rm -rf "$dst"; mkdir -p "$dst/figures" "$dst/generated_tables"
 cp "$src"/main.tex "$src"/supplement.tex "$src"/references.bib \
    "$src"/table_related.tex "$src"/table_scenarios.tex \

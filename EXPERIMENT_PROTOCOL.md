@@ -985,3 +985,47 @@ or as a file; `cover_letter.docx` is now generated beside the Markdown source an
 copied into the submission folder, one page, with the same text. The Markdown
 remains the source of record: if the letter changes, change the Markdown and
 rebuild the Word file, not the other way round.
+
+## Amendment 0.40 (2026-10-16) -- two authors added, and three facts about them that were not invented
+
+**Two authors were added to the manuscript**: V. Oksentiuk (Scopus 58178836600)
+and O. Oborska (Scopus 55816397200). The author line, the thanks footnote, the
+contributions paragraph and the cover letter were updated together.
+
+**Three facts about them are unknown here and are carried as a named absence.**
+Their affiliations and e-mail addresses, what each of them contributed, and the
+Latin spelling their Scopus profiles publish. Scopus refuses automated reading
+(robots), and the metadata API that would have answered the affiliation question
+was rate-limited, so none of it could be verified. None of it was guessed. A new
+`\UNCONFIRMED{...}` macro typesets each gap in bold inside the running text, and
+`scripts/audit_repo.sh` now refuses the repository while the macro appears in the
+source or the word reaches the rendered PDF. The audit therefore FAILS on purpose
+until the people named supply the facts about themselves.
+
+This is deliberately heavier than a TODO comment. A paper whose contribution is
+that an evaluation must be auditable cannot carry an invented affiliation or an
+invented contribution statement, and the failure mode for both is silent: nothing
+in a clean build says that a line about a person is fiction. The same reasoning
+produced the guards for placeholder tables, unresolved citations and the
+superseded DOI.
+
+**Authorship is a claim about contribution, not a courtesy.** IEEE and COPE
+require a substantial contribution, approval of the submitted version and
+accountability for it. The contributions paragraph now has a marked gap where
+each new author's contribution belongs, to be filled in their words and not in
+mine. Adding a name without that is what an editor asks about first.
+
+**The page budget changed shape, and the choice is now explicit.** Four
+biographies, measured rather than estimated: **10 pages without photographs**
+(page 10 at 1060 words of roughly a thousand) and **11 pages with the photograph
+space reserved**, page 11 carrying 47 words. At camera-ready the paper either
+omits the author photographs or pays US$220 for one overlength page. Omitting
+them costs nothing.
+
+**R3 was spent, and its estimate in the reserve was wrong.** The revision reserve
+claimed the determinism and replay-resolution prose could give back 120-170 words.
+Compressed without losing a fact -- the budget rule, the frozen budgets, the
+earlier 500 ms error and the non-monotonicity all now point at
+Supplement S5, where they are given in full -- it returned **28**. The reserve's
+remaining estimates should be read as optimistic by the same factor. What saved
+the page count was not the cut; it was dropping the photographs.
