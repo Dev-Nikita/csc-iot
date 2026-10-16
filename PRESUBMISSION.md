@@ -153,12 +153,24 @@ Expect this to add 0.2--0.4 page. It happens **before** Gate 5.
       **0.0445** and the implied crossing price **0.667**, both exactly as
       printed; the resource movement is 0.000057, which is the 0.0001 the paper
       reports at four decimals. The archive does back the paper.
+- [x] **The concept DOI does not resolve, so nothing published points at it.**
+      `10.5281/zenodo.23165224` is registered and DataCite reports it `findable`,
+      with a url of `https://zenodo.org/doi/10.5281/zenodo.23165224` and
+      `HasVersion` entries for every version. It still returned "DOI not found"
+      in a browser on 2026-10-16. Registered is not the test; opens is. The
+      manuscript, the supplement, the cover letter and the README now print
+      **`10.5281/zenodo.23321904`** (version 0.3), which is the only archive
+      identifier a person has actually opened, and which is in any case the
+      version that produced the figures -- citing the exact version is the better
+      practice for data. The audit refuses any other zenodo identifier in a
+      document a reader receives. If the concept DOI starts resolving later,
+      nothing needs to change.
 - [ ] **Upload that tarball as a new Zenodo version, then confirm the record.**
       The verified package is `dist/csc-iot-data.tar.gz` (470 KB), already copied
       to the Mac. Zenodo record -> New version -> upload -> publish. It mints a
       new version DOI, which changes nothing in the manuscript: the paper cites
-      the concept DOI `10.5281/zenodo.23165224`, which resolves to the newest
-      version. Afterwards open the record and confirm the files are **listed and
+      the version DOI `10.5281/zenodo.23321904`. The concept DOI is not used:
+      see the gate below. Afterwards open the record and confirm the files are **listed and
       downloadable** -- that is the one thing a verified local tarball does not
       prove, because a failed or partial upload looks like nothing from here.
 - [ ] **Register and record ORCID for both authors. Confirmed required.** The

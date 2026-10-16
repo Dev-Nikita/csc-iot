@@ -49,11 +49,15 @@ are the part that can be scooped before acceptance; they are added together with
 the camera-ready version once the paper is accepted. What is here is everything
 needed to re-run the work and check the numbers.
 
-Archived release: [10.5281/zenodo.23165224](https://doi.org/10.5281/zenodo.23165224)
-(all versions; latest is 0.3, [10.5281/zenodo.23321904](https://doi.org/10.5281/zenodo.23321904)).
-The manuscript cites the all-versions identifier. Versions 0.1 and 0.2 are
-superseded: 0.2 shipped two placeholder tables and 0.1 predates the corrected
-prediction table.
+Archived release: **[10.5281/zenodo.23321904](https://doi.org/10.5281/zenodo.23321904)**
+(version 0.3, <https://zenodo.org/records/23321904>). This is the identifier the
+manuscript cites and the one to use.
+
+The concept ("all versions") DOI `10.5281/zenodo.23165224` is registered and
+DataCite reports it findable, but it did not resolve in a browser when checked on
+2026-10-16, so nothing published points at it. Versions 0.1
+(`...23165225`) and 0.2 (`...23169891`) are superseded: 0.2 shipped two
+placeholder tables and 0.1 predates the corrected prediction table.
 
 ## Read these first
 

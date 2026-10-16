@@ -134,8 +134,12 @@ scp cybernord:~/csc-iot/dist/csc-iot-data.tar.gz ~/Downloads/
 
 Then on **web**: Zenodo record → *New version* → upload the tarball → publish.
 This mints a **new version DOI**, which is fine and changes nothing in the paper:
-the manuscript cites the concept DOI `10.5281/zenodo.23165224`, which always
-resolves to the newest version. Do not put a version DOI in the manuscript.
+the manuscript cites `10.5281/zenodo.23321904`, the version that produced the
+figures. **Do not switch the paper to the concept DOI**
+`10.5281/zenodo.23165224`: it is registered and DataCite calls it findable, but
+it returned "DOI not found" in a browser on 2026-10-16. If you publish a new
+version, decide deliberately whether the paper should point at it, and check the
+link opens before it goes anywhere.
 
 ---
 

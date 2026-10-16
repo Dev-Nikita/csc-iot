@@ -1217,3 +1217,39 @@ The submitted `main.pdf` is unchanged and the script now refuses to finish if it
 is not exactly ten pages, so the camera-ready can grow while the submission
 cannot. Months from now the camera-ready is assembled by running a file rather
 than by remembering a step.
+
+## Amendment 0.45 (2026-10-16) -- registered is not the same as resolves
+
+**The concept DOI does not open, and the paper was printing it.** The author
+opened `https://doi.org/10.5281/zenodo.23165224` and got "DOI not found".
+Checked against the DataCite metadata API from here: the identifier exists, its
+state is `findable`, its url is `https://zenodo.org/doi/10.5281/zenodo.23165224`
+and it carries `HasVersion` entries for 23165225, 23169891 and 23321904, plus a
+fourth, 23317517, that appears only in the versions relationship. Zenodo and
+doi.org both refused this environment (HTTP 429), so the resolution itself could
+not be reproduced here; what can be said is that the registry believes the DOI is
+fine and a person's browser disagrees. For a reader of a published paper only one
+of those matters.
+
+**Everything now prints the version DOI.** `10.5281/zenodo.23321904`, version
+0.3, is the only archive identifier that has been opened successfully by a
+person, and it is in any case the version that produced the figures -- citing
+the exact version rather than the concept is the better practice for data. The
+manuscript's thanks footnote, its data-availability statement, the cover letter
+in both Markdown and Word, the README and `CITATION.cff` were all changed
+together, and every shipped artefact was checked afterwards by extracting its
+text: `main.pdf`, `main-camera-ready.pdf` and `cover_letter.docx` each contain
+`zenodo.23321904` and no other zenodo identifier.
+
+**The guard changed from "not the superseded one" to "only the one that
+resolves".** It previously refused version 0.1's identifier and named the
+concept DOI as the correct answer, which today would have been advice to print a
+dead link. It now refuses every zenodo identifier except 23321904 in anything a
+reader receives, while allowing comment and prose lines that explain why the
+others are not used -- otherwise documenting the decision would break the build
+that the documentation exists to protect. Tested in both directions.
+
+**This is the third defect in the archive link and the second kind.** First the
+paper pointed at version 0.1; then it pointed at an identifier that is correct by
+every metadata check and still does not open. The rule that survives both: an
+identifier goes into a document only after a person has opened it.
