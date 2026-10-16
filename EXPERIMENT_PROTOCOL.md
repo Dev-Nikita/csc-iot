@@ -1073,3 +1073,68 @@ file state whether a rerun is needed, and copies the verified PDFs back, so what
 is uploaded is byte-identical to what was checked. This is the third time an
 unresolved citation has reached a cleanly-building document in this project, and
 the first time the guard caught it instead of a reader.
+
+## Amendment 0.42 (2026-10-16) -- a funding statement that was not true, and three bibliographic repairs
+
+**The funding statement claimed resources the university did not provide.** It
+read "carried out with institutional resources of Lviv Polytechnic National
+University". The author states that the testbed and every machine the reported
+experiments ran on were his own and that no institutional computing facilities
+were used. The statement now says that. This is the kind of sentence that gets
+written once as boilerplate and never read again; it was false, and it was false
+in the direction that borrows credibility from an institution.
+
+**The name was spelled wrong, and the people themselves settled it.** This file
+recorded "Oksentiuk" from the official Ukrainian transliteration and flagged the
+spelling as unverified because Scopus refuses automated reading. The university's
+own e-mail address is `Vira.M.Oksentyuk@lpnu.ua`. The manuscript, the cover letter
+and the biographies now follow the university. Remaining: confirm Scopus
+58178836600 publishes the same spelling, or the published paper will not attach
+to that profile.
+
+**All four institutional addresses are in the paper**, and the corresponding
+address moved from a personal mailbox to the institutional one.
+
+**Three bibliographic repairs, each verified before being made.** An independent
+review reported them; each was checked against a record rather than accepted.
+- `pham2024rca` carried the arXiv DOI and no pages for a paper that has been
+  published. OpenAlex gives pages 706-715 and the ACM proceedings DOI
+  10.1145/3691620.3695065; both are now in the entry. An incomplete record of a
+  published paper, not a wrong one, but the paper has a published form and should
+  cite it.
+- `bonilla2026slr` printed the article number twice, once as a page range and
+  once in a note. The note is gone.
+- `angelopoulos2021gentle` was questioned for citing 2021 when the latest version
+  is dated 2022. Checked: v1 is 2021-07-15, v6 is 2022-12-07, and there is no
+  journal reference. The year stays; the check is recorded in the entry so the
+  question is not reopened a third time.
+- `malik2023chess` was confirmed against the publisher's institutional record:
+  three authors in this order, SEAMS '23, 2023, ISBN 978-1-4503-9305-8. That
+  record gives no page range or DOI, so neither is stated.
+
+**A missing space between two sentences, and the guard it earned.** The first
+page read "repairs [5].We make the environment reconstructible." A comment placed
+after the citation ended with `%`, which swallowed the line break; LaTeX then
+dropped the next line's leading space. It compiles, warns about nothing, and
+reads to an editor as a manuscript nobody proofread. The audit now greps the
+rendered PDF for a sentence glued to the next after a citation. A reviewer found
+this, not us -- the third such defect this project has shipped into a cleanly
+building PDF, and the second to be answered with a permanent check rather than a
+correction.
+
+**The AI disclosure now localises the use.** IEEE asks which parts of the work
+involved generated content. The statement names Sections III-V and
+Supplement S4-S9 for the code, scripts and tests, and says prose was drafted and
+copy-edited throughout. The absolute claim that no citation was produced by an AI
+system became the claim that is actually checkable and was actually done: every
+reference was checked by the authors against the record of the work itself, with
+those checks logged in the artifact.
+
+**Page budget after these edits.** The declarations grew by about 60 words and
+the camera-ready went to 11 pages. Three passages were tightened by 35 words
+without losing a fact and the biographies were cut; the spill fell from 47 words
+to 39 and the eleventh page stayed, because what spills is an unbreakable
+biography block. The reserve is now spent in full. The choice at camera-ready is
+therefore explicit: about 50 more words out of the main text, or US$220. It is
+not being made now -- the real research interests are unwritten, review will
+change the text, and the measurement is cheap to repeat.

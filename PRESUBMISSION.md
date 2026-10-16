@@ -193,16 +193,17 @@ Expect this to add 0.2--0.4 page. It happens **before** Gate 5.
       four reviewed and approved the manuscript and accept responsibility for
       their respective contributions. The `UNCONFIRMED` markers are gone and the
       audit passes again.
-- [ ] **Two details still outstanding on the new authors, both small and both
-      theirs to give.**
-      - **E-mail addresses** for V. Oksentiuk and O. Oborska. The thanks footnote
-        carries the shared affiliation and the two existing addresses, which is
-        valid as printed, but ScholarOne asks for an address per author.
-      - **The Latin spelling their Scopus profiles publish** (58178836600 and
-        55816397200). "Oksentiuk" and "Oborska" here follow the official
-        Ukrainian transliteration; Scopus cannot be read from this environment,
-        so if it indexes them differently, match Scopus or the published paper
-        will not attach to their profiles.
+- [x] **E-mail addresses supplied; the spelling question answered by them.** All
+      four institutional addresses are now in the thanks footnote and the cover
+      letter: `Nikita.A.Tarasov@lpnu.ua`, `Roman.V.Zinko@lpnu.ua`,
+      `Vira.M.Oksentyuk@lpnu.ua`, `Oksana.V.Oborska@lpnu.ua`. The university's own
+      address spells it **Oksentyuk**, not the "Oksentiuk" this file had from the
+      official transliteration, so the manuscript, the cover letter and the
+      biographies now follow the university. The corresponding address changed
+      from the personal one to the institutional one, which is what IEEE prefers.
+      One thing left to eyeball: that Scopus 58178836600 publishes the same
+      spelling. Scopus cannot be read from here.
+
 - [ ] R. Zinko confirms co-authorship, the affiliation as printed, and the author
       contributions paragraph.
 - [ ] **All four** authors read the AI-use statement and confirm it matches what
@@ -215,33 +216,23 @@ Expect this to add 0.2--0.4 page. It happens **before** Gate 5.
 
 - [x] Funding, conflict of interest, data and code availability with the Zenodo
       DOI, author contributions, AI use.
-- [x] **Biographies written and measured, and deliberately not in the submitted
-      file.** IEEE collects biosketches with the final files on acceptance, so
-      `paper/biographies.tex` is not `\input` by `main.tex`. Measured with the
-      real text: four `IEEEbiographynophoto` entries give **10 pages**, page 10
-      at 1142 words. With photograph space reserved it is 11 pages and US$220.
-      The degrees and ranks in them are the ones the authors confirmed. Three
-      lines are marked `FILL:` -- the research interests of R. Zinko,
-      V. Oksentiuk and O. Oborska, which are theirs to write; the audit refuses a
-      build that `\input`s the file while a `FILL:` remains.
-- [x] **Re-measured for four authors: without photographs they fit, with
-      photographs they do not.** Four biographies of realistic length give
-      **10 pages** with `IEEEbiographynophoto` (page 10 at 1060 words of roughly
-      a thousand) and **11 pages** with the photograph space reserved, where page
-      11 carries only 47 words. So the choice at camera-ready is explicit: omit
-      the author photographs, or pay US$220 for one overlength page. Omitting
-      them is free and normal. Test build: `/tmp/crtest4`.
-- [x] **Earlier measurement, two authors, superseded by the line above.** TNSM counts biographies and author
-      pictures inside the ten free pages, so removing them now defers the space
-      rather than creating it -- which is why the fit was built rather than
-      guessed. A camera-ready build with two biographies of realistic length
-      stays at 10 pages with the photograph space reserved. **Re-measured
-      2026-10-13 after the scope and data-tier edits: still 10 pages, but the
-      last page now holds 969 words of roughly a thousand.** The slack is about
-      30 words. The next addition of any size spends R3 from the revision
-      reserve; do not add a sentence to the main text without rebuilding this
-      test. Test build: `/tmp/crtest` (biography filler of realistic length, not
-      real biographies).
+- [x] **Biographies written and measured; the camera-ready is one page over and
+      that is now a decision, not a surprise.** `paper/biographies.tex` is not
+      `\input` by `main.tex` -- IEEE collects biosketches at acceptance -- and the
+      three unsupplied research-interest lines are marked `FILL:`, which the audit
+      refuses if the file is ever included. Measured after the declarations were
+      corrected on 2026-10-16: four `IEEEbiographynophoto` entries give
+      **11 pages**, with **39 words** on page 11. Three passages were tightened by
+      35 words without losing a fact and the biographies themselves were cut; the
+      spill went 47 to 39 and the eleventh page did not go away, because what
+      spills is an unbreakable biography block.
+      **The choice at camera-ready, stated plainly:** take roughly 50 more words
+      out of the main text, or pay US$220 for one overlength page. The revision
+      reserve is spent -- R1, R2 and R4 were taken for the 2026-10-13 revision and
+      R3 on 2026-10-16 -- so the next cut comes out of substance. Do not cut now:
+      the real research interests are not written yet, review will change the text
+      anyway, and this is measured again at camera-ready. Test build: `/tmp/cr`.
+
 - [ ] Confirm in ScholarOne that TNSM accepts supplementary material, and under
       which file designation. Neither ComSoc policy page documents it. The main
       text is written so that no claim in it requires the supplement to be

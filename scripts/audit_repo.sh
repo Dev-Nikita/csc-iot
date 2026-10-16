@@ -393,6 +393,12 @@ if [ -f paper/main.tex ]; then
     chk "no unresolved citation in the supplement PDF"  bash -c '! pdftotext paper/supplement.pdf - 2>/dev/null | grep -q "\[?\]"'
     # A control word swallows the space after it, so "\SupImpl gives" typesets as
     # "S4gives". Four of these reached a PDF that compiled without a warning.
+    # A trailing % after a sentence swallows the line break, and LaTeX then drops
+    # the next line's leading space: "[5].We make". It compiles, raises nothing,
+    # and looks like a missed final proofread to an editor. Caught by a reviewer,
+    # not by us.
+    chk "no sentence glued to the next one after a citation" bash -c '
+      ! pdftotext paper/main.pdf - 2>/dev/null | grep -qE "\]\.[A-Z]" '
     chk "no cross-reference glued to the next word"     bash -c '! pdftotext paper/main.pdf - 2>/dev/null | grep -qE "S[0-9]+(-[A-Z])?[a-z]"'
   else
     echo "  skip  unresolved-citation check (pdftotext not installed)"
