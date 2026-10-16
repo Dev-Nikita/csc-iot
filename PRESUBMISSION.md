@@ -216,22 +216,22 @@ Expect this to add 0.2--0.4 page. It happens **before** Gate 5.
 
 - [x] Funding, conflict of interest, data and code availability with the Zenodo
       DOI, author contributions, AI use.
-- [x] **Biographies written and measured; the camera-ready is one page over and
-      that is now a decision, not a surprise.** `paper/biographies.tex` is not
-      `\input` by `main.tex` -- IEEE collects biosketches at acceptance -- and the
-      three unsupplied research-interest lines are marked `FILL:`, which the audit
-      refuses if the file is ever included. Measured after the declarations were
-      corrected on 2026-10-16: four `IEEEbiographynophoto` entries give
-      **11 pages**, with **39 words** on page 11. Three passages were tightened by
-      35 words without losing a fact and the biographies themselves were cut; the
-      spill went 47 to 39 and the eleventh page did not go away, because what
-      spills is an unbreakable biography block.
-      **The choice at camera-ready, stated plainly:** take roughly 50 more words
-      out of the main text, or pay US$220 for one overlength page. The revision
-      reserve is spent -- R1, R2 and R4 were taken for the 2026-10-13 revision and
-      R3 on 2026-10-16 -- so the next cut comes out of substance. Do not cut now:
-      the real research interests are not written yet, review will change the text
-      anyway, and this is measured again at camera-ready. Test build: `/tmp/cr`.
+- [x] **Biographies written in full from the authors' own records, and the
+      overlength page is now a priced decision.** `paper/biographies.tex` holds
+      four complete entries -- degrees, dissertation titles, posts and research
+      interests, all supplied by the authors, nothing inferred. It is not
+      `\input` by `main.tex`: IEEE collects biosketches with the final files on
+      acceptance, and nothing in the TNSM pages requires them at submission.
+      Measured 2026-10-16, both ways:
+      - full entries (about 140 words each): **11 pages**, 378 words on page 11;
+      - cut to about 70 words each: **11 pages**, 139 words on page 11.
+      Four biographies therefore do not fit in ten pages at any reasonable
+      length. Reaching ten would mean removing roughly 150 words of substance
+      from the main text, and the revision reserve is spent (R1, R2, R4 on
+      2026-10-13; R3 on 2026-10-16). **The recommendation is to keep the full
+      entries and pay the US$220 for one overlength page**, which is also the
+      cheaper of the two in anything but money. Re-measure at camera-ready: the
+      text will have changed by then. Test build: `/tmp/cr`.
 
 - [ ] Confirm in ScholarOne that TNSM accepts supplementary material, and under
       which file designation. Neither ComSoc policy page documents it. The main

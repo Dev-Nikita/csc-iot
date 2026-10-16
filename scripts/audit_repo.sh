@@ -369,22 +369,13 @@ if [ -f paper/main.tex ]; then
       echo "not the generated copy under paper/submission-ready/." >&2
       exit 1
     fi'
-  # Authorship and affiliation are the one class of fact nobody may invent, so
-  # they are carried as a named absence until the person named supplies them.
-  # The marker is loud in the rendered page AND refused here, because a draft
-  # with an unconfirmed author line is exactly the file that gets uploaded at
-  # one in the morning.
-  chk "no unconfirmed authorship placeholder in the source" bash -c '
-    ! grep -n "UNCONFIRMED{" paper/main.tex paper/supplement.tex 2>/dev/null'
-  # The biographies are not in the submitted manuscript -- IEEE collects them at
-  # acceptance -- so an unfilled line there is not a submission blocker. It is a
-  # camera-ready blocker, and the camera-ready is assembled under a deadline
-  # months from now by someone who will not remember this. Fail only once the
-  # file is actually \input by the manuscript.
-  if grep -q 'input{biographies' paper/main.tex 2>/dev/null; then
-    chk "no unwritten research interests in the biographies" bash -c '
-      ! grep -n "FILL:" paper/biographies.tex 2>/dev/null'
-  fi
+  # The UNCONFIRMED macro and its two guards are gone: every author fact they
+  # stood in for -- affiliations, e-mail addresses, contributions, the spelling
+  # of a name, four sets of research interests -- was supplied by the people
+  # named, on 2026-10-16. A guard with nothing left to guard is noise in a
+  # summary that must stay readable, and this one did its job: the paper could
+  # not be built, let alone submitted, while a line about a person was fiction.
+  # If a gap ever reopens, the macro is three lines and the check is two.
   # Grepping the LaTeX log does not catch this: a \cite in a document with no
   # bibliography at all raises no warning, it just typesets [?]. Read the PDF.
   if command -v pdftotext >/dev/null 2>&1; then

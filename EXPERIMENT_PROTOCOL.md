@@ -1138,3 +1138,36 @@ biography block. The reserve is now spent in full. The choice at camera-ready is
 therefore explicit: about 50 more words out of the main text, or US$220. It is
 not being made now -- the real research interests are unwritten, review will
 change the text, and the measurement is cheap to repeat.
+
+## Amendment 0.43 (2026-10-16) -- ChatGPT removed from the disclosure, the biographies written, and the guard retired
+
+**The AI disclosure named a system that was not used on this work.** It listed
+Claude (Anthropic) and ChatGPT (OpenAI). The author states that ChatGPT was used
+only for unrelated local problems, never for the code or the manuscript. The
+statement now names Claude alone. A disclosure that over-reports is still a false
+disclosure, and it is the kind that is easy to write while trying to be
+generous: the fix is the same as for under-reporting, namely to say what
+happened.
+
+**Four biographies written from the authors' own records.** Degrees,
+dissertation titles, posts, publication counts and research interests were all
+supplied by the people named; nothing is inferred, and the file says so. They are
+not `\input` by the manuscript, because IEEE collects biosketches with the final
+files on acceptance and nothing in the TNSM pages asks for them at submission.
+
+**The overlength page is now a priced decision rather than an open question.**
+Measured both ways: full entries of about 140 words each give 11 pages with 378
+words on page 11; cut to about 70 words each they still give 11 pages, with 139.
+Four biographies do not fit in ten pages at any reasonable length. Reaching ten
+would cost roughly 150 words of substance from the main text, and the revision
+reserve is spent. The recommendation recorded in the checklist is to keep the
+full entries and pay US$220 for the page.
+
+**The `\UNCONFIRMED` macro and its two guards are gone.** Every fact they stood
+in for -- affiliations, e-mail addresses, contributions, the spelling of a name,
+four sets of research interests -- has been supplied by the people named. The
+mechanism did its job: for one day the paper could not be built, and could not
+have been submitted, while a line about a person was fiction. A guard with
+nothing left to guard is noise in a summary that has to stay readable, so it is
+removed rather than left to pass forever. If a gap reopens, the macro is three
+lines and the check is two.
