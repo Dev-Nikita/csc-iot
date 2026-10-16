@@ -1253,3 +1253,45 @@ that the documentation exists to protect. Tested in both directions.
 paper pointed at version 0.1; then it pointed at an identifier that is correct by
 every metadata check and still does not open. The rule that survives both: an
 identifier goes into a document only after a person has opened it.
+
+## Amendment 0.46 (2026-10-16) -- the submission was returned, and the manuscript was not the reason
+
+**What happened.** TNSM-2026-12519 was accepted by the submission portal and then
+unsubmitted by the editorial office during the administrative checklist review,
+for exceeding the 16-page limit. The manuscript is ten pages, which is the number
+this project has measured and guarded for weeks. The merged proof PDF that
+ScholarOne generates is what the check counts, and it came to 21: four pages of
+portal cover sheet, keywords and scope statement, the 10-page `main.pdf`
+designated Main Document, and the 7-page `supplement.pdf` designated
+"Supplementary Material for Review". The cover letter was not merged.
+
+**The mistaken assumption, named plainly.** Uploading the supplement as a
+separate file was taken to mean it would be counted separately. It is not: the
+designation decides whether a file joins the merged review PDF, and
+"Supplementary Material for Review" joins it. Neither ComSoc policy page
+documents this, and the checklist here recorded the question -- "confirm in
+ScholarOne that TNSM accepts supplementary material, and under which file
+designation" -- as an open item that was never closed before submitting. An open
+gate was walked past. That is the failure, not the portal's behaviour.
+
+**What the page budget work was worth, and what it was not.** Every measurement
+in amendments 0.40 to 0.43 was correct and remains correct: the manuscript is ten
+pages, the camera-ready with four biographies is eleven. None of it protected
+against this, because the guarded quantity was the wrong one. The quantity that
+matters at submission is the page count of a file the portal builds, which cannot
+be measured here at all -- only looked at, on the final review step, before
+pressing submit. That instruction is now the last line of the upload step in the
+runbook.
+
+**Two remedies, neither of which touches the paper.** Re-upload the supplement
+under a designation confirmed not to be merged, which requires asking the
+editorial office because guessing from a list of designations is what produced
+this; or submit the manuscript alone and let the archive DOI carry the
+supplement. The second costs nothing scientific: the main text was deliberately
+written so that no claim in it requires the supplement to be assessed, and that
+insurance is now being collected. A query to `tnsm@uwo.ca` is written and ships
+with the submission folder.
+
+**No change to the manuscript, the supplement or any result.** Nothing was wrong
+with them. The record notes this so that a later reader of this log does not
+assume a returned submission implies a defect in the work.

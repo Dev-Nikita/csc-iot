@@ -281,20 +281,59 @@ rather than letting it run to page 11 at \$220.
 
 ---
 
-## Step 8 — web: what to upload, in the order ScholarOne asks for it
+## Step 8 — web: what to upload, and the trap that already cost one submission
 
-From `paper/submission-ready/`:
+**What happened on 2026-10-16.** The submission was accepted by the portal, then
+unsubmitted by the editorial office: *"the manuscript exceeds the 16-page limit"*.
+Nothing was wrong with the manuscript. ScholarOne builds **one merged proof PDF**
+out of every file whose designation is part of the review package, and the
+administrative check counts the pages of that merged file:
+
+| part | pages |
+|---|---|
+| portal cover sheet, keywords, scope statement, file list | 4 |
+| `main.pdf` (Main Document) | 10 |
+| `supplement.pdf` (**Supplementary Material for Review**) | 7 |
+| **merged total the checker counted** | **21** |
+
+So the supplement was counted as manuscript pages. Uploading the files
+separately does not help: separate upload is not separate counting. With the
+supplement removed the merged file is 14 pages and passes.
+
+**Two ways out. Pick one before re-submitting.**
+
+1. **Ask the editorial office which designation is excluded from the merged PDF**
+   and re-upload the supplement under it. Write to `tnsm@uwo.ca`, quote the
+   manuscript number, and ask the question directly; the answer takes a day and
+   settles it for every future submission. A designation along the lines of
+   *Supporting Document — not for review PDF* or *Auxiliary/Multimedia file* is
+   usually the one that is not merged, but **do not guess from that list**: the
+   names differ per journal and guessing is what produced this.
+2. **Submit the manuscript alone** and make the supplement reachable through the
+   archive. The main text was deliberately written so that every claim in it can
+   be assessed without the supplement -- that insurance exists precisely for
+   this. Add `supplement.pdf` to the Zenodo record as part of a new version, and
+   the DOI already printed in the paper carries it to any reviewer who wants it.
+
+Option 1 is better if the answer arrives quickly, because reviewers read what is
+in front of them. Option 2 is immediate and loses nothing that a reviewer cannot
+reach in one click.
+
+**Files, once the designation question is settled:**
 
 | File | Designation on the form |
 |---|---|
 | `main.pdf` | Main Document |
-| `supplement.pdf` | Supplementary Material (confirm the designation in Step 5) |
-| `cover_letter.docx` | Cover Letter (or paste `cover_letter.md` as text) |
+| `cover_letter.docx` | Cover Letter (not merged; it was not counted above) |
+| `supplement.pdf` | **only** under a designation confirmed not to be merged |
 
-Do **not** upload: the `.tex` sources (not at submission; they are asked for at
-acceptance), `PRESUBMISSION.md`, `EXPERIMENT_PROTOCOL.md`, the data tarball.
-The protocol and the data reach reviewers through the Zenodo DOI in the paper,
-which is the point of having it.
+Do **not** upload: the `.tex` sources (asked for at acceptance),
+`main-camera-ready.pdf`, `PRESUBMISSION.md`, `EXPERIMENT_PROTOCOL.md`, the data
+tarball.
+
+**Before pressing submit, open the merged proof the portal generates and count
+its pages.** It is shown as a PDF on the final review step. That number, not the
+page count of `main.pdf`, is what the administrative check reads.
 
 If you edit the letter, edit `paper/submission-ready-keep/cover_letter.md` — the
 copy under `paper/submission-ready/` is generated and is overwritten on every
@@ -303,15 +342,13 @@ catches it.
 
 Form fields that are easy to get wrong:
 
-- **Corresponding author:** N. Tarasov, dev.nikita@outlook.com.
-- **Second author:** R. Zinko, roman.v.zinko@lpnu.ua, with his ORCID.
+- **Corresponding author:** N. Tarasov, Nikita.A.Tarasov@lpnu.ua.
+- **Co-authors:** R. Zinko, V. Oksentyuk, O. Oborska, each with their ORCID.
 - **Abstract:** paste the 186-word abstract from the PDF, not from the `.tex`
   (the `.tex` has LaTeX markup in it).
 - **Conflict of interest / funding:** the statements on page 10 of the manuscript.
 - **Suggested reviewers:** if the form asks, do not name anyone you have
   co-authored with.
-
----
 
 ## Step 9 — Mac: after you press Submit
 

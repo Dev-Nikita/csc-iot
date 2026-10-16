@@ -245,10 +245,22 @@ Expect this to add 0.2--0.4 page. It happens **before** Gate 5.
       cheaper of the two in anything but money. Re-measure at camera-ready: the
       text will have changed by then. Test build: `/tmp/cr`.
 
-- [ ] Confirm in ScholarOne that TNSM accepts supplementary material, and under
-      which file designation. Neither ComSoc policy page documents it. The main
-      text is written so that no claim in it requires the supplement to be
-      assessed, which is the insurance; confirm anyway.
+- [ ] **BLOCKER, and it already fired once. Settle how the supplement travels.**
+      The submission of 2026-10-16 (TNSM-2026-12519) was accepted by the portal
+      and then unsubmitted by the editorial office for exceeding the 16-page
+      limit. The manuscript is 10 pages and was never the problem: ScholarOne
+      merges the review package into **one** proof PDF and the administrative
+      check counts that file -- 4 pages of portal cover sheet + 10 of `main.pdf`
+      + 7 of `supplement.pdf` = **21**. Uploading separate files is not the same
+      as having them counted separately, and nothing in the ComSoc policy pages
+      says so. Either re-upload the supplement under a designation confirmed not
+      to be merged (ask: `paper/submission-ready-keep/email_to_editorial_office.md`
+      is the query, ready to send to `tnsm@uwo.ca`), or submit the manuscript
+      alone and let the archive DOI carry the supplement -- the main text is
+      written so every claim in it can be assessed without it, which is what that
+      insurance was for. **Then, on the final review step, open the merged proof
+      the portal generates and count its pages before pressing submit.**
+
 - [x] Abstract length checked against the policy, not the submission form.
       TNSM requires "a 75 to 200 word abstract"; the rendered abstract is **186
       words**, counted on 2026-10-13 from the left column of page 1 of the PDF:
