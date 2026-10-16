@@ -1029,3 +1029,47 @@ earlier 500 ms error and the non-monotonicity all now point at
 Supplement S5, where they are given in full -- it returned **28**. The reserve's
 remaining estimates should be read as optimistic by the same factor. What saved
 the page count was not the cut; it was dropping the photographs.
+
+## Amendment 0.41 (2026-10-16) -- the authorship gaps closed, and a build that lied about citations
+
+**The four author facts were supplied and are now in the paper.** All four
+authors are with the Department of Computer-Aided Design Systems, Institute of
+Computer Science and Information Technologies, Lviv Polytechnic National
+University. The contributions paragraph is the authors' own text, naming what
+each contributed, and records that all four reviewed and approved the manuscript
+and accept responsibility for their respective contributions. Both `UNCONFIRMED`
+markers are gone and the guard that refused them passes. Two small items remain
+with the new authors: their e-mail addresses for the submission form, and the
+Latin spelling their Scopus profiles publish, which cannot be read from here.
+
+**The AI disclosure now names the systems and attributes the verification.**
+A reviewer made two points and both were right. The statement said "a
+large-language-model assistant", where IEEE asks which systems were used; it now
+names Claude (Anthropic) and ChatGPT (OpenAI). It also said "the authors read and
+verified that code", which after the author list grew would have asserted a check
+three people did not perform; it now says N. Tarasov read and verified it. A
+collective claim is the easiest kind of false declaration to write by accident.
+
+**Biographies written, measured, and kept out of the submitted file.** IEEE
+collects biosketches at acceptance, so `paper/biographies.tex` exists but is not
+`\input` by the manuscript. Measured with the real text: four
+`IEEEbiographynophoto` entries give 10 pages, page 10 at 1142 words. Three
+`FILL:` lines remain -- the research interests of the three authors who have not
+supplied them -- and the audit refuses a build that includes the file while a
+`FILL:` is in it. Degrees, ranks and the department are as the authors confirmed;
+nothing about a person is written here that a person did not state.
+
+**A build that reported success while producing 31 unresolved citations.**
+`make_submission_folder.sh` built the copied package in place, inside the
+user-mounted project folder. There, `pdflatex` wrote `main.aux` and the `bibtex`
+that followed did not see it: the result was a PDF with every citation rendered
+`[?]`, zero LaTeX errors, and a script that would have reported the folder
+verified had the unresolved-citation count not been part of the check. The same
+sequence on local disk was clean every time, which is why it took three runs to
+see that the filesystem was the variable. The script now copies the package to a
+scratch directory on local disk, builds there with explicit `pdflatex`,
+`bibtex`, `pdflatex`, `pdflatex` passes rather than letting a tool decide from
+file state whether a rerun is needed, and copies the verified PDFs back, so what
+is uploaded is byte-identical to what was checked. This is the third time an
+unresolved citation has reached a cleanly-building document in this project, and
+the first time the guard caught it instead of a reader.

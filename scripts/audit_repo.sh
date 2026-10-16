@@ -376,6 +376,15 @@ if [ -f paper/main.tex ]; then
   # one in the morning.
   chk "no unconfirmed authorship placeholder in the source" bash -c '
     ! grep -n "UNCONFIRMED{" paper/main.tex paper/supplement.tex 2>/dev/null'
+  # The biographies are not in the submitted manuscript -- IEEE collects them at
+  # acceptance -- so an unfilled line there is not a submission blocker. It is a
+  # camera-ready blocker, and the camera-ready is assembled under a deadline
+  # months from now by someone who will not remember this. Fail only once the
+  # file is actually \input by the manuscript.
+  if grep -q 'input{biographies' paper/main.tex 2>/dev/null; then
+    chk "no unwritten research interests in the biographies" bash -c '
+      ! grep -n "FILL:" paper/biographies.tex 2>/dev/null'
+  fi
   # Grepping the LaTeX log does not catch this: a \cite in a document with no
   # bibliography at all raises no warning, it just typesets [?]. Read the PDF.
   if command -v pdftotext >/dev/null 2>&1; then

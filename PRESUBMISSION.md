@@ -185,22 +185,24 @@ Expect this to add 0.2--0.4 page. It happens **before** Gate 5.
 
 ## Gate 3 -- authorship
 
-- [ ] **Four authors now, and three of the four gates below are theirs.**
-      V. Oksentiuk (Scopus 58178836600) and O. Oborska (Scopus 55816397200) were
-      added to the author list on 2026-10-16. Three things about them are
-      **unknown here and were not invented**; each is carried in the manuscript
-      as a loud `[UNCONFIRMED: ...]` marker that the repository audit refuses, so
-      the paper cannot be submitted until they are supplied:
-      - their **affiliations and e-mail addresses** (the thanks footnote);
-      - **what each of them contributed**, in their own words, for the author
-        contributions paragraph. IEEE and COPE authorship means a substantial
-        contribution, approval of the submitted version, and accountability for
-        it. A name added without a stated contribution is the thing editors ask
-        about, and this paper argues for its own evidence being checkable;
-      - the **Latin spelling of both names** as their Scopus profiles publish
-        them. "Oksentiuk" and "Oborska" here follow the official Ukrainian
-        transliteration; if Scopus indexes them as "Oksentyuk" or "Oborskaya",
-        match Scopus, or the published paper will not attach to their profiles.
+- [x] **Four authors; affiliation and contributions supplied and in the paper.**
+      All four are with the Department of Computer-Aided Design Systems,
+      Institute of Computer Science and Information Technologies, Lviv
+      Polytechnic National University. The contributions paragraph is the text
+      the authors themselves confirmed, naming what each did, and states that all
+      four reviewed and approved the manuscript and accept responsibility for
+      their respective contributions. The `UNCONFIRMED` markers are gone and the
+      audit passes again.
+- [ ] **Two details still outstanding on the new authors, both small and both
+      theirs to give.**
+      - **E-mail addresses** for V. Oksentiuk and O. Oborska. The thanks footnote
+        carries the shared affiliation and the two existing addresses, which is
+        valid as printed, but ScholarOne asks for an address per author.
+      - **The Latin spelling their Scopus profiles publish** (58178836600 and
+        55816397200). "Oksentiuk" and "Oborska" here follow the official
+        Ukrainian transliteration; Scopus cannot be read from this environment,
+        so if it indexes them differently, match Scopus or the published paper
+        will not attach to their profiles.
 - [ ] R. Zinko confirms co-authorship, the affiliation as printed, and the author
       contributions paragraph.
 - [ ] **All four** authors read the AI-use statement and confirm it matches what
@@ -213,8 +215,15 @@ Expect this to add 0.2--0.4 page. It happens **before** Gate 5.
 
 - [x] Funding, conflict of interest, data and code availability with the Zenodo
       DOI, author contributions, AI use.
-- [x] Biographies deliberately absent: IEEE collects biosketches with the final
-      files on acceptance.
+- [x] **Biographies written and measured, and deliberately not in the submitted
+      file.** IEEE collects biosketches with the final files on acceptance, so
+      `paper/biographies.tex` is not `\input` by `main.tex`. Measured with the
+      real text: four `IEEEbiographynophoto` entries give **10 pages**, page 10
+      at 1142 words. With photograph space reserved it is 11 pages and US$220.
+      The degrees and ranks in them are the ones the authors confirmed. Three
+      lines are marked `FILL:` -- the research interests of R. Zinko,
+      V. Oksentiuk and O. Oborska, which are theirs to write; the audit refuses a
+      build that `\input`s the file while a `FILL:` remains.
 - [x] **Re-measured for four authors: without photographs they fit, with
       photographs they do not.** Four biographies of realistic length give
       **10 pages** with `IEEEbiographynophoto` (page 10 at 1060 words of roughly

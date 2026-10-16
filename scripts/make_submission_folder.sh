@@ -7,7 +7,7 @@
 # the failure this script exists to prevent.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-src=paper; dst=paper/submission-ready
+src=paper; dst=paper/submission-ready; dstabs="$PWD/paper/submission-ready"
 
 # Checked BEFORE the old folder is deleted: a refusal must leave the previous
 # package intact rather than a half-built one. An unconfirmed author line is not
@@ -31,10 +31,30 @@ done
 for keep in README.md cover_letter.md cover_letter.docx; do
   [ -f "$src/submission-ready-keep/$keep" ] && cp "$src/submission-ready-keep/$keep" "$dst/"
 done
-cd "$dst"
+# Build in a scratch directory on local disk, not in $dst. $dst lives in a
+# user-mounted folder whose timestamp and visibility semantics are not those of a
+# local filesystem: there, pdflatex wrote main.aux and the bibtex that followed
+# did not see it, producing a PDF with 31 unresolved citations and no error. The
+# copy in $dst is what gets uploaded, so it must be byte-identical to what was
+# verified -- the PDFs are therefore built here and copied in.
+build=$(mktemp -d)
+cp -R "$dst"/. "$build"/
+cd "$build"
 fail=0
 for doc in main supplement; do
-  latexmk -pdf -interaction=nonstopmode "$doc.tex" > "build_$doc.log" 2>&1 || true
+  # Explicit passes rather than latexmk. latexmk decides whether to rerun by
+  # comparing file state, and on a mounted filesystem with coarse timestamp
+  # granularity it concluded nothing had changed after bibtex and stopped -- a
+  # PDF with 31 unresolved citations and zero errors, which is exactly the
+  # failure this folder exists to prevent and which the check below caught.
+  # pdflatex, bibtex, pdflatex, pdflatex is deterministic and does not care what
+  # the filesystem reports.
+  {
+    pdflatex -interaction=nonstopmode "$doc.tex"
+    bibtex "$doc"
+    pdflatex -interaction=nonstopmode "$doc.tex"
+    pdflatex -interaction=nonstopmode "$doc.tex"
+  } > "build_$doc.log" 2>&1 || true
   err=$(grep -c '^!' "build_$doc.log" || true)
   pages=$(pdfinfo "$doc.pdf" 2>/dev/null | awk '/^Pages/{print $2}')
   q=$(pdftotext "$doc.pdf" - 2>/dev/null | grep -c '\[?\]' || true)
@@ -43,6 +63,11 @@ for doc in main supplement; do
 done
 latexmk -c >/dev/null 2>&1 || true
 rm -f build_main.log build_supplement.log
+# Only the artefacts a reader needs travel back: the PDFs and the .bbl, so the
+# folder still builds standalone for an editor who runs LaTeX on it.
+cp main.pdf supplement.pdf main.bbl supplement.bbl "$OLDPWD/$dst"/ 2>/dev/null || \
+  cp main.pdf supplement.pdf main.bbl supplement.bbl "$dstabs"/
+cd / && rm -rf "$build"
 if [ "$fail" -ne 0 ]; then
   echo "REFUSED: the submission folder does not build cleanly on its own." >&2
   exit 1
