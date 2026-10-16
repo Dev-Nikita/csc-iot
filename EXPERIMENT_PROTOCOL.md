@@ -1171,3 +1171,49 @@ have been submitted, while a line about a person was fiction. A guard with
 nothing left to guard is noise in a summary that has to stay readable, so it is
 removed rather than left to pass forever. If a gap reopens, the macro is three
 lines and the check is two.
+
+## Amendment 0.44 (2026-10-16) -- the supplement went out under two authors, and the package now proves it agrees with itself
+
+**The supplement named two authors while the manuscript named four.** Nothing in
+the build links the two author lines: they are separate `\author` blocks in
+separate documents, and adding two people to one of them changes nothing in the
+other. The supplement was therefore going to be uploaded under
+"Nikita Tarasov and Roman Zinko" beside a manuscript by four, which reads to an
+editor as a package nobody assembled. Found by an independent review, which is
+twice in a row that the defect was in the part of the package nobody rebuilt.
+The supplement now names all four, and `scripts/audit_repo.sh` compares the two
+rendered title pages so the two lines cannot drift apart again.
+
+**Section S2 contradicted itself within a page.** It opened by saying the two
+closest works are "deliberately not given rows" in Table S1 and closed by saying
+both now appear there. Both sentences were true when written; amendment 0.35
+added the rows and left the lead-in behind. The lead-in now says what actually
+happened: they were kept out until they had been read in full rather than
+assessed from their abstracts. An edit that updates the conclusion and not the
+premise is the characteristic residue of revising under time pressure, and it is
+visible to any careful reader.
+
+**Table S1's caption now says what a mark means.** Six marks sit on the CSC row
+while S9 reports that the minimum-necessary-intervention advantage is not
+demonstrated on the mechanisms measured. Those are consistent -- the table
+records what a method attempts, not what it is shown to achieve -- but only if
+the reader knows it. The caption says so, in the table, rather than in a
+paragraph the reader may not reach.
+
+**The cover letter no longer undersells the supplement.** It said no claim in the
+manuscript requires the supplement in order to be assessed. That is true and it
+is worth keeping as insurance, but phrased alone it invites an editor to treat
+the supplement as optional detail, when it carries the assumptions, the
+accounting audit and the extended comparison. The letter now describes what the
+supplement contains and then says the main text is written so each claim can be
+assessed on its own. It also states the four authors and their approval
+explicitly, and signs with institutional addresses.
+
+**The biographies now compile, and their cost is a build output rather than a
+memory.** `make_submission_folder.sh` writes `main-camera-ready.tex` --
+`main.tex` with `biographies.tex` appended, nothing else -- and builds it
+alongside the submitted documents. Every run prints `main-camera-ready ... pages=11`.
+The submitted `main.pdf` is unchanged and the script now refuses to finish if it
+is not exactly ten pages, so the camera-ready can grow while the submission
+cannot. Months from now the camera-ready is assembled by running a file rather
+than by remembering a step.

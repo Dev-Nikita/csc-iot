@@ -22,7 +22,14 @@ fi
 rm -rf "$dst"; mkdir -p "$dst/figures" "$dst/generated_tables"
 cp "$src"/main.tex "$src"/supplement.tex "$src"/references.bib \
    "$src"/table_related.tex "$src"/table_scenarios.tex \
-   "$src"/IEEEtran.cls "$src"/IEEEtran.bst "$dst"/
+   "$src"/IEEEtran.cls "$src"/IEEEtran.bst "$src"/biographies.tex "$dst"/
+# main-camera-ready.tex is main.tex plus the biographies, nothing else. It exists
+# so the biographies compile and their cost in pages is a measured number rather
+# than an estimate, and so that the camera-ready is assembled months from now by
+# running a file rather than by remembering a step. The SUBMITTED document stays
+# main.pdf: IEEE collects biosketches with the final files on acceptance.
+sed 's|^\\end{document}|\\input{biographies.tex}\n\\end{document}|' \
+    "$src"/main.tex > "$dst"/main-camera-ready.tex
 cp "$src"/figures/fig1_concept.tex "$src"/figures/fig2_architecture.tex "$dst"/figures/
 for f in table_bands_merged table_prediction table_bands_single \
          table_bands_factored table_spanning table_runs; do
@@ -41,7 +48,7 @@ build=$(mktemp -d)
 cp -R "$dst"/. "$build"/
 cd "$build"
 fail=0
-for doc in main supplement; do
+for doc in main supplement main-camera-ready; do
   # Explicit passes rather than latexmk. latexmk decides whether to rerun by
   # comparing file state, and on a mounted filesystem with coarse timestamp
   # granularity it concluded nothing had changed after bibtex and stopped -- a
@@ -60,13 +67,20 @@ for doc in main supplement; do
   q=$(pdftotext "$doc.pdf" - 2>/dev/null | grep -c '\[?\]' || true)
   printf '%-11s errors=%s pages=%s unresolved=%s\n' "$doc" "$err" "${pages:-?}" "$q"
   [ "$err" = 0 ] && [ "$q" = 0 ] || fail=1
+  # The camera-ready build is informational: it is allowed to be eleven pages,
+  # and it is reported so nobody is surprised by the overlength charge. The
+  # submitted main.pdf is not allowed to grow, and is checked here.
+  if [ "$doc" = main ] && [ "${pages:-0}" != 10 ]; then
+    echo "REFUSED: main.pdf is $pages pages; TNSM gives ten free." >&2
+    fail=1
+  fi
 done
 latexmk -c >/dev/null 2>&1 || true
 rm -f build_main.log build_supplement.log
 # Only the artefacts a reader needs travel back: the PDFs and the .bbl, so the
 # folder still builds standalone for an editor who runs LaTeX on it.
-cp main.pdf supplement.pdf main.bbl supplement.bbl "$OLDPWD/$dst"/ 2>/dev/null || \
-  cp main.pdf supplement.pdf main.bbl supplement.bbl "$dstabs"/
+cp main.pdf supplement.pdf main-camera-ready.pdf \
+   main.bbl supplement.bbl main-camera-ready.bbl "$dstabs"/
 cd / && rm -rf "$build"
 if [ "$fail" -ne 0 ]; then
   echo "REFUSED: the submission folder does not build cleanly on its own." >&2

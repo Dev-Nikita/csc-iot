@@ -388,6 +388,13 @@ if [ -f paper/main.tex ]; then
     # the next line's leading space: "[5].We make". It compiles, raises nothing,
     # and looks like a missed final proofread to an editor. Caught by a reviewer,
     # not by us.
+    # The supplement went out under two authors while the manuscript had four.
+    # Nothing links the two author lines, so they drift silently and a reviewer
+    # reads it as a package nobody assembled. Compare the rendered pages.
+    chk "manuscript and supplement name the same authors" bash -c '
+      m=$(pdftotext -f 1 -l 1 paper/main.pdf - 2>/dev/null | grep -c "Oksentyuk")
+      s=$(pdftotext -f 1 -l 1 paper/supplement.pdf - 2>/dev/null | grep -c "Oksentyuk")
+      [ "$m" -ge 1 ] && [ "$s" -ge 1 ]'
     chk "no sentence glued to the next one after a citation" bash -c '
       ! pdftotext paper/main.pdf - 2>/dev/null | grep -qE "\]\.[A-Z]" '
     chk "no cross-reference glued to the next word"     bash -c '! pdftotext paper/main.pdf - 2>/dev/null | grep -qE "S[0-9]+(-[A-Z])?[a-z]"'
