@@ -180,20 +180,19 @@ Expect this to add 0.2--0.4 page. It happens **before** Gate 5.
       document a reader receives. If the concept DOI starts resolving later,
       nothing needs to change.
 - [x] **Upload that tarball as a new Zenodo version, then confirm the record.**
-      Done 2026-10-30. Version 0.5, `10.5281/zenodo.23814731`, carries two files:
-      `csc-iot-0.5.zip` and `csc-iot-data-0.5.tar.gz` (744,254 bytes). The DOI was
-      reserved on the draft before the tag was cut, so the archived code cites the
-      version it is in -- 0.1 through 0.4 all cited a previous one. Confirmed from
-      outside the browser session that uploaded it: both files download, the
-      tarball's SHA-256 matches the locally verified copy
-      (`57d0a32e0f4fc685b7d1b0a0f15cea530707bc6a7966de8f0c33db7896113856`), all 30
-      checksums in `SHA256SUMS` verify, the branch indices total 8118, and both
-      replays run from the download with `python3 -I`: `tau_hat=0.04468686866` and
-      `INDEPENDENT RCAEval VERIFICATION OK`.
+      Version 0.5 did this for the data; version 0.6, `10.5281/zenodo.23820907`,
+      adds the analyses the manuscript cites, so that every distribution it
+      reports can be recomputed from the archive and not only from the author's
+      host. The DOI was reserved on the draft before the tag was cut, so the
+      archived code cites the version it is in. Verified from the extracted
+      package on the analysis host and again on an unrelated machine: all 36
+      files checksum, 8118 branch rows, `tau_hat=0.04468686866`, the resampling
+      spans 0.078 and 0.021 with no draw abstaining, 161 design points, the
+      value-of-protocol tables, and `INDEPENDENT RCAEval VERIFICATION OK`.
 
-      Version 0.4 (`...23814311`) is superseded and was never usable: publishing a
-      GitHub release fired the Zenodo webhook, which packages the repository and
-      nothing else. The webhook is now off. Do not re-enable it: an archive that
+      Versions 0.3 and 0.4 are superseded and carried code only; 0.4 was created
+      automatically by the GitHub release webhook, which packages the repository
+      and nothing else. The webhook is off. Do not re-enable it: an archive that
       must carry data cannot be assembled by a tool that only knows about code.
 - [ ] **Register and record ORCID for both authors. Confirmed required.** The
       TNSM submission page states: "All IEEE publications require an Open

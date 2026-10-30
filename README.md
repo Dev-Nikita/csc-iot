@@ -49,13 +49,13 @@ are the part that can be scooped before acceptance; they are added together with
 the camera-ready version once the paper is accepted. What is here is everything
 needed to re-run the work and check the numbers.
 
-Archived release: **[10.5281/zenodo.23814731](https://doi.org/10.5281/zenodo.23814731)**
-(version 0.5, <https://zenodo.org/records/23814731>). This is the identifier the
+Archived release: **[10.5281/zenodo.23820907](https://doi.org/10.5281/zenodo.23820907)**
+(version 0.6, <https://zenodo.org/records/23820907>). This is the identifier the
 manuscript cites and the one to use. It holds two files: the code snapshot and
-`csc-iot-data-0.5.tar.gz`, the checksum-covered derived data for the reported
+`csc-iot-data-0.6.tar.gz`, the checksum-covered derived data for the reported
 matrices.
 
-Superseded versions: 0.3, 0.4.
+Superseded versions: 0.3, 0.4, 0.5.
 
 Both shipped code only; 0.4 was created automatically by the GitHub release
 webhook, which packages the repository and nothing else. The webhook is off, and archive versions are assembled by hand so
