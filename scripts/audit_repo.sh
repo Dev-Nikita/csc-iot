@@ -347,7 +347,7 @@ if [ -f paper/main.tex ]; then
   # copy is the one mistake that cannot be corrected after the fact.
   if [ -d paper/submission-ready ]; then
     chk "the submission folder matches the working copy" bash -c '
-      for f in main.tex supplement.tex references.bib table_related.tex table_scenarios.tex; do
+      for f in main.tex supplement.tex references.bib table_related.tex table_scenarios.tex table_rcaeval.tex; do
         cmp -s "paper/$f" "paper/submission-ready/$f" || exit 1
       done'
   fi

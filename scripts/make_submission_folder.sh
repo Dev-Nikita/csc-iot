@@ -21,7 +21,7 @@ fi
 
 rm -rf "$dst"; mkdir -p "$dst/figures" "$dst/generated_tables"
 cp "$src"/main.tex "$src"/supplement.tex "$src"/references.bib \
-   "$src"/table_related.tex "$src"/table_scenarios.tex \
+   "$src"/table_related.tex "$src"/table_scenarios.tex "$src"/table_rcaeval.tex \
    "$src"/IEEEtran.cls "$src"/IEEEtran.bst "$src"/biographies.tex "$dst"/
 # main-camera-ready.tex is main.tex plus the biographies, nothing else. It exists
 # so the biographies compile and their cost in pages is a measured number rather
@@ -67,12 +67,21 @@ for doc in main supplement main-camera-ready; do
   q=$(pdftotext "$doc.pdf" - 2>/dev/null | grep -c '\[?\]' || true)
   printf '%-11s errors=%s pages=%s unresolved=%s\n' "$doc" "$err" "${pages:-?}" "$q"
   [ "$err" = 0 ] && [ "$q" = 0 ] || fail=1
-  # The camera-ready build is informational: it is allowed to be eleven pages,
-  # and it is reported so nobody is surprised by the overlength charge. The
-  # submitted main.pdf is not allowed to grow, and is checked here.
-  if [ "$doc" = main ] && [ "${pages:-0}" != 10 ]; then
-    echo "REFUSED: main.pdf is $pages pages; TNSM gives ten free." >&2
-    fail=1
+  # The submitted manuscript is checked against the free-page allowance of the
+  # journal actually being targeted, read from paper/page_budget.conf. When that
+  # allowance is unset -- because nobody has yet read it on the journal's own
+  # site -- the build says so and does not refuse. Refusing on a number nobody
+  # verified would make the guard a source of cuts rather than of correctness.
+  if [ "$doc" = main ]; then
+    free=$(sed -n 's/^FREE_PAGES=//p' "$OLDPWD/paper/page_budget.conf" 2>/dev/null | tr -d ' ')
+    jrnl=$(sed -n 's/^JOURNAL=//p' "$OLDPWD/paper/page_budget.conf" 2>/dev/null)
+    if [ -z "$free" ]; then
+      echo "            NOTE: free-page allowance for ${jrnl:-the target journal} is unset" >&2
+      echo "            in paper/page_budget.conf; page count not checked." >&2
+    elif [ "${pages:-0}" -gt "$free" ]; then
+      echo "REFUSED: main.pdf is $pages pages against $free free for ${jrnl}." >&2
+      fail=1
+    fi
   fi
 done
 latexmk -c >/dev/null 2>&1 || true

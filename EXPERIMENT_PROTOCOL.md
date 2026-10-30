@@ -1397,3 +1397,47 @@ with a second system is not the three identifiability limits; it is that
 comparisons between self-healing or diagnosis methods are frequently below the
 noise of the evaluation that produces them, demonstrated now on this testbed and
 on an independent published benchmark. That is the paper to write.
+
+## Amendment 0.49 (2026-10-30) -- the paper restructured around the result that survived a second system
+
+**What the paper now claims.** Not three identifiability limits. The claim is
+that a large share of the comparisons these evaluations report lies beneath the
+resolution of the evaluation that produced them, shown on two independent
+systems measured two different ways. The three limits remain, demoted to what
+they are: the mechanism behind our own testbed's case. Limit 1 now says in the
+main text that it is reported as mechanism and not as a discovery, because a
+windowed rate is standard production telemetry and the paper always said so.
+
+**Changed.** Title, abstract (197 words), keywords, the introduction's opening
+and its contribution list; a new Section~VI reporting the second system with its
+own table; Supplement S11 carrying that protocol and its bounds; and compression
+of the controller specification, the gate, Limit 1 and Limit 3, all of which
+describe a method the paper no longer advances as its contribution. Every
+figure, table and limitation is unchanged, and `check_transcribed.py` validates
+all the new decimals against `RESULTS.md`, where the probe is recorded with its
+provenance.
+
+**The page guard was wrong and is now honest.** It refused any manuscript over
+ten pages, hard-coded from TNSM's allowance, and the restructured paper is
+eleven. Refusing on that number would have forced cuts to meet a limit belonging
+to a journal we have left. The allowance now lives in
+`paper/page_budget.conf`, the build refuses only when it is set and exceeded,
+and it is deliberately **unset**: the Computer Society author pages render in
+JavaScript and come back empty here, so nobody has read TDSC's number. If it is
+twelve, as a secondary source suggests, eleven pages is free and no cut is
+needed. If it is ten, about 500 words must go and the places are named below.
+Guessing it either way is the mistake that returned the last submission, in the
+opposite direction.
+
+**If a cut is needed, these are the candidates, in order:** the related-work
+section (775 words, and the supplement carries the extended comparison); "What
+decision-time telemetry predicts" (368); "Replay-based reference outcomes" (now
+tightened, still 450); and Limit 2 (258), the shortest of the three and the one
+whose finding is a single sentence. None of these is a result. The revision
+reserve named in the header of `main.tex` is spent and should not be consulted;
+these four replace it.
+
+**Not done, and still the two gaps that matter.** The CRC construction has not
+been audited by anyone outside this work, and no closed-loop experiment exists.
+The second system answers external validity, which was the third gap; it does
+not answer those two.
