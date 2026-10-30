@@ -98,6 +98,27 @@ rm -f build_main.log build_supplement.log
 # folder still builds standalone for an editor who runs LaTeX on it.
 cp main.pdf supplement.pdf main-camera-ready.pdf \
    main.bbl supplement.bbl main-camera-ready.bbl "$dstabs"/
+# The PDFs land on a network/FUSE mount, and an audit run immediately afterwards
+# read them while the copy was still being flushed: pdftotext returned a short or
+# empty first page and two guards failed on a document that was in fact correct.
+# A checking apparatus that fails at random teaches people to re-run it until it
+# passes, which is worse than having no guard. Wait until each copy actually
+# reads back before declaring the folder built.
+sync 2>/dev/null || true
+for f in main.pdf supplement.pdf main-camera-ready.pdf; do
+  ok=0
+  for _ in $(seq 1 20); do
+    if command -v pdftotext >/dev/null 2>&1; then
+      if pdftotext -f 1 -l 1 "$dstabs/$f" - 2>/dev/null | grep -q "[A-Za-z]"; then
+        ok=1; break
+      fi
+    else
+      [ -s "$dstabs/$f" ] && { ok=1; break; }
+    fi
+    sleep 0.5
+  done
+  [ "$ok" = 1 ] || { echo "REFUSED: $dstabs/$f did not read back after copying" >&2; exit 1; }
+done
 cd / && rm -rf "$build"
 if [ "$fail" -ne 0 ]; then
   echo "REFUSED: the submission folder does not build cleanly on its own." >&2
