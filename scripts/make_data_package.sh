@@ -27,6 +27,20 @@ for root in "$@"; do
   done
   mkdir -p "$out/$name"
   cp "$root/matrix.json" "$root/jobs.csv" "$out/$name/"
+  case "$name" in
+    b5-matrix-v2)
+      required=(structural.csv decisions.csv crc_calibration.csv crc_curve_independent.csv) ;;
+    d45-matrix-v1)
+      required=(structural.csv) ;;
+    *) required=() ;;
+  esac
+  for f in "${required[@]}"; do
+    [ -f "$root/$f" ] || {
+      echo "REFUSED: $root/$f is required for independent reconstruction" >&2
+      exit 1
+    }
+    cp "$root/$f" "$out/$name/"
+  done
   # one row per branch: which branch, which action, which scenario. The objective
   # components are already in jobs.csv; this is the index that ties them to the
   # directory names the manifests use.
@@ -54,10 +68,29 @@ fi
 # checked against it, and the supplement tells a reader the archive is what lets
 # them recompute the reported figures. `|| true` here once meant a package could
 # be built without it and nothing would say so.
-for f in RESULTS.md EXPERIMENT_PROTOCOL.md; do
+for f in RESULTS.md EXPERIMENT_PROTOCOL.md CRC_AUDIT.md; do
   [ -f "$f" ] || { echo "REFUSED: $f is missing from the working tree" >&2; exit 1; }
   cp "$f" "$out/"
 done
+
+mkdir -p "$out/rcaeval"
+for f in secondstand/README.md secondstand/batch.py \
+         secondstand/results.jsonl secondstand/analyse2.py \
+         secondstand/analysis_output.txt \
+         secondstand/replication_sensitivity.py \
+         secondstand/replication_sensitivity_output.txt \
+         secondstand/verify_independent.py \
+         secondstand/verify_independent_output.txt; do
+  [ -f "$f" ] || { echo "REFUSED: $f is missing" >&2; exit 1; }
+  cp "$f" "$out/rcaeval/"
+done
+[ -f secondstand/results.jsonl.provenance.json ] || {
+  echo "REFUSED: RCAEval package-version provenance is missing" >&2
+  echo "         rerun secondstand/batch.py at the pinned dataset revision" >&2
+  exit 1
+}
+cp secondstand/results.jsonl.provenance.json "$out/rcaeval/"
+cp analysis/recompute_crc_independent.py "$out/"
 
 ( cd "$out" && find . -type f ! -name SHA256SUMS -print0 | sort -z \
     | xargs -0 shasum -a 256 > SHA256SUMS )
@@ -73,13 +106,27 @@ One directory per matrix the manuscript reports. Each contains:
 - `branch_index.txt` -- the branch directory names, so a row can be tied to the
                      run that produced it
 
+The primary matrix also contains `crc_calibration.csv`, the frozen calibration
+ledger, and `crc_curve_independent.csv`. Run
+`python3 recompute_crc_independent.py b5-matrix-v2/crc_calibration.csv` to rebuild
+the run-level loss curve and threshold without importing the project CRC module.
+`structural.csv` and `decisions.csv` preserve the prediction and method-summary
+outputs used by the paper.
+
 `generated_tables/` holds the tables as the analysis emitted them, and
 `SHA256SUMS` covers every file here.
 
+`rcaeval/` contains the 375 per-case benchmark results used in the second study,
+the pinned scorer, both analysis scripts, their frozen outputs, and an
+independent standard-library verifier. Follow `rcaeval/README.md` to download
+the public cases at the recorded dataset revision and reproduce the scorer.
+
 Raw execution logs are not included: they are large, they are append-only, and
-nothing in the manuscript is computed from them directly. Everything the
-manuscript reports is recomputable from `jobs.csv` with the analysis scripts in
-the source repository.
+nothing in the manuscript is computed from them directly. Objective and
+dispersion tables are recomputable from `jobs.csv`; CRC arithmetic is
+recomputable from the explicit ledger. Re-fitting the predictor from raw
+telemetry still requires the branch records retained on the analysis host, so
+this derived-data package does not claim full end-to-end re-execution.
 INNER
 
 echo

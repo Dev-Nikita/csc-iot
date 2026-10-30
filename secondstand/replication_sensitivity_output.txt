@@ -1,0 +1,14 @@
+Replication-depth sensitivity: same paired-bootstrap rule at every n
+bootstrap resamples=4000 seed=17
+Rates pool enumerated repetition subsets; they are descriptive, not FWER-controlled discoveries.
+
+n=2: subsets=750  CI excludes zero=0.4213 (316/750)  sign agrees with full-five=0.8333  median |subset-full|=0.1000  p90 |subset-full|=0.2400  median CI width=0.1667  exact sign-flip p<0.05=0
+n=3: subsets=750  CI excludes zero=0.2867 (215/750)  sign agrees with full-five=0.9213  median |subset-full|=0.0667  p90 |subset-full|=0.1600  median CI width=0.5000  exact sign-flip p<0.05=0
+n=4: subsets=375  CI excludes zero=0.4853 (182/375)  sign agrees with full-five=0.9653  median |subset-full|=0.0417  p90 |subset-full|=0.1000  median CI width=0.3750  exact sign-flip p<0.05=0
+n=5: subsets=75  CI excludes zero=0.5733 (43/75)  sign agrees with full-five=1.0000  median |subset-full|=0.0000  p90 |subset-full|=0.0000  median CI width=0.4000  exact sign-flip p<0.05=0
+
+Exact sign-flip minimum attainable two-sided p-values:
+n=2: 0.5000
+n=3: 0.2500
+n=4: 0.1250
+n=5: 0.0625

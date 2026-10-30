@@ -14,9 +14,12 @@ is exactly what the dispersion band needs, so the question "how much of a
 reported difference between methods survives run-to-run variation" can be asked
 of somebody else's benchmark without running anything.
 
-`batch.py` scores every RE1 case with three of RCAEval's own shipped
-metrics-only methods -- BARO, N-Sigma and epsilon-Diagnosis -- recording the
-rank position of the true root-cause service. `analyse.py` then applies the
+`batch.py` attempts every RE1 case with three shipped metrics-only methods and
+records the rank position of the true root-cause service. BARO and N-Sigma
+return it in 373/375 cases each; epsilon-Diagnosis does so in only 23/375. Its
+raw output is retained, but inference excludes it because turning 352 absences
+into reciprocal-rank zero makes a nearly constant failure mode look stable.
+`analyse2.py` then applies the
 manuscript's own band definition, carried over unchanged: the band is the pooled
 Q0.95 of within-configuration pairwise |differences| of the same method across
 repetitions of the same fault, and a contrast between two methods at a
@@ -24,13 +27,28 @@ configuration is resolvable only if it exceeds that band.
 
 Reproduce:
 
-    pip install RCAEval pyarrow huggingface_hub
+    pip install RCAEval==1.9.0 pandas==2.2.3 pyarrow==26.0.0 \
+      huggingface_hub==0.29.1 scikit-learn==1.9.1 scipy==1.18.1
     python -c "from huggingface_hub import snapshot_download; \
       snapshot_download('phamquiluan/RCAEval', repo_type='dataset', \
+      revision='afeacb11bcc94dadfd1c8f483ee4377b2b8b614e', \
       allow_patterns=['re1*','cases.parquet'], local_dir='re1')"
-    python batch.py && python analyse.py
+    python batch.py --root re1
+    python analyse2.py
+    python verify_independent.py
 
-Scoring all 375 cases took about 17 minutes on one core.
+`batch.py` writes `results.jsonl.provenance.json` with the dataset revision,
+Python and package versions, and output SHA-256. On 2026-10-30 a clean Python
+3.12 environment using the versions above reproduced all 375 original lines
+byte-for-byte: both files have SHA-256
+`b542851fb79c4848295557370e07d11ad7b6652432dfdaa5902873d2e51846e4`.
+The rerun also confirmed that epsilon-Diagnosis's missing true-service entries
+are produced by the pinned public code and data, rather than by a later analysis
+step. The RCAEval wheel does not install its imported scikit-learn dependency,
+so the explicit dependency list above is required.
+
+Scoring all 375 cases took 726 seconds on one Apple-silicon core in this clean
+environment; runtime varies markedly across traces.
 
 ## Correction, 2026-10-30
 
@@ -47,30 +65,27 @@ can be traced, and must not be cited.
 
 ## What it found
 
-**Repetitions of the same method on the same fault disagree often.** Hit@1 flips
-between two repetitions in **20.6%** of repetition pairs, hit@5 in **12.3%**. On
-reciprocal rank, 26.8% of repetition pairs differ by more than 0.25 and the
-Q0.95 band is **0.667**.
+**Repetitions of the same method on the same fault disagree often.** For BARO
+and N-Sigma, Hit@1 flips between two repetitions in **30.9%** of repetition
+pairs, hit@5 in **14.1%**. On reciprocal rank, 35.9% differ by more than 0.25 and
+the Q0.95 band is **0.750**.
 
 **(A) One run of each method cannot separate them.** Comparing two methods as
 single observations on the same case -- the regime the manuscript's own design is
-in, one branch per action per anchor -- only **277 of 1125** contrasts exceed the
-band, and **14 of 375** for BARO against N-Sigma.
+in, one branch per action per anchor -- only **8 of 375** BARO--N-Sigma
+contrasts exceed the band.
 
 **(B) Five repetitions mostly can.** Keeping the repetitions and testing the
-paired difference of means by bootstrap, **188 of 225** per-configuration
-contrasts resolve, including **43 of 75** for BARO against N-Sigma.
+paired difference of means by bootstrap, **43 of 75** BARO--N-Sigma
+configuration-level contrasts exclude zero.
 
-**(C) Over the whole suite every pair separates.** Hierarchical bootstrap over
+**(C) Over the whole suite the pair separates.** Hierarchical bootstrap over
 configurations and repetitions: BARO minus N-Sigma -0.2195, 95% CI
-[-0.2626, -0.1766]; the other two pairs likewise. Aggregate orderings are stable
-in 100% of 2000 resamples on all three systems.
+[-0.2626, -0.1766].
 
 | pair | (A) one run each | (B) five repetitions |
 |---|---|---|
-| BARO vs N-Sigma | 14 of 375 | 43 of 75 |
-| BARO vs eps-Diagnosis | 80 of 375 | 71 of 75 |
-| N-Sigma vs eps-Diagnosis | 183 of 375 | 74 of 75 |
+| BARO vs N-Sigma | 8 of 375 | 43 of 75 |
 
 ## What this licenses the paper to claim, and what it does not
 
@@ -89,8 +104,9 @@ methods.
 ## Honest limits of this probe
 
 
-- Three metrics-only methods, not the full set; `ht` needs `pyrca`, which is not
-  installed. More methods would strengthen it and are cheap to add.
+- Two usable metrics-only methods, not the full set; epsilon-Diagnosis failed to
+  include the true service in 352 cases, and `ht` needs `pyrca`, which is not
+  installed. More successfully executed methods would strengthen it.
 - Reciprocal rank is our choice of continuous score. The benchmark's own Avg@5
   is binary per case, and a Q0.95 band on a Bernoulli difference saturates at
   1.0, so nothing is resolvable by construction under it -- which is itself

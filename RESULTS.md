@@ -310,9 +310,12 @@ Source: `secondstand/results.jsonl` (375 rows, one per case) and
 `secondstand/analysis_output.txt`, produced by `secondstand/batch.py` and
 `secondstand/analyse2.py` over the RCAEval RE1 suite downloaded from the authors'
 Hugging Face repository (`phamquiluan/RCAEval`, patterns `re1*`, 124 MB).
-Three of the benchmark's own shipped metrics-only methods were scored: BARO,
-N-Sigma and epsilon-Diagnosis. The score recorded per case is the rank position
-of the true root-cause service; reciprocal rank is derived from it.
+Three shipped metrics-only methods were attempted. BARO and N-Sigma include the
+true service in 373 of 375 rankings each; epsilon-Diagnosis does so in only 23 of
+375. Its 352 absent services remain in the raw output but are excluded from
+inference: mapping them to reciprocal-rank zero made a nearly constant failure
+mode appear artificially stable. The analysis below therefore compares BARO and
+N-Sigma only.
 
 **A correction, recorded in place of the figures it replaces.** The first
 analysis (`analyse.py`, superseded) compared the MEAN of five repetitions against
@@ -331,49 +334,57 @@ Design constants, not measurements:
 - cases scored: 375
 - configurations (dataset x service x fault): 75
 - repetitions per configuration: 5
-- methods: 3; method pairs: 3
-- within-configuration, within-method repetition pairs: 2250
-- single-observation contrasts (one per case per pair): 1125
-- per-configuration contrasts: 225
+- methods in inference: 2; method pairs: 1
+- within-configuration, within-method repetition pairs: 1500
+- single-observation contrasts: 375
+- per-configuration contrasts: 75
 
 Measurements:
 
-- repetition pairs flipping hit@1: 20.6 per cent
-- repetition pairs flipping hit@5: 12.3 per cent
-- repetition pairs differing in reciprocal rank by more than 0.25: 26.8 per cent
+- repetition pairs flipping hit@1: 30.9 per cent
+- repetition pairs flipping hit@5: 14.1 per cent
+- repetition pairs differing in reciprocal rank by more than 0.25: 35.9 per cent
 - band, pooled Q0.95 of |difference between two single repetitions| of the same
-  method on the same fault: 0.667
+  method on the same fault: 0.750
 
 Criterion A, one run of each method against the band, which is the regime the
 manuscript's own design is in (one branch per action per anchor):
 
-- resolvable: 277 of 1125, i.e. 24.6 per cent
-- BARO vs N-Sigma: 14 of 375; BARO vs epsilon-Diagnosis: 80 of 375;
-  N-Sigma vs epsilon-Diagnosis: 183 of 375
+- BARO vs N-Sigma: 8 of 375
 
 Criterion B, five repetitions, paired bootstrap confidence interval on the mean
 difference, 4000 resamples, resolvable when the interval excludes zero:
 
-- resolvable: 188 of 225, i.e. 83.6 per cent
-- BARO vs N-Sigma: 43 of 75; BARO vs epsilon-Diagnosis: 71 of 75;
-  N-Sigma vs epsilon-Diagnosis: 74 of 75
+- BARO vs N-Sigma: 43 of 75
 
 Criterion C, whole suite, hierarchical bootstrap over configurations and then
 repetitions, 4000 resamples:
 
-- BARO minus N-Sigma: -0.2195, 95 per cent interval -0.2626 to -0.1766
-- BARO minus epsilon-Diagnosis: +0.4436, interval +0.3851 to +0.5028
-- N-Sigma minus epsilon-Diagnosis: +0.6620, interval +0.5982 to +0.7229
-- all three resolved
+- BARO minus N-Sigma: -0.2190, 95 per cent interval -0.2630 to -0.1761
+- epsilon-Diagnosis comparisons are excluded
 
-Mean reciprocal rank by system, BARO / N-Sigma / epsilon-Diagnosis: Online
-Boutique 0.496 / 0.775 / 0.071; Sock Shop 0.635 / 0.797 / 0.000; Train Ticket
-0.270 / 0.487 / 0.000. Resampling whole repetitions within configurations 2000
-times, the ordering N-Sigma > BARO > epsilon-Diagnosis holds in 100 per cent of
-resamples on all three systems.
+Resampling whole repetitions within configurations preserves N-Sigma $>$ BARO.
 
 Negative control recorded because it bounds the method: under the benchmark's
 own Avg@k, which is binary per case, the Q0.95 of pairwise differences saturates
 at 1.0 as soon as any repetition disagrees, so no per-configuration contrast is
 resolvable under it by construction. This is reported as a property of the
 metric, not as a measurement of the methods.
+
+Replication-depth sensitivity (`secondstand/replication_sensitivity.py`, seed
+17, 4000 paired-bootstrap resamples per subset). Every subset of size n from the
+five paired repetitions is enumerated; the full-five mean difference is the
+descriptive reference, not an independent truth:
+
+- n=2: 750 subsets; sign agreement 83.33%; median absolute subset-to-full
+  deviation 0.1000; 90th percentile 0.2400
+- n=3: 750 subsets; sign agreement 92.13%; median deviation 0.0667; 90th
+  percentile 0.1600
+- n=4: 375 subsets; sign agreement 96.53%; median deviation 0.0417; 90th
+  percentile 0.1000
+- n=5: 75 subsets; sign agreement 100%; zero deviation by construction
+
+The paired percentile-bootstrap interval-exclusion rate is non-monotone: 42.13%,
+28.67%, 48.53% and 57.33% at n=2,3,4,5. It is therefore a small-sample diagnostic,
+not a replication power curve. Exact two-sided sign-flip tests reject none at
+0.05; their minimum attainable p-values are 0.5, 0.25, 0.125 and 0.0625.

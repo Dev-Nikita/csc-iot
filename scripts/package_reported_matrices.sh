@@ -43,6 +43,12 @@ for name in "${MATRICES[@]}"; do
 done
 
 echo
+primary="${roots[0]}"
+python3 analysis/export_crc_ledger.py "$primary" "$primary/jobs.csv" \
+  --out "$primary/crc_calibration.csv"
+python3 analysis/recompute_crc_independent.py "$primary/crc_calibration.csv" \
+  --curve "$primary/crc_curve_independent.csv"
+
 bash scripts/make_data_package.sh "${roots[@]}"
 
 tar -czf dist/csc-iot-data.tar.gz -C dist zenodo-data

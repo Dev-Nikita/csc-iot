@@ -100,7 +100,10 @@ This gate is otherwise still open on the first item.
       re-check at submission time.
 - [ ] Every new entry verified at the source and recorded in
       `docs/literature.csv` before it enters `references.bib`. No exceptions, and
-      no DOI that has not been seen at the publisher.
+      no DOI that has not been seen at the publisher. `li2026pilot` was added on
+      2026-10-30 only after the full NSDI paper and proceedings record were read;
+      it is now the closest execution-level comparator and the priority claim was
+      narrowed around it.
 
 Expect this to add 0.2--0.4 page. It happens **before** Gate 5.
 
@@ -177,13 +180,26 @@ Expect this to add 0.2--0.4 page. It happens **before** Gate 5.
       document a reader receives. If the concept DOI starts resolving later,
       nothing needs to change.
 - [ ] **Upload that tarball as a new Zenodo version, then confirm the record.**
-      The verified package is `dist/csc-iot-data.tar.gz` (470 KB), already copied
-      to the Mac. Zenodo record -> New version -> upload -> publish. It mints a
-      new version DOI, which changes nothing in the manuscript: the paper cites
-      the version DOI `10.5281/zenodo.23321904`. The concept DOI is not used:
-      see the gate below. Afterwards open the record and confirm the files are **listed and
+      Rebuild `dist/csc-iot-data.tar.gz` on the analysis host with the revised
+      packager; the earlier 470 KB copy predates the CRC ledger and RCAEval
+      additions and must not be uploaded as the final artifact. Zenodo record ->
+      New version -> upload -> publish. It mints a new version DOI, which must
+      replace `10.5281/zenodo.23321904` in the manuscript, supplement and
+      README because they cite an exact version rather than the concept DOI.
+      Afterwards open the record and confirm the files are **listed and
       downloadable** -- that is the one thing a verified local tarball does not
-      prove, because a failed or partial upload looks like nothing from here.
+      establish. API inspection on 2026-10-30 confirmed that published v0.3 has
+      only `Dev-Nikita/csc-iot-0.3.zip` and does not contain the derived-data
+      tarball, RCAEval cases or the new analyses. The revised packager now also
+      refuses a package without a CRC calibration ledger and independent curve;
+      `jobs.csv` alone cannot reproduce CRC.
+- [x] **RCAEval scoring independently reconstructed from the pinned public
+      snapshot inside a clean environment.** Python 3.12, RCAEval 1.9.0 and the
+      recorded dependency set reproduced all 375 retained JSON lines
+      byte-for-byte (SHA-256 `b542851f...e51846e4`) on 2026-10-30. The rerun
+      confirms both usable rankings and the 352 epsilon-Diagnosis absences. The
+      exact manifest is `secondstand/results.jsonl.provenance.json`; this is an
+      internal clean-room rerun, not a substitute for an external auditor.
 - [ ] **Register and record ORCID for both authors. Confirmed required.** The
       TNSM submission page states: "All IEEE publications require an Open
       Researcher and Contributor ID (ORCID) for all authors," and that a
@@ -202,9 +218,13 @@ Expect this to add 0.2--0.4 page. It happens **before** Gate 5.
       2026-10-13 review raised this distinction and it is the right one.
 - [ ] **An independent audit of the CRC construction** -- that the finite-sample
       rule applies to this run-level loss and to taking the largest admissible
-      threshold, and that adaptive selection from the admissible set is covered
-      under every realised fallback. The guarantee is stated conservatively, but
-      it has not been checked by anyone outside this work.
+      threshold, and that adaptive selection from a non-empty admissible set is
+      pointwise dominated by the set loss. Fallback is explicitly outside the
+      guarantee and must be audited as a separately reported outcome. An internal
+      code-and-claim audit is recorded in `CRC_AUDIT.md`; it repaired a test that
+      had checked a tail probability instead of expected loss and leaves the
+      exchangeability/manifests check open. The construction has still not been
+      checked by anyone outside this work.
 
 ## Gate 3 -- authorship
 

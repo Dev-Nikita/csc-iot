@@ -1,24 +1,18 @@
-cases 375  configurations 75  repetition pairs 2250
-band eta = Q0.95 of |difference between two single repetitions| = 0.6667
-repetition pairs differing by more than 0.25: 26.8%
+cases 375  configurations 75  repetition pairs 1500
+band eta = Q0.95 of |difference between two single repetitions| = 0.7500
+repetition pairs differing by more than 0.25: 35.9%
 
 (A) one run each, against the band
-    resolvable 277 of 1125 (24.6%)
-                       resolvable    n      frac
-pair                                            
-baro vs e_diagnosis            80  375  0.213333
-baro vs nsigma                 14  375  0.037333
-nsigma vs e_diagnosis         183  375  0.488000 
+    resolvable 8 of 375 (2.1%)
+                resolvable    n      frac
+pair
+baro vs nsigma           8  375  0.021333
 
 (B) five repetitions, paired bootstrap CI on the mean difference
-    resolvable 188 of 225 (83.6%)
-                       resolvable   n      frac
-pair                                           
-baro vs e_diagnosis            71  75  0.946667
-baro vs nsigma                 43  75  0.573333
-nsigma vs e_diagnosis          74  75  0.986667 
+    resolvable 43 of 75 (57.3%)
+                resolvable   n      frac
+pair
+baro vs nsigma          43  75  0.573333
 
 (C) whole suite, hierarchical bootstrap over configurations and repetitions
-    baro         - nsigma         -0.2195  95% CI [-0.2626, -0.1766]  resolved
-    baro         - e_diagnosis    +0.4436  95% CI [+0.3851, +0.5028]  resolved
-    nsigma       - e_diagnosis    +0.6620  95% CI [+0.5982, +0.7229]  resolved
+    baro         - nsigma         -0.2190  95% CI [-0.2630, -0.1761]  resolved

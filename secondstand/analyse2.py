@@ -19,16 +19,23 @@ Three criteria are reported, because they answer three different questions:
                                        whole suite?
 """
 import json, itertools
+from pathlib import Path
 import numpy as np, pandas as pd
 
-rows = [json.loads(l) for l in open("results.jsonl")]
+rows = [json.loads(l) for l in Path(__file__).with_name("results.jsonl").open()]
 df = pd.DataFrame(rows)
-M = ["baro", "nsigma", "e_diagnosis"]
+# epsilon-Diagnosis did not return the true service in 352/375 cases. Treating
+# those absences as RR=0 made a nearly constant failure mode look like stable
+# experimental evidence. Keep its raw output in results.jsonl, but restrict the
+# inferential comparison to the two methods that produced rankings almost
+# everywhere (373/375 cases each).
+M = ["baro", "nsigma"]
 for m in M:
     df[m + "_rr"] = df[m].apply(
         lambda p: 0.0 if p is None or (isinstance(p, float) and np.isnan(p)) else 1.0 / p)
 key = ["dataset", "service", "fault"]
-rng = np.random.default_rng(7)
+rng_paired = np.random.default_rng(7)
+rng_hierarchical = np.random.default_rng(7)
 
 d = np.array([abs(a - b) for _, g in df.groupby(key) for m in M
               for a, b in itertools.combinations(g[m + "_rr"].values, 2)])
@@ -49,7 +56,8 @@ b_rows = []
 for k, g in df.groupby(key):
     for x, y in itertools.combinations(M, 2):
         v = (g[x+"_rr"] - g[y+"_rr"]).values; n = len(v)
-        bs = np.array([v[rng.integers(0, n, n)].mean() for _ in range(4000)])
+        bs = np.array([v[rng_paired.integers(0, n, n)].mean()
+                       for _ in range(4000)])
         lo, hi = np.quantile(bs, [0.025, 0.975])
         b_rows.append({"pair": f"{x} vs {y}", "res": lo > 0 or hi < 0})
 B = pd.DataFrame(b_rows)
@@ -59,10 +67,13 @@ print(B.groupby("pair").res.agg(resolvable="sum", n="size", frac="mean").to_stri
 print("(C) whole suite, hierarchical bootstrap over configurations and repetitions")
 for x, y in itertools.combinations(M, 2):
     cfg = [g[x+"_rr"].values - g[y+"_rr"].values for _, g in df.groupby(key)]
+    estimate = np.mean([values.mean() for values in cfg])
     bs = []
     for _ in range(4000):
-        idx = rng.integers(0, len(cfg), len(cfg))
-        bs.append(np.mean([cfg[i][rng.integers(0, len(cfg[i]), len(cfg[i]))].mean() for i in idx]))
+        idx = rng_hierarchical.integers(0, len(cfg), len(cfg))
+        bs.append(np.mean([
+            cfg[i][rng_hierarchical.integers(0, len(cfg[i]), len(cfg[i]))].mean()
+            for i in idx]))
     lo, hi = np.quantile(bs, [0.025, 0.975])
-    print(f"    {x:12s} - {y:14s} {np.mean(bs):+.4f}  95% CI [{lo:+.4f}, {hi:+.4f}]"
+    print(f"    {x:12s} - {y:14s} {estimate:+.4f}  95% CI [{lo:+.4f}, {hi:+.4f}]"
           f"  {'resolved' if lo>0 or hi<0 else 'NOT resolved'}")

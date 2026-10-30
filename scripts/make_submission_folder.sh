@@ -22,6 +22,7 @@ fi
 rm -rf "$dst"; mkdir -p "$dst/figures" "$dst/generated_tables"
 cp "$src"/main.tex "$src"/supplement.tex "$src"/references.bib \
    "$src"/table_related.tex "$src"/table_scenarios.tex "$src"/table_rcaeval.tex \
+   "$src"/table_replication_sensitivity.tex \
    "$src"/IEEEtran.cls "$src"/IEEEtran.bst "$src"/biographies.tex "$dst"/
 # main-camera-ready.tex is main.tex plus the biographies, nothing else. It exists
 # so the biographies compile and their cost in pages is a measured number rather

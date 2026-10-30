@@ -1521,3 +1521,51 @@ Still unknown and recorded as such: the maximum length accepted at submission,
 which that page says may differ from the formatted limit.
 
 **Abstract back to 188 words after the rewrite pushed it to 215.**
+
+## Amendment 0.52 (2026-10-30) -- replication depth isolated, and the quantile is no longer called a universal bound
+
+**Why the A/B contrast was insufficient.** Criterion A used single case-level
+observations against a pooled dispersion quantile; criterion B used
+configuration-level means with paired-bootstrap intervals. Their difference
+cannot be attributed to replication depth because the unit and decision rule
+both changed. They remain in the paper as answers to different questions and
+are now labelled non-equivalent rather than presented as a replication curve.
+
+**What was added.** For every RCAEval configuration and method pair, every subset
+of n=2,3,4,5 paired repetitions is enumerated and the same paired percentile-
+bootstrap rule applied. The inferential interval result is non-monotone at these
+sample sizes, so it is retained as a negative diagnostic rather than promoted.
+The descriptive result is stable: sign agreement with the full-five estimate
+rises 93.7%, 97.0%, 98.8%, 100%, while median absolute deviation falls 0.095,
+0.064, 0.039, 0.000. The n=5 endpoint is the reference itself and is named as
+such. Exact sign-flip tests cannot attain p<0.05 with five pairs; the paper says
+so rather than interpreting zero rejections as indistinguishability.
+
+**Claim narrowed.** The pooled Q0.95 is an empirical resolution threshold, not
+an upper bound on every possible comparison. The introduction, contribution
+list, RCAEval section and conclusion now use that language. The conclusion has
+also been rewritten around both systems and explicitly separates common-state
+branch nondeterminism from independent-run variation.
+
+## Amendment 0.53 (2026-10-30) -- the failed third scorer is excluded from inference
+
+Adversarial review counted missing true-service ranks rather than accepting a
+null as a score. BARO and N-Sigma include the true service in 373 of 375 outputs
+each; epsilon-Diagnosis does so in only 23 of 375. The scorer raised no exception
+in the other 352 cases -- the true service was absent from the returned ranking
+and the first analysis mapped that absence to reciprocal-rank zero. Pooling those
+zeros made a nearly constant compatibility/failure mode look like low dispersion
+and inflated both the all-pair interval-exclusion rate and subset sign agreement.
+
+The raw epsilon-Diagnosis outputs remain in `results.jsonl`; they are not erased
+or relabelled. They are excluded from every inferential RCAEval result. The
+second-system claim is now BARO versus N-Sigma only. Recomputed from their 1500
+within-method repetition pairs: Q0.95 = 0.750; hit@1 flips 30.9%, hit@5 14.1%,
+and 35.9% of reciprocal-rank pairs differ by more than 0.25. Criterion A is
+8/375 and Criterion B 43/75. Subset sign agreement at n=2,3,4 is 83.3%, 92.1%
+and 96.5%; median errors are 0.100, 0.067 and 0.042. The exact standard-library
+verifier enumerates all 3125 paired bootstrap resamples per configuration and
+reproduces the retained counts without a random seed.
+
+The earlier pooled three-method figures remain above as historical corrections
+and must not be cited. This amendment supersedes their use in the manuscript.

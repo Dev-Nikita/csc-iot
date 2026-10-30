@@ -53,12 +53,18 @@ def test_rejects_non_monotone_loss():
 
 
 def test_guarantee_holds_on_held_out_runs():
-    """The point of the whole exercise: calibrate on n runs, check the realised
-    loss on fresh exchangeable runs sits at or below delta on average."""
+    """Exercise the quantity in the theorem: expected held-out loss.
+
+    CRC does *not* bound P(L > delta).  The old version of this test counted
+    such exceedances and therefore tested a tail probability the manuscript
+    never claims.  Averaging one fresh exchangeable loss over many independently
+    calibrated trials is the direct Monte-Carlo check of E[L] <= delta.
+    """
     rng = np.random.default_rng(7)
     taus = np.linspace(0.01, 0.6, 60)
-    delta, breaches = 0.10, 0
-    trials = 200
+    delta = 0.10
+    fresh_losses = []
+    trials = 2000
     for _ in range(trials):
         cal = monotone_losses(25, taus, rate=0.35, rng=rng)
         out = calibrate(cal, taus, delta=delta)
@@ -66,5 +72,6 @@ def test_guarantee_holds_on_held_out_runs():
             continue
         j = taus.tolist().index(out["tau_hat"])
         fresh = monotone_losses(1, taus, rate=0.35, rng=rng)
-        breaches += fresh[0, j] > delta
-    assert breaches / trials <= delta + 0.05   # slack for a finite trial count
+        fresh_losses.append(fresh[0, j])
+    assert len(fresh_losses) > 0.95 * trials
+    assert np.mean(fresh_losses) <= delta + 0.01

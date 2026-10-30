@@ -1,0 +1,16 @@
+{
+  "cases": 375,
+  "dataset": "phamquiluan/RCAEval",
+  "dataset_revision": "afeacb11bcc94dadfd1c8f483ee4377b2b8b614e",
+  "output_sha256": "b542851fb79c4848295557370e07d11ad7b6652432dfdaa5902873d2e51846e4",
+  "packages": {
+    "RCAEval": "1.9.0",
+    "huggingface-hub": "0.29.1",
+    "numpy": "2.5.4",
+    "pandas": "2.2.3",
+    "pyarrow": "26.0.0",
+    "scikit-learn": "1.9.1",
+    "scipy": "1.18.1"
+  },
+  "python": "3.12.3"
+}

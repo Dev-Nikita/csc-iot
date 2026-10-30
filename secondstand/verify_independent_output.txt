@@ -1,0 +1,9 @@
+rows=375 configurations=75 within-pairs=1500
+eta_q95=0.75
+criterion_A=8/375 baro-nsigma:8/375
+criterion_B_exact=43/75 baro-nsigma:43/75
+n=2 subsets=750 sign_agreement=0.8333333333 median_error=0.1 p90_error=0.24
+n=3 subsets=750 sign_agreement=0.9213333333 median_error=0.06666666667 p90_error=0.16
+n=4 subsets=375 sign_agreement=0.9653333333 median_error=0.04166666667 p90_error=0.1
+n=5 subsets=75 sign_agreement=1 median_error=0 p90_error=0
+INDEPENDENT RCAEval VERIFICATION OK

@@ -313,6 +313,11 @@ chk "neighbour selection uses a stable sort"       grep -qF 'kind="stable"' anal
 chk "no live argpartition in the leakage harness"  bash -c '! grep -E "^[^#]*argpartition" analysis/leakage_tests.py'
 chk "the per-anchor contrasts have a script"      test -f analysis/action_contrasts.py
 chk "that script refuses a factored matrix"       grep -q "is not one thing" analysis/action_contrasts.py
+chk "CRC has a portable calibration ledger"       test -f analysis/export_crc_ledger.py
+chk "CRC has an implementation-independent replay" test -f analysis/recompute_crc_independent.py
+chk "the data package requires the CRC ledger"    grep -q 'crc_calibration.csv' scripts/make_data_package.sh
+chk "the data package carries the RCAEval cases"  grep -q 'secondstand/results.jsonl' scripts/make_data_package.sh
+chk "RCAEval has a standard-library verifier"    test -f secondstand/verify_independent.py
 echo
 # The manuscript is not part of this repository until the paper is accepted (see
 # .gitignore), so these run only where a working copy of it is present. They are
@@ -347,7 +352,7 @@ if [ -f paper/main.tex ]; then
   # copy is the one mistake that cannot be corrected after the fact.
   if [ -d paper/submission-ready ]; then
     chk "the submission folder matches the working copy" bash -c '
-      for f in main.tex supplement.tex references.bib table_related.tex table_scenarios.tex table_rcaeval.tex; do
+      for f in main.tex supplement.tex references.bib table_related.tex table_scenarios.tex table_rcaeval.tex table_replication_sensitivity.tex; do
         cmp -s "paper/$f" "paper/submission-ready/$f" || exit 1
       done'
   fi
@@ -418,6 +423,18 @@ if [ -f paper/main.tex ]; then
 else
   echo "manuscript invariants: skipped (no working copy of the manuscript here)"
 fi
+# The RCAEval method filter was corrected after epsilon-Diagnosis omitted the
+# true service from 352/375 rankings. A frozen output file still carried the
+# withdrawn three-method counts even after code and prose had changed. Re-run
+# the generator and compare its complete stdout, so the archive cannot contain
+# a stale but plausible-looking analysis.
+chk "frozen RCAEval analysis matches its generator" bash -c '
+  generated=$(mktemp)
+  frozen=$(mktemp)
+  trap "rm -f \"$generated\" \"$frozen\"" EXIT
+  python3 secondstand/analyse2.py | sed "s/[[:space:]]*$//" >"$generated" &&
+    sed "s/[[:space:]]*$//" secondstand/analysis_output.txt >"$frozen" &&
+    diff -u "$frozen" "$generated"'
 # Submission blockers. These are not regressions, so they do not fail the audit;
 # they are things that must be true before the manuscript is submitted and are
 # printed every run so that none of them is submitted by being forgotten.
