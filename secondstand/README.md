@@ -32,50 +32,62 @@ Reproduce:
 
 Scoring all 375 cases took about 17 minutes on one core.
 
+## Correction, 2026-10-30
+
+The first version of this probe used one criterion: the difference of two
+methods' **means** over a configuration's five repetitions, compared against a
+band built from differences between **single** repetitions. Those are different
+scales. A mean of five is roughly four times less dispersed than one
+observation, so the criterion was far too conservative. It produced "BARO vs
+N-Sigma resolvable in 0 of 75 configurations", which was briefly presented as the
+sharpest number here. An independent review identified the mismatch; it was
+reproduced and confirmed before anything was changed. `analyse.py` is superseded
+by `analyse2.py`; the old figures are kept in `RESULTS.md` so the earlier claim
+can be traced, and must not be cited.
+
 ## What it found
 
-**Repetitions of the same method on the same fault disagree often.**
-Hit@1 flips between two repetitions in **20.6%** of repetition pairs and hit@5
-in **12.3%**. On reciprocal rank, 26.8% of repetition pairs differ by more than
-0.25 and the Q0.95 band is **0.667**.
+**Repetitions of the same method on the same fault disagree often.** Hit@1 flips
+between two repetitions in **20.6%** of repetition pairs, hit@5 in **12.3%**. On
+reciprocal rank, 26.8% of repetition pairs differ by more than 0.25 and the
+Q0.95 band is **0.667**.
 
-**Three quarters of per-configuration method comparisons do not survive it.**
-Of 225 contrasts (75 configurations x 3 method pairs), **170 (75.6%)** are
-smaller than the band. By method pair:
+**(A) One run of each method cannot separate them.** Comparing two methods as
+single observations on the same case -- the regime the manuscript's own design is
+in, one branch per action per anchor -- only **277 of 1125** contrasts exceed the
+band, and **14 of 375** for BARO against N-Sigma.
 
-| pair | resolvable |
-|---|---|
-| BARO vs N-Sigma | **0 of 75** |
-| BARO vs epsilon-Diagnosis | 13 of 75 |
-| N-Sigma vs epsilon-Diagnosis | 42 of 75 |
+**(B) Five repetitions mostly can.** Keeping the repetitions and testing the
+paired difference of means by bootstrap, **188 of 225** per-configuration
+contrasts resolve, including **43 of 75** for BARO against N-Sigma.
 
-The first row is the sharpest number here: two competitive published methods,
-75 configurations, five repetitions each, and **not one configuration** where
-their difference exceeds repetition noise. The third row resolves often only
-because epsilon-Diagnosis scores near zero throughout.
+**(C) Over the whole suite every pair separates.** Hierarchical bootstrap over
+configurations and repetitions: BARO minus N-Sigma -0.2195, 95% CI
+[-0.2626, -0.1766]; the other two pairs likewise. Aggregate orderings are stable
+in 100% of 2000 resamples on all three systems.
 
-**But the aggregate leaderboard is stable, and that must be said.** Bootstrapping
-whole repetitions within each configuration, 2000 times, the ordering
-N-Sigma > BARO > epsilon-Diagnosis holds in **100%** of resamples on all three
-systems. The claim that published rankings are unresolvable would be false.
+| pair | (A) one run each | (B) five repetitions |
+|---|---|---|
+| BARO vs N-Sigma | 14 of 375 | 43 of 75 |
+| BARO vs eps-Diagnosis | 80 of 375 | 71 of 75 |
+| N-Sigma vs eps-Diagnosis | 183 of 375 | 74 of 75 |
 
 ## What this licenses the paper to claim, and what it does not
 
-It licenses: the pathology is not a property of our testbed. On an independent,
-published, widely used benchmark, the per-configuration comparisons -- which is
-where fault-type-specific claims such as "our method is best on network faults"
-are made -- are mostly indistinguishable from repetition noise, and two real
-methods are never distinguishable at that granularity.
+It licenses: the quantity an evaluation reports from a **single** run of each
+candidate is dominated by that evaluation's own dispersion, on an independent
+published benchmark as well as on ours, and recovering the comparison took five
+repetitions and a paired test. Studies reporting one run per configuration are
+reporting dispersion.
 
-It does not license: any claim about aggregate leaderboards, which survive here
-intact. And it is a weaker instrument than the manuscript's own: RCAEval
-repetitions are independent runs, not branches forked from a verified-equivalent
-state, so the dispersion measured here conflates run-to-run variation with
-initial-state variation. That the number is *worse* under the weaker instrument
-is consistent, not contradictory, and the manuscript should say so rather than
-claim the two measurements are the same quantity.
+It does not license: any claim that these methods are indistinguishable. They are
+distinguishable, and criteria B and C show it. Nor any claim about aggregate
+leaderboards, which are stable. Nor the pattern for automated recovery in
+general: this is one benchmark suite, one family of diagnosis methods, three
+methods.
 
 ## Honest limits of this probe
+
 
 - Three metrics-only methods, not the full set; `ht` needs `pyrca`, which is not
   installed. More methods would strengthen it and are cheap to add.

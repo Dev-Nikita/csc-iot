@@ -1,27 +1,24 @@
-cases analysed: 375   configurations: 75
+cases 375  configurations 75  repetition pairs 2250
+band eta = Q0.95 of |difference between two single repetitions| = 0.6667
+repetition pairs differing by more than 0.25: 26.8%
 
-within-configuration repetition dispersion of reciprocal rank
-  pairs=2250  median=0.0000  Q0.95 (band eta)=0.6667
-  share of repetition pairs differing by more than 0.25: 0.268
+(A) one run each, against the band
+    resolvable 277 of 1125 (24.6%)
+                       resolvable    n      frac
+pair                                            
+baro vs e_diagnosis            80  375  0.213333
+baro vs nsigma                 14  375  0.037333
+nsigma vs e_diagnosis         183  375  0.488000 
 
-method-pair contrasts per configuration, against the band
-  total contrasts: 225
-  RESOLVABLE: 55 (24.4%)
-  NOT resolvable: 170 (75.6%)
+(B) five repetitions, paired bootstrap CI on the mean difference
+    resolvable 188 of 225 (83.6%)
+                       resolvable   n      frac
+pair                                           
+baro vs e_diagnosis            71  75  0.946667
+baro vs nsigma                 43  75  0.573333
+nsigma vs e_diagnosis          74  75  0.986667 
 
-                       sum  size      mean
-pair                                      
-baro vs e_diagnosis     13    75  0.173333
-baro vs nsigma           0    75  0.000000
-nsigma vs e_diagnosis   42    75  0.560000
-
-         sum  size      mean
-dataset                     
-RE1-OB    17    75  0.226667
-RE1-SS    31    75  0.413333
-RE1-TT     7    75  0.093333
-
-leaderboard per dataset: mean reciprocal rank, with a repetition bootstrap
-  RE1-OB: baro=0.496 nsigma=0.775 e_diagnosis=0.071 | most frequent ranking nsigma>baro>e_diagnosis in 100.0% of bootstraps, 1 distinct orderings
-  RE1-SS: baro=0.635 nsigma=0.797 e_diagnosis=0.000 | most frequent ranking nsigma>baro>e_diagnosis in 100.0% of bootstraps, 1 distinct orderings
-  RE1-TT: baro=0.270 nsigma=0.487 e_diagnosis=0.000 | most frequent ranking nsigma>baro>e_diagnosis in 100.0% of bootstraps, 1 distinct orderings
+(C) whole suite, hierarchical bootstrap over configurations and repetitions
+    baro         - nsigma         -0.2195  95% CI [-0.2626, -0.1766]  resolved
+    baro         - e_diagnosis    +0.4436  95% CI [+0.3851, +0.5028]  resolved
+    nsigma       - e_diagnosis    +0.6620  95% CI [+0.5982, +0.7229]  resolved

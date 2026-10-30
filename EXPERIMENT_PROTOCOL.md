@@ -1441,3 +1441,51 @@ these four replace it.
 been audited by anyone outside this work, and no closed-loop experiment exists.
 The second system answers external validity, which was the third gap; it does
 not answer those two.
+
+## Amendment 0.50 (2026-10-30) -- the second stand's headline number was an artifact of our own criterion
+
+**What was wrong.** The RCAEval analysis compared the \emph{mean} of five
+repetitions against a band built from differences between \emph{single}
+repetitions. A mean of five is roughly four times less dispersed than one
+observation, so the criterion was far too conservative. It produced "BARO against
+N-Sigma resolvable in 0 of 75 configurations" and "170 of 225 contrasts below the
+band", and the first of those was presented as the sharpest number in the probe.
+An independent review identified the mismatch. It was reproduced here before
+anything was changed, and it is correct.
+
+**What is true instead.** Under a paired bootstrap on the same data --- the
+methods are scored on the same cases, so the differences are paired --- 188 of
+225 per-configuration contrasts resolve, including 43 of 75 for BARO against
+N-Sigma, and over the whole suite every pair separates cleanly, BARO minus
+N-Sigma being -0.2195 with a 95 per cent interval of [-0.2626, -0.1766]. The
+methods are distinguishable. Any claim that they were not would have been wrong.
+
+**What survives, and it is narrower and still worth reporting.** Comparing two
+methods as \emph{single} observations against the band --- which is the regime
+this paper's own design is in, one branch per action per anchor --- resolves 277
+of 1125 contrasts, and 14 of 375 for the two competitive methods. So the finding
+is about how many runs an evaluation needs, not about whether methods differ: a
+single run of each candidate reports that evaluation's dispersion, and recovering
+the comparison took five repetitions and a paired test. That is actionable in a
+way the overstated version was not.
+
+**The manuscript's own numbers are unaffected, and the reason matters.** Its
+band is applied to single branches, one per action per anchor, which is the
+regime the band is built for; the mismatch was introduced in transferring the
+criterion to a dataset with repetitions, not in the original design. The 45 of 60
+and 33 of 60 figures stand.
+
+**Two documentation errors found in the same review, both ours, both fixed.**
+The supplement still carried the previous title. And the abstract and the
+contribution list said the preregistered band leaves 33 of 60 contrasts, when the
+preregistered band resolves 45 and 33 is what survives all four sensitivity
+bands; the body of the paper had it right throughout. `check_transcribed.py`
+cannot catch this class of error: both numbers are in `RESULTS.md`, so it
+validates the digits and not the claim they are attached to. Noted as a limit of
+that check rather than a reason to distrust it.
+
+**How this was handled, for the record.** The superseded figures are kept in
+`RESULTS.md` and named as superseded, the correction is stated in the manuscript
+itself rather than quietly applied, and `secondstand/analyse.py` is left in place
+beside `analyse2.py` that replaces it. A result that was wrong for a day and is
+documented is worth more than one that was quietly improved.

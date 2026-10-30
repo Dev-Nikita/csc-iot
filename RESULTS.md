@@ -304,46 +304,73 @@ construction. The measured-latency variant is the one reported.
   runs are bounded by date against the commit history and that range is what the
   manuscript states.
 
-## Second system: resolvability on RCAEval RE1 (recorded 2026-10-30)
+## Second system: resolvability on RCAEval RE1 (recorded 2026-10-30, CORRECTED)
 
 Source: `secondstand/results.jsonl` (375 rows, one per case) and
 `secondstand/analysis_output.txt`, produced by `secondstand/batch.py` and
-`secondstand/analyse.py` over the RCAEval RE1 suite downloaded from the authors'
+`secondstand/analyse2.py` over the RCAEval RE1 suite downloaded from the authors'
 Hugging Face repository (`phamquiluan/RCAEval`, patterns `re1*`, 124 MB).
 Three of the benchmark's own shipped metrics-only methods were scored: BARO,
 N-Sigma and epsilon-Diagnosis. The score recorded per case is the rank position
 of the true root-cause service; reciprocal rank is derived from it.
+
+**A correction, recorded in place of the figures it replaces.** The first
+analysis (`analyse.py`, superseded) compared the MEAN of five repetitions against
+a band built from differences between SINGLE repetitions. A mean of five is about
+four times less dispersed than one observation, so that criterion was far too
+conservative, and it produced the figure "0 of 75 for BARO against N-Sigma" that
+was briefly the headline of this probe. An independent review identified the
+mismatch; it was reproduced and confirmed here before anything was changed. The
+superseded figures were: band 0.667, 170 of 225 contrasts below it (75.6 per
+cent), BARO vs N-Sigma 0 of 75, BARO vs epsilon-Diagnosis 13 of 75, N-Sigma vs
+epsilon-Diagnosis 42 of 75, and by system 17, 31 and 7 of 75. They are listed so
+that the earlier claim can be traced, and they must not be cited.
 
 Design constants, not measurements:
 
 - cases scored: 375
 - configurations (dataset x service x fault): 75
 - repetitions per configuration: 5
-- methods: 3; method pairs per configuration: 3; contrasts: 225
+- methods: 3; method pairs: 3
 - within-configuration, within-method repetition pairs: 2250
+- single-observation contrasts (one per case per pair): 1125
+- per-configuration contrasts: 225
 
 Measurements:
 
 - repetition pairs flipping hit@1: 20.6 per cent
 - repetition pairs flipping hit@5: 12.3 per cent
 - repetition pairs differing in reciprocal rank by more than 0.25: 26.8 per cent
-- band, pooled Q0.95 of within-configuration pairwise |difference| in
-  reciprocal rank: 0.667
-- per-configuration method contrasts below the band: 170 of 225, i.e. 75.6
-  per cent; resolvable: 55
-- resolvable by method pair: BARO vs N-Sigma 0 of 75; BARO vs
-  epsilon-Diagnosis 13 of 75; N-Sigma vs epsilon-Diagnosis 42 of 75
-- resolvable by system: Online Boutique 17 of 75; Sock Shop 31 of 75;
-  Train Ticket 7 of 75
-- mean reciprocal rank, Online Boutique: BARO 0.496, N-Sigma 0.775,
-  epsilon-Diagnosis 0.071
-- mean reciprocal rank, Sock Shop: BARO 0.635, N-Sigma 0.797,
-  epsilon-Diagnosis 0.000
-- mean reciprocal rank, Train Ticket: BARO 0.270, N-Sigma 0.487,
-  epsilon-Diagnosis 0.000
-- bootstrap over whole repetitions within configurations, 2000 resamples: the
-  ordering N-Sigma > BARO > epsilon-Diagnosis holds in 100 per cent of resamples
-  on all three systems, with one distinct ordering observed
+- band, pooled Q0.95 of |difference between two single repetitions| of the same
+  method on the same fault: 0.667
+
+Criterion A, one run of each method against the band, which is the regime the
+manuscript's own design is in (one branch per action per anchor):
+
+- resolvable: 277 of 1125, i.e. 24.6 per cent
+- BARO vs N-Sigma: 14 of 375; BARO vs epsilon-Diagnosis: 80 of 375;
+  N-Sigma vs epsilon-Diagnosis: 183 of 375
+
+Criterion B, five repetitions, paired bootstrap confidence interval on the mean
+difference, 4000 resamples, resolvable when the interval excludes zero:
+
+- resolvable: 188 of 225, i.e. 83.6 per cent
+- BARO vs N-Sigma: 43 of 75; BARO vs epsilon-Diagnosis: 71 of 75;
+  N-Sigma vs epsilon-Diagnosis: 74 of 75
+
+Criterion C, whole suite, hierarchical bootstrap over configurations and then
+repetitions, 4000 resamples:
+
+- BARO minus N-Sigma: -0.2195, 95 per cent interval -0.2626 to -0.1766
+- BARO minus epsilon-Diagnosis: +0.4436, interval +0.3851 to +0.5028
+- N-Sigma minus epsilon-Diagnosis: +0.6620, interval +0.5982 to +0.7229
+- all three resolved
+
+Mean reciprocal rank by system, BARO / N-Sigma / epsilon-Diagnosis: Online
+Boutique 0.496 / 0.775 / 0.071; Sock Shop 0.635 / 0.797 / 0.000; Train Ticket
+0.270 / 0.487 / 0.000. Resampling whole repetitions within configurations 2000
+times, the ordering N-Sigma > BARO > epsilon-Diagnosis holds in 100 per cent of
+resamples on all three systems.
 
 Negative control recorded because it bounds the method: under the benchmark's
 own Avg@k, which is binary per case, the Q0.95 of pairwise differences saturates
