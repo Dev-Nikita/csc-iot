@@ -1295,3 +1295,50 @@ with the submission folder.
 **No change to the manuscript, the supplement or any result.** Nothing was wrong
 with them. The record notes this so that a later reader of this log does not
 assume a returned submission implies a defect in the work.
+
+## Amendment 0.47 (2026-10-30) -- desk-rejected as out of scope, and the cover letter said so first
+
+**TNSM-2026-12519 was rejected without review**: "it falls outside the scope of
+the journal... Manuscripts whose primary contribution lies outside network
+management, network service management, or network application management are
+considered out of scope." No referee read it. A scope rejection says nothing
+about whether the work is correct, and nothing in the results, the data or the
+checks changes.
+
+**The framing invited it, and one sentence invited it explicitly.** The cover
+letter's "Why this journal" paragraph opened: *"The result is about how network
+and service management mechanisms are evaluated, not about a controller."* That
+was written to position the paper as methodology of broad interest. Read by a
+desk editor matching scope, it is a statement that the primary contribution is
+meta-level -- and the rejection letter's wording tracks it. The title led with
+"in the Evaluation of", naming a methodology as the object of the paper; the
+abstract's every sentence after the first described measurement properties --
+sign tests, resolvable signs, a resource term -- and never said what the work
+tells an operator to do. Nothing in the paper was hidden from the editor; the
+paper simply presented itself as measurement science.
+
+**The reframe is not spin, because the results already are what the new framing
+says.** All three limits are statements about what the deployed telemetry
+determines: cumulative counters do not separate onset from severity; telemetry
+from the path in use does not reveal an idle target's capacity; container
+accounting does not price recruited capacity. That is a service-assurance result
+-- it tells an operator what to instrument so that a fault-management decision
+can be verified -- and it was buried under the instrument used to find it.
+Changed: the title now names what telemetry must expose; the abstract opens on
+mechanism selection by operators and closes on the adverse consequence; the
+keywords lead with network and service management, fault management, service
+assurance and instrumentation; and the contributions list now leads with the
+three limits stated as instrumentation requirements, each with what an operator
+must export, probe or declare, with fork-and-replay demoted to second and named
+as the instrument. The fork-and-replay methodology did not become less
+important; it stopped being the headline.
+
+**What was not changed.** No result, no number, no table, no limitation, no
+declaration. The adverse findings stay where they were, including the reactive
+threshold reaching the oracle bound. The TNSM submission is preserved at git tag
+`tnsm-submitted-20261016`.
+
+**The lesson worth keeping.** This project spent weeks guarding page counts,
+DOIs, citations and author lists, and was stopped by none of them. It was stopped
+by a sentence in a cover letter that told an editor the paper was out of scope.
+Scope fit is a claim like any other and deserved the same scrutiny as a figure.
