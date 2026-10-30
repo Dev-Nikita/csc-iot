@@ -52,12 +52,14 @@ needed to re-run the work and check the numbers.
 Archived release: **[10.5281/zenodo.23814731](https://doi.org/10.5281/zenodo.23814731)**
 (version 0.5, <https://zenodo.org/records/23814731>). This is the identifier the
 manuscript cites and the one to use. It holds two files: the code snapshot and
-`csc-iot-data.tar.gz`, the checksum-covered derived data for the reported
-matrices. Versions 0.3 (`...23321904`) and 0.4 (`...23814311`) are superseded: both
-shipped code only. 0.4 was created automatically by the GitHub release
-webhook, which packages the repository and nothing else; the webhook is now
-off, and archive versions are assembled by hand so the data travels with the
-code.
+`csc-iot-data-0.5.tar.gz`, the checksum-covered derived data for the reported
+matrices.
+
+Superseded versions: 0.3, 0.4.
+
+Both shipped code only; 0.4 was created automatically by the GitHub release
+webhook, which packages the repository and nothing else. The webhook is off, and archive versions are assembled by hand so
+that the data travels with the code.
 
 The concept ("all versions") DOI `10.5281/zenodo.23165224` is registered and
 DataCite reports it findable, but it did not resolve in a browser when checked on

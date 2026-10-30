@@ -85,7 +85,19 @@ done
   exit 1
 }
 cp secondstand/results.jsonl.provenance.json "$out/rcaeval/"
-cp analysis/recompute_crc_independent.py "$out/"
+# The archive must carry every analysis the manuscript now cites, or the next
+# reviewer finds the same gap again: a paper that reports a distribution from
+# data a reader cannot recompute is in the position version 0.3 was in.
+for f in analysis/recompute_crc_independent.py \
+         analysis/value_of_protocol.py \
+         analysis/value_of_protocol_output.txt \
+         analysis/independent_units.py \
+         analysis/crc_replay_sensitivity.py \
+         analysis/units_and_sensitivity_output.txt \
+         VALUE_OF_PROTOCOL.md; do
+  [ -f "$f" ] || { echo "REFUSED: $f is missing from the working tree" >&2; exit 1; }
+  cp "$f" "$out/"
+done
 
 # The placeholder guard runs HERE, after every file is in place. It used to run
 # immediately after the generated tables were copied, which was before RESULTS.md,

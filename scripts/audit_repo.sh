@@ -6,6 +6,28 @@
 # file that had been fixed here. The individual fixes were fine; discovering
 # them one failed build at a time was not. This runs in a second.
 set -uo pipefail
+
+# pdftotext on a file that lives on a mounted filesystem can come back empty or
+# short for a moment after the file is written, and each process has its own view
+# of that cache, so a read-back check inside the build does not protect a check
+# run from a separate process afterwards. Two guards failed three times on
+# documents that were correct. Retry until the page has letters in it, and fail
+# only if it never does: a guard that fails at random is worse than no guard,
+# because it teaches people to re-run the audit until it passes.
+pdfpage() {
+  local f="$1" first="$2" last="$3" out=""
+  for _ in $(seq 1 20); do
+    out=$(pdftotext -f "$first" -l "$last" "$f" - 2>/dev/null || true)
+    case "$out" in *[A-Za-z]*) printf '%s' "$out"; return 0;; esac
+    sleep 0.5
+  done
+  return 1
+}
+# The guards run inside `bash -c`, which is a fresh shell and does not inherit
+# functions. Without this export every guard that calls pdfpage fails with
+# "command not found", which looks exactly like the failure it was added to fix.
+export -f pdfpage
+
 fail=0
 failed_checks=()
 chk() { # chk <description> <test-command...>
@@ -317,6 +339,11 @@ chk "CRC has a portable calibration ledger"       test -f analysis/export_crc_le
 chk "CRC has an implementation-independent replay" test -f analysis/recompute_crc_independent.py
 chk "the data package requires the CRC ledger"    grep -q 'crc_calibration.csv' scripts/make_data_package.sh
 chk "the data package carries the RCAEval cases"  grep -q 'secondstand/results.jsonl' scripts/make_data_package.sh
+chk "the data package carries every cited analysis" bash -c '
+  for f in value_of_protocol.py value_of_protocol_output.txt independent_units.py \
+           crc_replay_sensitivity.py units_and_sensitivity_output.txt VALUE_OF_PROTOCOL.md; do
+    grep -q "$f" scripts/make_data_package.sh || { echo "$f is not packaged" >&2; exit 1; }
+  done'
 chk "RCAEval has a standard-library verifier"    test -f secondstand/verify_independent.py
 echo
 # The manuscript is not part of this repository until the paper is accepted (see
@@ -427,14 +454,14 @@ if [ -f paper/main.tex ]; then
     # Nothing links the two author lines, so they drift silently and a reviewer
     # reads it as a package nobody assembled. Compare the rendered pages.
     chk "manuscript and supplement name the same authors" bash -c '
-      m=$(pdftotext -f 1 -l 1 paper/submission-ready/main.pdf - 2>/dev/null | grep -c "Zinko")
-      s=$(pdftotext -f 1 -l 1 paper/submission-ready/supplement.pdf - 2>/dev/null | grep -c "Zinko")
+      m=$(pdfpage paper/submission-ready/main.pdf 1 1 | grep -c "Zinko")
+      s=$(pdfpage paper/submission-ready/supplement.pdf 1 1 | grep -c "Zinko")
       [ "$m" -ge 1 ] && [ "$s" -ge 1 ]'
     # The cover letter carried the manuscript's PREVIOUS title through a retarget
     # and a full rewrite of the contribution. Nobody reads a letter's subject line
     # twice. Compare it against the title the PDF actually prints.
     chk "the cover letter names the manuscript's current title" bash -c '
-      t=$(pdftotext -f 1 -l 1 paper/submission-ready/main.pdf - 2>/dev/null |
+      t=$(pdfpage paper/submission-ready/main.pdf 1 1 |
             tr "\n" " " | tr -s " " |
             grep -o "Comparisons Below the Noise[^.]*Diagnosis" | head -1)
       [ -n "$t" ] || { echo "could not read the title from main.pdf" >&2; exit 1; }

@@ -16,8 +16,24 @@ import pathlib
 import re
 import sys
 
-OLD_ID = "23321904"
-OLD_VER = "0.3"
+def _current():
+    """The identifier and version every document carries now.
+
+    This used to be two literals, which meant the script worked exactly once and
+    then silently referred to a superseded record. CITATION.cff is the one file
+    that states both and is checked by the audit, so it is the source.
+    """
+    import pathlib as _p
+    import re as _re
+    text = _p.Path("CITATION.cff").read_text()
+    doi = _re.search(r'doi:\s*"10\.5281/zenodo\.(\d+)"', text)
+    ver = _re.search(r'version:\s*"([\d.]+)"', text)
+    if not doi or not ver:
+        raise SystemExit("REFUSED: CITATION.cff does not state a doi and a version")
+    return doi.group(1), ver.group(1)
+
+
+OLD_ID, OLD_VER = _current()
 
 
 def edit(path, pairs, required=True):
@@ -37,6 +53,22 @@ def edit(path, pairs, required=True):
     return 1
 
 
+def append_superseded(version):
+    """Add a version to README's superseded list, in order, once."""
+    p = pathlib.Path("README.md")
+    s = p.read_text()
+    m = re.search(r"^Superseded versions: ([^\n]*?)\.$", s, re.M)
+    if not m:
+        sys.exit("REFUSED: README.md has no 'Superseded versions:' line")
+    have = [x.strip() for x in m.group(1).split(",") if x.strip()]
+    if version in have:
+        return
+    have.append(version)
+    have.sort(key=lambda v: [int(x) for x in v.split(".")])
+    s = s[:m.start()] + "Superseded versions: " + ", ".join(have) + "." + s[m.end():]
+    p.write_text(s)
+
+
 def main():
     if len(sys.argv) != 3:
         sys.exit(__doc__)
@@ -48,80 +80,47 @@ def main():
     if new_id == OLD_ID:
         sys.exit("REFUSED: that is the identifier already in the documents")
 
-    # 1. The thanks footnote: the archive is no longer code-only.
-    edit("paper/main.tex", [(
-        f"""\\thanks{{The current public archive contains the source-code snapshot at
-\\protect\\url{{https://doi.org/10.5281/zenodo.{OLD_ID}}} (version~{OLD_VER}) and
-is developed at""",
-        f"""\\thanks{{The source code and the derived-data package for this revision are
-archived together at
-\\protect\\url{{https://doi.org/10.5281/zenodo.{new_id}}} (version~{new_ver}) and
-the code is developed at""",
-    )])
-
-    # 2. Data and code availability: the blocker sentence goes, because the
-    #    package it was waiting for is now published.
-    edit("paper/main.tex", [(
-        f"""\\textbf{{Data and code availability.}} The current public version
-\\url{{https://doi.org/10.5281/zenodo.{OLD_ID}}} archives the source-code snapshot,
-not the derived matrices used by this revision. A checksum-covered package has
-been prepared containing the per-branch objective rows, manifests, structural
-and decision outputs, CRC calibration ledger and RCAEval cases and analyses.
-This manuscript is not to be submitted until that package is published as a new
-version and the exact version DOI is inserted here. Raw per-branch execution logs
-are retained on the analysis host and are available from the corresponding
-author.""",
-        f"""\\textbf{{Data and code availability.}} Version~{new_ver} of the archive,
-\\url{{https://doi.org/10.5281/zenodo.{new_id}}}, carries the source code and a
-checksum-covered derived-data package: the per-branch objective rows and manifests
-for all three reported matrices, the structural and decision outputs, the CRC
-calibration ledger with a reconstruction that reads it without importing our
-calibration code, and the RCAEval cases with both analyses and a standard-library
-verifier. Every file is covered by \\texttt{{SHA256SUMS}}. Re-fitting the predictor
-from raw telemetry additionally requires the per-branch execution logs, which are
-retained on the analysis host and are available from the corresponding author.""",
-    )])
-
-    # 3. Cover letter.
-    edit("paper/submission-ready-keep/cover_letter.md", [(
-        f"""The source
-snapshot is archived at https://doi.org/10.5281/zenodo.{OLD_ID}. The derived-data
-package for this revision is being prepared as a new archive version; this letter
-and manuscript must receive its exact DOI before submission.""",
-        f"""The code and the
-derived-data package for this revision are archived together at
-https://doi.org/10.5281/zenodo.{new_id} (version {new_ver}), where every file is
-covered by published checksums and the calibration threshold and benchmark
-analysis can both be recomputed without our implementations.""",
-    )])
-
-    # 4. Editorial-office email.
-    edit("paper/submission-ready-keep/email_to_editorial_office.md",
-         [(f"https://doi.org/10.5281/zenodo.{OLD_ID}",
-           f"https://doi.org/10.5281/zenodo.{new_id}")])
-
-    # 5. README.
-    edit("README.md", [(
-        f"""Archived release: **[10.5281/zenodo.{OLD_ID}](https://doi.org/10.5281/zenodo.{OLD_ID})**
-(version {OLD_VER}, <https://zenodo.org/records/{OLD_ID}>). This is the identifier the
-manuscript cites and the one to use.""",
-        f"""Archived release: **[10.5281/zenodo.{new_id}](https://doi.org/10.5281/zenodo.{new_id})**
-(version {new_ver}, <https://zenodo.org/records/{new_id}>). This is the identifier the
-manuscript cites and the one to use. It holds two files: the code snapshot and
-`csc-iot-data.tar.gz`, the checksum-covered derived data for the reported
-matrices. Version {OLD_VER} (`...{OLD_ID}`) is superseded: it shipped code only.""",
-    )])
-
-    # 6. CITATION.cff.
+    # Each document states the identifier in its own wording. The rename is
+    # therefore a substitution of the identifier and the version within the
+    # sentences that already exist, not a rewrite of those sentences: an earlier
+    # version of this script carried the pre-0.5 prose as its anchors and would
+    # only ever have worked once.
+    doi = [(f"10.5281/zenodo.{OLD_ID}", f"10.5281/zenodo.{new_id}")]
+    # The records URL appears in README.md only; listing it for every file would
+    # make the script refuse on a file that is perfectly correct.
+    pairs = doi
+    edit("paper/main.tex", pairs + [
+        (f"(version~{OLD_VER})", f"(version~{new_ver})")])
+    edit("paper/supplement.tex", [
+        (f"Archive version~${OLD_VER}$", f"Archive version~${new_ver}$")])
+    edit("paper/submission-ready-keep/cover_letter.md", pairs + [
+        (f"(version {OLD_VER})", f"(version {new_ver})")])
+    edit("paper/submission-ready-keep/email_to_editorial_office.md", pairs)
+    edit("README.md", pairs + [
+        (f"zenodo.org/records/{OLD_ID}", f"zenodo.org/records/{new_id}"),
+        (f"(version {OLD_VER}, <https://", f"(version {new_ver}, <https://"),
+        ])
+    append_superseded(OLD_VER)
     edit("CITATION.cff", [(f'doi: "10.5281/zenodo.{OLD_ID}"',
                            f'doi: "10.5281/zenodo.{new_id}"'),
                           (f'version: "{OLD_VER}"', f'version: "{new_ver}"')])
 
+    # The refused set grows by one identifier each time a version is superseded,
+    # so it is read out of the guard rather than written here as a literal that
+    # would be correct only until the next release.
+    guard = pathlib.Path("scripts/audit_repo.sh").read_text()
+    m = re.search(r"zenodo\\\.\([0-9|]+\)", guard)
+    if not m:
+        sys.exit("REFUSED: no refused-identifier set in scripts/audit_repo.sh")
+    refused = m.group(0)
+    if OLD_ID in refused:
+        sys.exit(f"REFUSED: {OLD_ID} is already refused by the audit; the rename "
+                 "may already have been applied")
+
     # 7. The audit guard itself: the superseded identifier joins the refused set
     #    and the new one becomes the only one a reader may be handed.
     edit("scripts/audit_repo.sh", [
-        (f"zenodo\\.(23165224|23165225|23169891|23317517)",
-         f"zenodo\\.(23165224|23165225|23169891|23317517|{OLD_ID})"),
+        (refused, refused[:-1] + f"|{OLD_ID})"),
         # This string occurs twice, in the explaining comment and in the error
         # the guard prints; replace() takes both, so one pair is correct and a
         # second pair for the parenthesised form would find nothing and refuse.
