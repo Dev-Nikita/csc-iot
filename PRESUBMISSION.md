@@ -211,18 +211,22 @@ Expect this to add 0.2--0.4 page. It happens **before** Gate 5.
       replay is how the decisions were *evaluated*, and charging its cost to the
       online decision would overstate the latency by orders of magnitude. The
       2026-10-13 review raised this distinction and it is the right one.
-- [ ] **An independent audit of the CRC construction** -- that the finite-sample
-      rule applies to this run-level loss and to taking the largest admissible
-      threshold, and that adaptive selection from a non-empty admissible set is
-      pointwise dominated by the set loss. Fallback is explicitly outside the
-      guarantee and must be audited as a separately reported outcome. An internal
-      code-and-claim audit is recorded in `CRC_AUDIT.md`; it repaired a test that
-      had checked a tail probability instead of expected loss and leaves the
-      exchangeability/manifests check open. The construction has still not been
-      checked by anyone outside this work.
-
-## Gate 3 -- authorship
-
+- [ ] **An independent audit of the CRC construction.** Partly closed, and the
+      remainder needs a person outside this work. What is done: the rule matches
+      equation (4) of Angelopoulos et al. after the change of parameter, the
+      monotonicity and pointwise-domination arguments pass code-and-claim review,
+      a test that checked a tail probability instead of expected loss was
+      repaired, and `analysis/recompute_crc_independent.py` recovers
+      `tau_hat = 0.04468686866` from the frozen ledger alone, importing neither
+      our CRC nor our predictor, on three different machines including a clean
+      download of the published archive. Also done: the threshold was resampled
+      over the executed replay repeats, 4000 draws, none abstaining, and the
+      reported value is the minimum of all of them. What is not done: items 1, 3
+      and 4 of `CRC_AUDIT.md` -- run identifiers against the manifests, the order
+      of predictor fitting and `U_max` selection against calibration, and the
+      search for evidence against exchangeability -- and none of it has been done
+      by anyone other than the author. Fallback remains explicitly outside the
+      guarantee.
 - [x] **Two authors. V. Oksentyuk and O. Oborska withdrew 2026-10-30.** They
       declined to continue on the paper and are removed from the author line, the
       thanks footnote, the e-mail list, the author-contributions paragraph, the

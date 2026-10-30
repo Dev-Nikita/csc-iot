@@ -1,0 +1,69 @@
+# Generated from the published archive 10.5281/zenodo.23814731
+#
+# analysis/independent_units.py
+
+b5-matrix-v2
+  branches                      6210
+  = scenarios x anchors x actions x repeats
+  scenarios (design points)     115
+  distinct configurations       115   (one per scenario)
+  scenarios spanning >1 config  0
+  anchors per scenario          [6]
+  decision anchors              690
+  actions per anchor            3  ['NO_OP', 'REROUTE', 'THROTTLE']
+  repeats per cell              3  ['r01', 'r02', 'r03']
+  fault families                ['D1', 'D3']
+  master_seed in manifest       42
+  runtime stack                 161b4e3893c01695
+  INDEPENDENT UNITS             115 scenarios, not 6210 branches
+
+d45-matrix-v1
+  branches                      1800
+  = scenarios x anchors x actions x repeats
+  scenarios (design points)     40
+  distinct configurations       40   (one per scenario)
+  scenarios spanning >1 config  0
+  anchors per scenario          [5]
+  decision anchors              200
+  actions per anchor            3  ['NO_OP', 'REROUTE', 'THROTTLE']
+  repeats per cell              3  ['r01', 'r02', 'r03']
+  fault families                ['D4', 'D5']
+  master_seed in manifest       42
+  runtime stack                 15192a04761cca10
+  INDEPENDENT UNITS             40 scenarios, not 1800 branches
+
+d6-pilot-v2
+  branches                      108
+  = scenarios x anchors x actions x repeats
+  scenarios (design points)     6
+  distinct configurations       6   (one per scenario)
+  scenarios spanning >1 config  0
+  anchors per scenario          [2]
+  decision anchors              12
+  actions per anchor            3  ['NO_OP', 'REROUTE', 'THROTTLE']
+  repeats per cell              3  ['r01', 'r02', 'r03']
+  fault families                ['D6']
+  master_seed in manifest       42
+  runtime stack                 408a36b2a908cf6d
+  INDEPENDENT UNITS             6 scenarios, not 108 branches
+
+==================================================================
+total across the matrices listed
+  branches   8118
+  anchors    902
+  scenarios  161
+  configurations appearing in more than one matrix: 0
+
+# analysis/crc_replay_sensitivity.py, 2000 draws
+ledger /sessions/rcw-01vqftxssfy1xkjqz9yu7zvw/vop-run/zenodo-data/b5-matrix-v2/crc_calibration.csv
+  rows 1080  cells 360  repeats per cell [3]  runs 20
+  delta 0.1  u_max 0.15
+  point estimate, all repeats: tau_hat = 0.04468686866
+  ONE  one repeat per cell: 2000 draws, 0 abstained
+      min 0.0446869  Q0.05 0.0446869  median 0.0467014  Q0.95 0.0481864  max 0.0505439
+      equal to the point estimate: 120 of 2000 (6.0%)
+      ratio of the 0.05-0.95 span to the point estimate: 0.078
+  BOOT bootstrap of repeats: 2000 draws, 0 abstained
+      min 0.0446869  Q0.05 0.0446869  median 0.0446869  Q0.95 0.0456463  max 0.0481864
+      equal to the point estimate: 1238 of 2000 (61.9%)
+      ratio of the 0.05-0.95 span to the point estimate: 0.021

@@ -18,6 +18,7 @@ Standard library only; imports neither the project CRC nor the predictor.
 
     python3 -I crc_replay_sensitivity.py <crc_calibration.csv> [draws]
 """
+import bisect
 import collections
 import csv
 import math
@@ -35,18 +36,29 @@ def one(rows, field):
 
 
 def tau_hat(runs, grid, delta, u_max):
-    """Largest tau whose corrected risk stays at or below delta; None if any."""
+    """Largest tau whose corrected risk stays at or below delta; None if any.
+
+    An anchor contributes to the loss from the smallest tau at which one of its
+    admissible branches has already failed, and never stops contributing, so that
+    one number per anchor determines the whole curve. Scanning every branch at
+    every grid point computes the same thing far more slowly; this version was
+    written only after the slow one had produced the point estimate, and both
+    agree on it.
+    """
     n = len(runs)
+    per_run = []
+    for anchors in runs.values():
+        ts = []
+        for branches in anchors.values():
+            cand = [b[0] for b in branches if b[1] <= u_max and b[2]]
+            ts.append(min(cand) if cand else math.inf)
+        ts.sort()
+        per_run.append(ts)
+
     best, previous = None, -1.0
     for tau in grid:
-        losses = []
-        for anchors in runs.values():
-            hits = 0
-            for branches in anchors.values():
-                hits += int(any(b[0] <= tau and b[1] <= u_max and b[2]
-                                for b in branches))
-            losses.append(hits / len(anchors))
-        empirical = sum(losses) / n
+        empirical = sum(bisect.bisect_right(ts, tau) / len(ts)
+                        for ts in per_run) / n
         if empirical + 1e-15 < previous:
             raise SystemExit("REFUSED: reconstructed loss is not monotone")
         previous = empirical

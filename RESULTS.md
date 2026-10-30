@@ -356,6 +356,39 @@ elsewhere reached a wrong conclusion. It also cannot separate "the structural
 model is wrong" from "the model is right about something the objective does not
 price", which is this paper's own third limit.
 
+## 5c. Independent units, and what the threshold depends on
+
+From `analysis/independent_units.py` and `analysis/crc_replay_sensitivity.py`,
+both reading the published archive, both standard library only; frozen output in
+`analysis/units_and_sensitivity_output.txt`.
+
+| matrix | branches | design points | anchors | actions | repeats |
+|---|---|---|---|---|---|
+| `b5-matrix-v2` | 6210 | 115 | 690 | 3 | 3 |
+| `d45-matrix-v1` | 1800 | 40 | 200 | 3 | 3 |
+| `d6-pilot-v2` | 108 | 6 | 12 | 3 | 3 |
+| total | 8118 | 161 | 902 | | |
+
+No configuration appears in more than one matrix. The independent unit is the
+design point, of which there are 161. One master seed, 42, drives all three, so
+no design point has an independent seed replication, and anchors inside a design
+point are not independent of one another.
+
+Resampling the calibration outcomes over the replay repeats that were actually
+executed, 2000 draws each:
+
+| resampling | min | Q0.05 | median | Q0.95 | max | abstained |
+|---|---|---|---|---|---|---|
+| one repeat per cell | 0.0446869 | 0.0446869 | 0.0467014 | 0.0481864 | 0.0505439 | 0 |
+| bootstrap of repeats | 0.0446869 | 0.0446869 | 0.0446869 | 0.0456463 | 0.0481864 | 0 |
+
+The 0.05-0.95 span is 7.8 and 2.1 per cent of the point estimate, and the
+reported `tau_hat = 0.0446869` is the minimum over all 4000 draws. That follows
+from the aggregation: an anchor counts as failing when any admissible branch
+there failed, so using all three repeats is the strictest reading of the
+calibration data. Replay nondeterminism could only have made the gate more
+permissive.
+
 ## 6. Replay dispersion
 
 | run | mechanisms | eta_J pooled | worst cell | ratio |
