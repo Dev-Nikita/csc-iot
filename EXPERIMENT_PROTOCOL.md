@@ -1342,3 +1342,58 @@ threshold reaching the oracle bound. The TNSM submission is preserved at git tag
 DOIs, citations and author lists, and was stopped by none of them. It was stopped
 by a sentence in a cover letter that told an editor the paper was out of scope.
 Scope fit is a claim like any other and deserved the same scrutiny as a figure.
+
+## Amendment 0.48 (2026-10-30) -- the second stand turned out to be a re-analysis, and it both supports and disciplines the claim
+
+**The weakest point of the manuscript was external validity**: nine containers
+on one host, one emulation. The plan was a second testbed. It was not needed.
+
+**RCAEval publishes repetitions, which is the whole requirement.** The benchmark
+of Pham, Ha and Zhang -- reference [11] of this manuscript, the "How Far Are We?"
+authors -- releases 735 microservice fault cases over three systems with explicit
+repetitions per fault-service configuration: five in suite RE1, three in RE2.
+Dispersion across repetitions of the same configuration is measurable from
+published data, so the question this paper asks of its own testbed can be asked
+of somebody else's, with no deployment, no chaos injection and no new code beyond
+a scorer. RE1 is 124 MB; scoring all 375 cases with three of the benchmark's own
+metrics-only methods took about 17 minutes on one core.
+
+**Result, under this manuscript's own band definition carried over unchanged.**
+Hit@1 flips between two repetitions of the same method on the same fault in
+20.6% of repetition pairs, hit@5 in 12.3%. On reciprocal rank the Q0.95 band is
+0.667, and of 225 per-configuration method contrasts **170, or 75.6%, fall below
+it**. BARO against N-Sigma is resolvable in **0 of 75** configurations: two
+competitive published methods, five repetitions each, and not one configuration
+where the difference exceeds repetition noise.
+
+**The result that disciplines the claim.** Bootstrapping whole repetitions
+within configurations, 2000 times, the aggregate ordering
+N-Sigma > BARO > epsilon-Diagnosis holds in 100% of resamples on all three
+systems. Published leaderboards are *not* unresolvable. The honest statement is
+narrower and better: the pathology lives at the per-configuration level, which is
+exactly where fault-type-specific claims are made in the analysis sections of
+these papers, and not at the level of the headline table. Had the probe been run
+to confirm a thesis rather than to test one, this is the finding that would have
+been left out.
+
+**A methodological point found on the way.** The benchmark's own headline metric,
+Avg@5, is binary per case. A Q0.95 band on pairwise differences of a Bernoulli
+variable saturates at 1.0 as soon as any repetition disagrees, so under Avg@5 no
+per-configuration contrast is resolvable by construction. That is not a failure
+of the band; it says the headline metric cannot support a per-configuration
+comparison at all.
+
+**Honest limits, recorded before anyone asks.** Three methods, not the full set
+(`ht` needs `pyrca`, absent here). Reciprocal rank is our choice of continuous
+score. RE1 only. And RCAEval's repetitions are independent runs, not branches
+forked from a verified-equivalent state, so the dispersion measured there
+conflates run-to-run with initial-state variation -- it is a weaker instrument
+than this paper's, which makes the worse number consistent rather than
+contradictory, and the manuscript must say so rather than present the two as the
+same quantity.
+
+**What this changes about the paper.** The contribution that survives contact
+with a second system is not the three identifiability limits; it is that
+comparisons between self-healing or diagnosis methods are frequently below the
+noise of the evaluation that produces them, demonstrated now on this testbed and
+on an independent published benchmark. That is the paper to write.
