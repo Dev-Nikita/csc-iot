@@ -15,8 +15,8 @@ repository-code: "https://github.com/Dev-Nikita/csc-iot"
 # The archive identifier a reader can actually open. The concept DOI
 # 10.5281/zenodo.23165224 is registered but did not resolve in a browser on
 # 2026-10-16, so it is not published anywhere.
-doi: "10.5281/zenodo.23321904"
-version: "0.3"
+doi: "10.5281/zenodo.23814731"
+version: "0.5"
 abstract: >-
   Uncertainty-aware proactive self-healing for mobile edge IoT systems.
   Evaluates action-conditioned counterfactual futures before intervening,

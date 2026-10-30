@@ -366,7 +366,7 @@ if [ -f paper/main.tex ]; then
   # it was version 0.1, then it was the concept DOI, which is registered and
   # which DataCite calls findable but which did not resolve in a browser. Only
   # one identifier has been opened successfully by a person:
-  # 10.5281/zenodo.23321904, version 0.3. Every other zenodo identifier is
+  # 10.5281/zenodo.23814731, version 0.5. Every other zenodo identifier is
   # refused in anything a reader receives, because "registered" is not the test
   # -- "opens" is.
   chk "only the archive DOI that resolves appears in any document" bash -c '
@@ -374,7 +374,7 @@ if [ -f paper/main.tex ]; then
     # the identifier being used: this excludes LaTeX comments, shell/YAML
     # comments and the Markdown lines that document the decision, and keeps
     # everything a reader is actually handed.
-    hits=$(grep -rnE "zenodo\.(23165224|23165225|23169891|23317517)" \
+    hits=$(grep -rnE "zenodo\.(23165224|23165225|23169891|23317517|23321904|23814311)" \
              paper/main.tex paper/supplement.tex \
              paper/submission-ready-keep paper/submission-ready \
              README.md CITATION.cff 2>/dev/null \
@@ -382,7 +382,7 @@ if [ -f paper/main.tex ]; then
            | grep -vE "is registered|did not resolve|superseded|not used" || true)
     if [ -n "$hits" ]; then
       echo "these name an archive DOI that is not the one known to resolve" >&2
-      echo "(10.5281/zenodo.23321904, version 0.3):" >&2
+      echo "(10.5281/zenodo.23814731, version 0.5):" >&2
       echo "$hits" >&2
       echo "the cover letter source is paper/submission-ready-keep/cover_letter.md," >&2
       echo "not the generated copy under paper/submission-ready/." >&2
