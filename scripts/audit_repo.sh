@@ -352,7 +352,7 @@ if [ -f paper/main.tex ]; then
   # copy is the one mistake that cannot be corrected after the fact.
   if [ -d paper/submission-ready ]; then
     chk "the submission folder matches the working copy" bash -c '
-      for f in main.tex supplement.tex references.bib table_related.tex table_scenarios.tex table_rcaeval.tex table_replication_sensitivity.tex; do
+      for f in main.tex supplement.tex references.bib table_related.tex table_scenarios.tex table_rcaeval.tex table_replication_sensitivity.tex table_value_of_protocol.tex; do
         cmp -s "paper/$f" "paper/submission-ready/$f" || exit 1
       done'
   fi
@@ -407,7 +407,8 @@ if [ -f paper/main.tex ]; then
       for pdf in paper/submission-ready/main.pdf paper/submission-ready/supplement.pdf; do
         [ -f "$pdf" ] || { echo "$pdf is missing; run make_submission_folder.sh" >&2; exit 1; }
         for src in paper/main.tex paper/supplement.tex paper/references.bib \
-                   paper/table_rcaeval.tex paper/table_replication_sensitivity.tex; do
+                   paper/table_rcaeval.tex paper/table_replication_sensitivity.tex \
+                   paper/table_value_of_protocol.tex; do
           [ -f "$src" ] || continue
           [ "$pdf" -nt "$src" ] || {
             echo "$pdf is older than $src; rebuild before auditing" >&2; exit 1; }

@@ -406,7 +406,8 @@ analysis (`analyse.py`, superseded) compared the MEAN of five repetitions agains
 a band built from differences between SINGLE repetitions. A mean of five is about
 sqrt(5) ~= 2.24 times less dispersed in standard deviation than one observation
 (measured: within-configuration sd 0.197 for a single repetition, 0.088 for the
-mean of five), so that criterion was far too
+mean of five; the corresponding difference scales are 0.278 and 0.125), so that
+criterion was far too
 conservative, and it produced the figure "0 of 75 for BARO against N-Sigma" that
 was briefly the headline of this probe. An independent review identified the
 mismatch; it was reproduced and confirmed here before anything was changed. The
