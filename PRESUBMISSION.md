@@ -1,4 +1,15 @@
-# Pre-submission gates
+# Pre-submission checklist
+
+**Target: IEEE Transactions on Dependable and Secure Computing (since
+2026-10-30).** TNSM declined without review as out of scope; the manuscript was
+reframed, not rewritten, and no result changed. Gates below that name TNSM page
+counts, templates or supplementary handling are **void until re-checked against
+TDSC** — its limits are different and could not be read from this environment.
+Three new blockers, all of them lookups on the TDSC author page: the regular-paper
+page limit and overlength charge; whether supplemental material is merged into
+the review PDF; and whether the journal requires its own LaTeX class rather than
+`IEEEtran`, which would make every page measurement in this file stale.
+
 
 Ordered. Each one is either done or it is not; nothing here is a judgement call.
 `scripts/audit_repo.sh` prints the open ones on every run.

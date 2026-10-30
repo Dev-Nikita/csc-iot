@@ -1,4 +1,32 @@
-# Submission runbook — IEEE TNSM
+# Submission runbook — IEEE TDSC
+
+**Target changed 2026-10-30.** TNSM declined the manuscript without review as
+outside its scope. The target is now IEEE Transactions on Dependable and Secure
+Computing, and the manuscript was reframed for it: see amendment 0.47. The TNSM
+submission is preserved at git tag `tnsm-submitted-20261016`.
+
+**Three TDSC facts this environment could not read and you must confirm on the
+journal's own author page before uploading anything.** The IEEE Computer Society
+author pages render in JavaScript and come back empty here, so none of this is
+verified:
+
+1. **The page limit for a regular paper**, and the overlength charge per page
+   above it. TDSC is a Computer Society title and its limit is *not* TNSM's ten
+   free pages — do not assume the budget this repository has been guarding.
+2. **How supplemental material is handled**, and specifically whether it is
+   merged into the review PDF. This is what returned the TNSM submission: there
+   the supplement was merged and counted. Ask or read before you upload, and on
+   the final step open the merged proof and count its pages.
+3. **The template.** Computer Society journals use their own LaTeX class, which
+   is not `IEEEtran`. If so, the manuscript needs reformatting and the page count
+   must be re-measured afterwards — every page figure in this repository was
+   measured in `IEEEtran`.
+
+Everything below that is not journal-specific still applies.
+
+---
+
+# (previous) Submission runbook — IEEE TNSM
 
 Every command, in order, with the folder it runs in. Written 2026-10-13.
 
