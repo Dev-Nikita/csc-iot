@@ -179,27 +179,22 @@ Expect this to add 0.2--0.4 page. It happens **before** Gate 5.
       practice for data. The audit refuses any other zenodo identifier in a
       document a reader receives. If the concept DOI starts resolving later,
       nothing needs to change.
-- [ ] **Upload that tarball as a new Zenodo version, then confirm the record.**
-      Rebuild `dist/csc-iot-data.tar.gz` on the analysis host with the revised
-      packager; the earlier 470 KB copy predates the CRC ledger and RCAEval
-      additions and must not be uploaded as the final artifact. Zenodo record ->
-      New version -> upload -> publish. It mints a new version DOI, which must
-      replace `10.5281/zenodo.23321904` in the manuscript, supplement and
-      README because they cite an exact version rather than the concept DOI.
-      Afterwards open the record and confirm the files are **listed and
-      downloadable** -- that is the one thing a verified local tarball does not
-      establish. API inspection on 2026-10-30 confirmed that published v0.3 has
-      only `Dev-Nikita/csc-iot-0.3.zip` and does not contain the derived-data
-      tarball, RCAEval cases or the new analyses. The revised packager now also
-      refuses a package without a CRC calibration ledger and independent curve;
-      `jobs.csv` alone cannot reproduce CRC.
-- [x] **RCAEval scoring independently reconstructed from the pinned public
-      snapshot inside a clean environment.** Python 3.12, RCAEval 1.9.0 and the
-      recorded dependency set reproduced all 375 retained JSON lines
-      byte-for-byte (SHA-256 `b542851f...e51846e4`) on 2026-10-30. The rerun
-      confirms both usable rankings and the 352 epsilon-Diagnosis absences. The
-      exact manifest is `secondstand/results.jsonl.provenance.json`; this is an
-      internal clean-room rerun, not a substitute for an external auditor.
+- [x] **Upload that tarball as a new Zenodo version, then confirm the record.**
+      Done 2026-10-30. Version 0.5, `10.5281/zenodo.23814731`, carries two files:
+      `csc-iot-0.5.zip` and `csc-iot-data-0.5.tar.gz` (744,254 bytes). The DOI was
+      reserved on the draft before the tag was cut, so the archived code cites the
+      version it is in -- 0.1 through 0.4 all cited a previous one. Confirmed from
+      outside the browser session that uploaded it: both files download, the
+      tarball's SHA-256 matches the locally verified copy
+      (`57d0a32e0f4fc685b7d1b0a0f15cea530707bc6a7966de8f0c33db7896113856`), all 30
+      checksums in `SHA256SUMS` verify, the branch indices total 8118, and both
+      replays run from the download with `python3 -I`: `tau_hat=0.04468686866` and
+      `INDEPENDENT RCAEval VERIFICATION OK`.
+
+      Version 0.4 (`...23814311`) is superseded and was never usable: publishing a
+      GitHub release fired the Zenodo webhook, which packages the repository and
+      nothing else. The webhook is now off. Do not re-enable it: an archive that
+      must carry data cannot be assembled by a tool that only knows about code.
 - [ ] **Register and record ORCID for both authors. Confirmed required.** The
       TNSM submission page states: "All IEEE publications require an Open
       Researcher and Contributor ID (ORCID) for all authors," and that a
@@ -324,12 +319,17 @@ Expect this to add 0.2--0.4 page. It happens **before** Gate 5.
       the manuscript is transcribed against). Re-read this against the actual
       contents of 0.3 when you check it: if the package lacks any of the four
       published items, this wording is the thing that becomes false.
-- [ ] **Archive authorship.** The DataCite record for 0.3 lists one creator,
-      N. Tarasov. If R. Zinko contributed to the code or the data rather than to
-      the manuscript alone, the archive's creator list should say so; it is
-      separate metadata from the paper's author list and nobody checks it for you.
-      Raised by the 2026-10-13 review. Decide with him, then edit the Zenodo
-      record -- metadata can be edited without a new version.
+- [ ] **Archive authorship. Still open, and now on three records.** 0.3, 0.4 and
+      the current 0.5 each list one creator, N. Tarasov, while the manuscript
+      carries four authors. Zenodo metadata is editable on a published record
+      without minting a new version, so this is a form to fill, not a new upload.
+      Decide with each co-author whether they contributed to the code and data or
+      to the manuscript alone -- the creator list is separate metadata from the
+      paper's author list and nobody checks it for you -- then edit at least 0.5.
+      The related identifier on 0.5 also still points at
+      `github.com/Dev-Nikita/csc-iot/tree/0.4`; it should name `tree/0.5`, the
+      revision the archived zip actually contains. Raised by the 2026-10-13
+      review.
 - [ ] Neither PDF contains `[?]`. Check with `pdftotext file.pdf - | grep '\[?\]'`,
       not by reading the LaTeX log: an undefined citation in a document with no
       bibliography at all produces no warning to grep for. That is how eight of
