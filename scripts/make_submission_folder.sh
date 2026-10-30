@@ -85,6 +85,12 @@ for doc in main supplement main-camera-ready; do
     fi
   fi
 done
+# paper/check_supplement_refs.py reads section numbering out of paper/*.aux, and
+# the build happens in a scratch directory, so those .aux files were never
+# refreshed and the check failed on staleness instead of on content. The .aux is
+# a build artefact of this run; copying it back is what makes the macro check
+# read the numbering the PDF actually prints.
+cp main.aux supplement.aux "$OLDPWD/paper/" 2>/dev/null || true
 latexmk -c >/dev/null 2>&1 || true
 rm -f build_main.log build_supplement.log
 # Only the artefacts a reader needs travel back: the PDFs and the .bbl, so the

@@ -223,35 +223,26 @@ Expect this to add 0.2--0.4 page. It happens **before** Gate 5.
 
 ## Gate 3 -- authorship
 
-- [x] **Four authors; affiliation and contributions supplied and in the paper.**
-      All four are with the Department of Computer-Aided Design Systems,
-      Institute of Computer Science and Information Technologies, Lviv
-      Polytechnic National University. The contributions paragraph is the text
-      the authors themselves confirmed, naming what each did, and states that all
-      four reviewed and approved the manuscript and accept responsibility for
-      their respective contributions. The `UNCONFIRMED` markers are gone and the
-      audit passes again.
-- [x] **E-mail addresses supplied; the spelling question answered by them.** All
-      four institutional addresses are now in the thanks footnote and the cover
-      letter: `Nikita.A.Tarasov@lpnu.ua`, `Roman.V.Zinko@lpnu.ua`,
-      `Vira.M.Oksentyuk@lpnu.ua`, `Oksana.V.Oborska@lpnu.ua`. The university's own
-      address spells it **Oksentyuk**, not the "Oksentiuk" this file had from the
-      official transliteration, so the manuscript, the cover letter and the
-      biographies now follow the university. The corresponding address changed
-      from the personal one to the institutional one, which is what IEEE prefers.
-      One thing left to eyeball: that Scopus 58178836600 publishes the same
-      spelling. Scopus cannot be read from here.
-
+- [x] **Two authors. V. Oksentyuk and O. Oborska withdrew 2026-10-30.** They
+      declined to continue on the paper and are removed from the author line, the
+      thanks footnote, the e-mail list, the author-contributions paragraph, the
+      biographies and the cover letter. Both remaining authors are with the
+      Department of Computer-Aided Design Systems, Institute of Computer Science
+      and Information Technologies, Lviv Polytechnic National University. The
+      contributions paragraph now describes two people and states that both
+      reviewed and approved the manuscript.
+- [x] **E-mail addresses supplied.** `Nikita.A.Tarasov@lpnu.ua` and
+      `Roman.V.Zinko@lpnu.ua` are in the thanks footnote and the cover letter. The
+      corresponding address is the institutional one, which is what IEEE prefers.
+      The transliteration question that applied to a withdrawn author no longer
+      arises.
 - [ ] R. Zinko confirms co-authorship, the affiliation as printed, and the author
       contributions paragraph.
-- [ ] **All four** authors read the AI-use statement and confirm it matches what
+- [ ] **Both authors read the AI-use statement** and confirm it matches what
       actually happened, including work done outside the sessions it was written
-      from. Adding authors does not make this easier: each of them is
-      accountable for a declaration about work they did not watch, which is a
-      reason to show them the statement rather than summarise it.
-
-## Gate 4 -- front and back matter
-
+      from. Each of them is accountable for a declaration about work they did not
+      watch, which is the part that needs an actual conversation rather than a
+      forwarded PDF.
 - [x] Funding, conflict of interest, data and code availability with the Zenodo
       DOI, author contributions, AI use.
 - [x] **Biographies written in full from the authors' own records, and the
@@ -321,7 +312,7 @@ Expect this to add 0.2--0.4 page. It happens **before** Gate 5.
       published items, this wording is the thing that becomes false.
 - [ ] **Archive authorship. Still open, and now on three records.** 0.3, 0.4 and
       the current 0.5 each list one creator, N. Tarasov, while the manuscript
-      carries four authors. Zenodo metadata is editable on a published record
+      carries two authors. Zenodo metadata is editable on a published record
       without minting a new version, so this is a form to fill, not a new upload.
       Decide with each co-author whether they contributed to the code and data or
       to the manuscript alone -- the creator list is separate metadata from the

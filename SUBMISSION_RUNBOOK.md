@@ -371,7 +371,7 @@ catches it.
 Form fields that are easy to get wrong:
 
 - **Corresponding author:** N. Tarasov, Nikita.A.Tarasov@lpnu.ua.
-- **Co-authors:** R. Zinko, V. Oksentyuk, O. Oborska, each with their ORCID.
+- **Co-author:** R. Zinko, with his ORCID 0000-0002-3275-8188. V. Oksentyuk and O. Oborska withdrew on 2026-10-30 and are not authors.
 - **Abstract:** paste the 186-word abstract from the PDF, not from the `.tex`
   (the `.tex` has LaTeX markup in it).
 - **Conflict of interest / funding:** the statements on page 10 of the manuscript.

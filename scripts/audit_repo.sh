@@ -398,9 +398,24 @@ if [ -f paper/main.tex ]; then
   # Grepping the LaTeX log does not catch this: a \cite in a document with no
   # bibliography at all raises no warning, it just typesets [?]. Read the PDF.
   if command -v pdftotext >/dev/null 2>&1; then
-    chk "no unresolved citation in the manuscript PDF"  bash -c '! pdftotext paper/main.pdf - 2>/dev/null | grep -q "\[?\]"'
-    chk "no unconfirmed authorship placeholder in the PDF" bash -c '! pdftotext paper/main.pdf - 2>/dev/null | grep -q "UNCONFIRMED"'
-    chk "no unresolved citation in the supplement PDF"  bash -c '! pdftotext paper/supplement.pdf - 2>/dev/null | grep -q "\[?\]"'
+    # Every check below reads a built PDF. make_submission_folder.sh writes the
+    # PDFs into paper/submission-ready/ and does NOT refresh the stale copies that
+    # used to sit in paper/, so these checks spent hours validating a document five
+    # hours older than the sources -- passing on an author line and a title that
+    # had already been replaced. Refuse before reading a PDF older than its source.
+    chk "the built PDFs are newer than their sources" bash -c '
+      for pdf in paper/submission-ready/main.pdf paper/submission-ready/supplement.pdf; do
+        [ -f "$pdf" ] || { echo "$pdf is missing; run make_submission_folder.sh" >&2; exit 1; }
+        for src in paper/main.tex paper/supplement.tex paper/references.bib \
+                   paper/table_rcaeval.tex paper/table_replication_sensitivity.tex; do
+          [ -f "$src" ] || continue
+          [ "$pdf" -nt "$src" ] || {
+            echo "$pdf is older than $src; rebuild before auditing" >&2; exit 1; }
+        done
+      done'
+    chk "no unresolved citation in the manuscript PDF"  bash -c '! pdftotext paper/submission-ready/main.pdf - 2>/dev/null | grep -q "\[?\]"'
+    chk "no unconfirmed authorship placeholder in the PDF" bash -c '! pdftotext paper/submission-ready/main.pdf - 2>/dev/null | grep -q "UNCONFIRMED"'
+    chk "no unresolved citation in the supplement PDF"  bash -c '! pdftotext paper/submission-ready/supplement.pdf - 2>/dev/null | grep -q "\[?\]"'
     # A control word swallows the space after it, so "\SupImpl gives" typesets as
     # "S4gives". Four of these reached a PDF that compiled without a warning.
     # A trailing % after a sentence swallows the line break, and LaTeX then drops
@@ -411,12 +426,34 @@ if [ -f paper/main.tex ]; then
     # Nothing links the two author lines, so they drift silently and a reviewer
     # reads it as a package nobody assembled. Compare the rendered pages.
     chk "manuscript and supplement name the same authors" bash -c '
-      m=$(pdftotext -f 1 -l 1 paper/main.pdf - 2>/dev/null | grep -c "Oksentyuk")
-      s=$(pdftotext -f 1 -l 1 paper/supplement.pdf - 2>/dev/null | grep -c "Oksentyuk")
+      m=$(pdftotext -f 1 -l 1 paper/submission-ready/main.pdf - 2>/dev/null | grep -c "Zinko")
+      s=$(pdftotext -f 1 -l 1 paper/submission-ready/supplement.pdf - 2>/dev/null | grep -c "Zinko")
       [ "$m" -ge 1 ] && [ "$s" -ge 1 ]'
+    # The cover letter carried the manuscript's PREVIOUS title through a retarget
+    # and a full rewrite of the contribution. Nobody reads a letter's subject line
+    # twice. Compare it against the title the PDF actually prints.
+    chk "the cover letter names the manuscript's current title" bash -c '
+      t=$(pdftotext -f 1 -l 1 paper/submission-ready/main.pdf - 2>/dev/null |
+            tr "\n" " " | tr -s " " |
+            grep -o "Comparisons Below the Noise[^.]*Diagnosis" | head -1)
+      [ -n "$t" ] || { echo "could not read the title from main.pdf" >&2; exit 1; }
+      for f in paper/submission-ready-keep/cover_letter.md \
+               paper/submission-ready/cover_letter.md; do
+        [ -f "$f" ] || continue
+        tr "\n" " " <"$f" | tr -s " " | grep -qF "$t" || {
+          echo "$f does not carry: $t" >&2; exit 1; }
+      done'
+    # The supplement described the archive as unpublished for as long as the main
+    # paper described it as published. Prose without an identifier in it is exactly
+    # what a DOI rename misses, so look for the claim rather than the number.
+    chk "no document still calls the archive unpublished" bash -c '
+      ! grep -rniE "contains only the source snapshot|blocked from submission until|package (has been|is being) prepared" \
+          paper/main.tex paper/supplement.tex \
+          paper/submission-ready-keep paper/submission-ready 2>/dev/null \
+        | grep -vE ":[[:space:]]*%"'
     chk "no sentence glued to the next one after a citation" bash -c '
-      ! pdftotext paper/main.pdf - 2>/dev/null | grep -qE "\]\.[A-Z]" '
-    chk "no cross-reference glued to the next word"     bash -c '! pdftotext paper/main.pdf - 2>/dev/null | grep -qE "S[0-9]+(-[A-Z])?[a-z]"'
+      ! pdftotext paper/submission-ready/main.pdf - 2>/dev/null | grep -qE "\]\.[A-Z]" '
+    chk "no cross-reference glued to the next word"     bash -c '! pdftotext paper/submission-ready/main.pdf - 2>/dev/null | grep -qE "S[0-9]+(-[A-Z])?[a-z]"'
   else
     echo "  skip  unresolved-citation check (pdftotext not installed)"
   fi
