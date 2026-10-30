@@ -1489,3 +1489,35 @@ that check rather than a reason to distrust it.
 itself rather than quietly applied, and `secondstand/analyse.py` is left in place
 beside `analyse2.py` that replaces it. A result that was wrong for a day and is
 documented is worth more than one that was quietly improved.
+
+## Amendment 0.51 (2026-10-30) -- the correction did not reach the front of the paper
+
+**A correction applied to the body and not to the abstract is a paper that
+contradicts itself.** Amendment 0.50 replaced the RCAEval figures in
+Section~VI and Supplement S11 but left the abstract and the second contribution
+carrying the withdrawn ones: "170 of 225 ... fall below the band" and "separable
+in 0 of 75 configurations". For a day the manuscript stated in its abstract a
+result its own results section had retracted two pages later. The same review
+found it. Both passages now carry the three-criterion figures, and the only
+remaining mention of 0 of 75 is the sentence that records it as superseded.
+
+**The replication claim was also too strong and is now bounded.** The text said
+recovering the comparison "took five repetitions and a paired test". Five
+repetitions are what this benchmark provides; three or four were not tested and
+may well suffice. The sentence now says so, and the paper does not claim a
+minimum replication count.
+
+**The page allowance is verified, at the first source rather than a summary.**
+The IEEE Computer Society author-resources page states that "the regular paper
+page length limit is defined at 12 formatted pages for Transactions", that all
+page limits include abstracts, references and author biographies, and that pages
+or fractions above it are charged $220 each after final layout. That is now in
+`paper/page_budget.conf` with the URL and the date, and the build checks against
+it: at 11 pages the manuscript is inside the limit and no cut is needed. The same
+page states that all supplemental material must be submitted as separate files
+and must not be included in the same PDF as the main paper -- which is the policy
+the TNSM submission fell foul of, and is worth re-reading before the next upload.
+Still unknown and recorded as such: the maximum length accepted at submission,
+which that page says may differ from the formatted limit.
+
+**Abstract back to 188 words after the rewrite pushed it to 215.**
