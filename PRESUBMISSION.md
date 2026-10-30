@@ -313,17 +313,28 @@ Expect this to add 0.2--0.4 page. It happens **before** Gate 5.
       the manuscript is transcribed against). Re-read this against the actual
       contents of 0.3 when you check it: if the package lacks any of the four
       published items, this wording is the thing that becomes false.
-- [ ] **Archive authorship. Still open, and now on three records.** 0.3, 0.4 and
-      the current 0.5 each list one creator, N. Tarasov, while the manuscript
-      carries two authors. Zenodo metadata is editable on a published record
-      without minting a new version, so this is a form to fill, not a new upload.
-      Decide with each co-author whether they contributed to the code and data or
-      to the manuscript alone -- the creator list is separate metadata from the
-      paper's author list and nobody checks it for you -- then edit at least 0.5.
-      The related identifier on 0.5 also still points at
-      `github.com/Dev-Nikita/csc-iot/tree/0.4`; it should name `tree/0.5`, the
-      revision the archived zip actually contains. Raised by the 2026-10-13
-      review.
+- [ ] **Archive metadata: two fields are wrong on the record the paper cites.**
+      Checked against the Zenodo API on 2026-10-30, not in the browser session
+      that uploaded it. The files, the DOI and the related identifier on
+      `10.5281/zenodo.23820907` are correct, and both files replay end to end
+      from a fresh download. Two metadata fields are not, and both are editable
+      on a published record without minting a new version:
+
+      1. **The version field is empty.** Zenodo therefore labels the record
+         `v7`, an internal revision counter, while the manuscript, the cover
+         letter, README.md and CITATION.cff all say `version 0.6`. A reviewer who
+         opens the DOI sees a different version string than the one cited. Set it
+         to `0.6`.
+      2. **One creator where the paper has two.** N. Tarasov is listed;
+         R. Zinko is not. This has now been true of every version. Decide with him
+         whether he contributed to the code and data or to the manuscript alone --
+         the creator list is separate metadata from the author list and nobody
+         checks it for you -- then set it, with ORCIDs
+         `0000-0003-1870-3436` and `0000-0002-3275-8188`.
+
+      Versions 0.3, 0.4 and 0.5 carry the same single-creator defect, and 0.5's
+      related identifier still points at `tree/0.4`. Fixing the superseded records
+      is optional; fixing 0.6 is not, because it is the one the paper cites.
 - [ ] Neither PDF contains `[?]`. Check with `pdftotext file.pdf - | grep '\[?\]'`,
       not by reading the LaTeX log: an undefined citation in a document with no
       bibliography at all produces no warning to grep for. That is how eight of
