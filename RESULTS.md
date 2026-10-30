@@ -290,6 +290,72 @@ rule out is a problem in the ledger's construction -- which runs entered the
 calibration pool, and whether they are exchangeable with a future run. Those two
 checks are in `CRC_AUDIT.md` and remain open for someone outside this work.
 
+## 5b. What executing the alternatives actually changes
+
+Rules frozen in `VALUE_OF_PROTOCOL.md` and committed before the distribution was
+computed; produced by `analysis/value_of_protocol.py` from the published archive
+and recorded in `analysis/value_of_protocol_output.txt`. Three evaluations on the
+same anchors, the same actions and the same objective column: **P** picks the
+action minimising the structural prediction `J_hat`; **S** picks the one
+minimising a single executed branch; **R** picks the one minimising the mean over
+repeats and declares the anchor unresolved when the gap to the runner-up is at or
+below `eta_J`.
+
+| contrast | | d45-matrix-v1 (200 anchors) | b5-matrix-v2 (690 anchors) |
+|---|---|---|---|
+| P vs S | changed / unchanged | 104 / 96 | 131 / 559 |
+| P vs R | changed / unchanged / unresolved | 23 / 7 / 170 | 7 / 417 / 266 |
+| S vs R | changed / unchanged / unresolved | 0 / 30 / 170 | 2 / 422 / 266 |
+
+The result is not the one the protocol was expected to produce, and it is the
+more interesting one.
+
+**Repetition almost never changes the winner.** Where the comparison resolves at
+all, a single execution and five-fold repeated execution pick the same action in
+30 of 30 anchors on d45 and 422 of 424 on b5. What repetition buys is not a
+different answer but the knowledge of whether there is an answer.
+
+**Most comparisons do not resolve.** 170 of 200 anchors on d45 (85.0 per cent)
+and 266 of 690 on b5 (38.6 per cent) have a best-to-runner-up gap at or below the
+dispersion band. A conventional evaluation reports a winner at every one of them.
+
+**Where it does resolve, the structural prediction is wrong far more often on
+d45 than on b5.** 23 of the 30 resolved d45 anchors change the winner against the
+prediction, against 7 of 424 on b5. The two matrices disagree by a factor of
+forty, and the manuscript must not quote either alone.
+
+**The effect is confined to one mechanism.** On d45 every changed anchor is D4:
+D5 contributes 0 changed, 0 unchanged and 100 unresolved. That is a limitation,
+not a headline, and it is reported as one.
+
+**Sign flips are more numerous than the five the supplement tabulates, under a
+weaker rule.** Taking the pooled band alone, 35 of 196 resolvable
+`(anchor, action)` contrasts against `NO_OP` have predicted and observed
+improvements of opposite sign on d45, and 16 on b5. The supplement's table of
+five is the failure set of the preregistered sign test, which requires a contrast
+to survive **all four** bands and admits 101 contrasts. Both are correct for
+their own rule; the gap between 5 and 35 is itself a statement about how much the
+conclusion depends on the strictness of the resolvability criterion, and it
+belongs in the paper.
+
+The case the frozen selection rule picks -- largest observed magnitude among
+sign-flipped pairs -- is `s27-a02-REROUTE` on d45: observed `-0.1682`, predicted
+`+0.0182`. It is one of the five already in the supplement. Its predicted benefit
+is small, so it illustrates a wrong direction rather than a large predicted gain
+reversed; `s27-a08-REROUTE` (observed `-0.1403`, predicted `+0.2359`) is the more
+striking case and was **not** selected, which is stated here so that the choice
+cannot be revisited after the fact.
+
+The supplement's five rows use the **median** over repeats and this analysis uses
+the **mean**; that is the whole of the difference between its `-0.1737` and the
+`-0.1682` here. One definition has to be chosen for the manuscript.
+
+What this does not establish: the comparison is between a structural prediction
+and execution on one testbed. It is not evidence that a published benchmark
+elsewhere reached a wrong conclusion. It also cannot separate "the structural
+model is wrong" from "the model is right about something the objective does not
+price", which is this paper's own third limit.
+
 ## 6. Replay dispersion
 
 | run | mechanisms | eta_J pooled | worst cell | ratio |
@@ -338,7 +404,9 @@ N-Sigma only.
 **A correction, recorded in place of the figures it replaces.** The first
 analysis (`analyse.py`, superseded) compared the MEAN of five repetitions against
 a band built from differences between SINGLE repetitions. A mean of five is about
-four times less dispersed than one observation, so that criterion was far too
+sqrt(5) ~= 2.24 times less dispersed in standard deviation than one observation
+(measured: within-configuration sd 0.197 for a single repetition, 0.088 for the
+mean of five), so that criterion was far too
 conservative, and it produced the figure "0 of 75 for BARO against N-Sigma" that
 was briefly the headline of this probe. An independent review identified the
 mismatch; it was reproduced and confirmed here before anything was changed. The

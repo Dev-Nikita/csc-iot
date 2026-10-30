@@ -55,7 +55,8 @@ environment; runtime varies markedly across traces.
 The first version of this probe used one criterion: the difference of two
 methods' **means** over a configuration's five repetitions, compared against a
 band built from differences between **single** repetitions. Those are different
-scales. A mean of five is roughly four times less dispersed than one
+scales. The standard deviation of a mean of five is sqrt(5) ~= 2.24 times
+smaller than that of one
 observation, so the criterion was far too conservative. It produced "BARO vs
 N-Sigma resolvable in 0 of 75 configurations", which was briefly presented as the
 sharpest number here. An independent review identified the mismatch; it was
