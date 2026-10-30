@@ -115,4 +115,22 @@ stay in the discussion.
 
 ## Amendments
 
-(none yet)
+**1, 2026-10-30. The resolvability criterion is reported under all four of this
+paper's bands, not only the pooled one.** External review pointed out that the
+headline rests on one definition of `eta_J` while the paper itself declares four,
+and that a result which moves with the definition is a result about the
+definition. Nothing in the plan above is withdrawn: the pooled-band figures stand
+exactly as first computed and remain the headline, because that is the
+preregistered band. The four columns are added beside them.
+
+The four readings are the paper's own: the pooled band; the worst single cell in
+the matrix; the larger of the two cells entering that contrast; and a percentile
+interval for the difference of means over the executed repeats, 4000 draws,
+excluding zero. "All four" requires every one of them.
+
+The result does not depend on the choice. Unresolved anchors range from 38.1 to
+54.8 per cent of 890 across the four criteria, with the pooled band at 49.0; and
+the winner changes between a single execution and repeated execution at between
+0 and 8 of the 402 to 551 anchors a criterion can resolve, the worst case being
+1.5 per cent. Both headline claims hold under every reading, and the range is
+reported rather than the most convenient member of it.

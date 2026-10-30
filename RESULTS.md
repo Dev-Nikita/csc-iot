@@ -350,6 +350,24 @@ The supplement's five rows use the **median** over repeats and this analysis use
 the **mean**; that is the whole of the difference between its `-0.1737` and the
 `-0.1682` here. One definition has to be chosen for the manuscript.
 
+**Neither claim depends on the band.** Repeating the classification under all
+four declared bands (pooled, worst cell, contrast-local, and a bootstrap interval
+on the difference of means excluding zero):
+
+| criterion | unresolved d45 | unresolved b5 | S vs R changed d45 | S vs R changed b5 |
+|---|---|---|---|---|
+| pooled | 170 | 266 | 0 | 2 |
+| worst cell | 189 | 299 | 0 | 0 |
+| local | 144 | 258 | 0 | 1 |
+| bootstrap | 119 | 220 | 2 | 6 |
+| all four | 189 | 299 | 0 | 0 |
+
+Over 890 anchors the unresolved share runs 38.1 to 54.8 per cent (pooled 49.0),
+and the winner changes between a single execution and repeated execution at 0 to
+8 of the 402 to 551 anchors a criterion resolves, at most 1.5 per cent. Recorded
+as amendment 1 in `VALUE_OF_PROTOCOL.md`: the pooled figures were computed first,
+are unchanged, and the four columns were added after external review asked.
+
 What this does not establish: the comparison is between a structural prediction
 and execution on one testbed. It is not evidence that a published benchmark
 elsewhere reached a wrong conclusion. It also cannot separate "the structural

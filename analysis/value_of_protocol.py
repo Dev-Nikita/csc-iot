@@ -9,6 +9,8 @@ reader can reproduce from the archive.
 """
 import collections
 import csv
+import itertools
+import random
 import sys
 
 NO_OP = "NO_OP"
@@ -40,6 +42,25 @@ def load(root, matrix):
             "repeat": j["repeat"], "fault_type": j["fault_type"],
         })
     return out, len(rows), len(out)
+
+
+def cell_eta(vals):
+    """The band of one cell: Q0.95 of its own pairwise absolute differences."""
+    return quantile([abs(a - b) for a, b in itertools.combinations(vals, 2)], 0.95)
+
+
+def boot_excludes_zero(a, b, draws=4000, seed=20261031):
+    """Percentile interval for the difference of means, resampling repeats."""
+    rng = random.Random(seed)
+    diffs = []
+    for _ in range(draws):
+        ra = sum(a[rng.randrange(len(a))] for _ in a) / len(a)
+        rb = sum(b[rng.randrange(len(b))] for _ in b) / len(b)
+        diffs.append(ra - rb)
+    diffs.sort()
+    lo = diffs[int(0.025 * (draws - 1) + 0.5)]
+    hi = diffs[int(0.975 * (draws - 1) + 0.5)]
+    return lo > 0 or hi < 0
 
 
 def winner(scores):
@@ -74,11 +95,18 @@ def analyse(root, matrix):
             "J_hat": sum(x["J_hat"] for x in v) / len(v),
             "single": first["J_obs"],
             "mean": sum(x["J_obs"] for x in v) / len(v),
+            "obs": [x["J_obs"] for x in v],
+            "eta": cell_eta([x["J_obs"] for x in v]),
             "n": len(v),
         }
         meta.setdefault((sc, an), {"fault_type": v[0]["fault_type"],
                                    "regime": v[0]["regime"]})
 
+    worst_cell = max((d["eta"] for a in anchors.values() for d in a.values()),
+                     default=0.0)
+    criteria = ("pooled", "worst", "local", "bootstrap", "all four")
+    band_labels = {c: collections.Counter() for c in criteria}
+    band_sr = {c: collections.Counter() for c in criteria}
     labels = {c: collections.Counter() for c in ("P vs S", "P vs R", "S vs R")}
     by_fault = collections.defaultdict(lambda: collections.Counter())
     by_regime = collections.defaultdict(lambda: collections.Counter())
@@ -95,6 +123,24 @@ def analyse(root, matrix):
         R, rbest, rsecond, tR = winner({a: d["mean"] for a, d in acts.items()})
         gap = rsecond - rbest
         gaps.append(gap)
+
+        # the same winner under four readings of "resolvable", this paper's own
+        ordered = sorted(acts.items(), key=lambda kv: (kv[1]["mean"], kv[0]))
+        top, run = ordered[0][1], ordered[1][1]
+        verdicts = {
+            "pooled": gap > eta,
+            "worst": gap > worst_cell,
+            "local": gap > max(top["eta"], run["eta"]),
+            "bootstrap": boot_excludes_zero(top["obs"], run["obs"]),
+        }
+        verdicts["all four"] = all(verdicts.values())
+        for name, resolved_here in verdicts.items():
+            if not resolved_here:
+                band_labels[name]["unresolved"] += 1
+                band_sr[name]["unresolved"] += 1
+            else:
+                band_labels[name]["changed" if P != R else "unchanged"] += 1
+                band_sr[name]["changed" if S != R else "unchanged"] += 1
         tied_any += int(tP or tS or tR)
         unresolved = gap <= eta
 
@@ -122,7 +168,9 @@ def analyse(root, matrix):
     return dict(matrix=matrix, n_struct=n_struct, n_joined=n_joined, eta=eta,
                 n_pairs=len(diffs), anchors=len(anchors), labels=labels,
                 by_fault=by_fault, by_regime=by_regime, confusion=confusion,
-                gaps=gaps, tied=tied_any, flips=flips)
+                gaps=gaps, tied=tied_any, flips=flips,
+                band_labels=band_labels, band_sr=band_sr,
+                worst_cell=worst_cell, criteria=criteria)
 
 
 def report(r):
@@ -144,6 +192,24 @@ def report(r):
                   f"({quantile(g,p)/r['eta']:.2f} x eta)")
         below = sum(1 for x in g if x <= r["eta"])
         print(f"  at or below the band: {below} of {len(g)} ({below/len(g):.1%})")
+
+    print(f"\nP vs R under four readings of resolvable "
+          f"(pooled {r['eta']:.4f}, worst cell {r['worst_cell']:.4f})")
+    order3 = ("changed", "unchanged", "unresolved")
+    print(f"  {'criterion':12s}" + "".join(f"{k:>12s}" for k in order3)
+          + f"{'unresolved %':>14s}")
+    for c in r["criteria"]:
+        n = sum(r["band_labels"][c].values())
+        u = r["band_labels"][c].get("unresolved", 0)
+        print(f"  {c:12s}" + "".join(f"{r['band_labels'][c].get(k,0):12d}"
+                                     for k in order3)
+              + f"{u/n:>13.1%}")
+
+    print("\nS vs R under the same four readings")
+    print(f"  {'criterion':12s}" + "".join(f"{k:>12s}" for k in order3))
+    for c in r["criteria"]:
+        print(f"  {c:12s}" + "".join(f"{r['band_sr'][c].get(k,0):12d}"
+                                     for k in order3))
 
     print("\nP winner -> R conclusion")
     pw = sorted({k[0] for k in r["confusion"]})
