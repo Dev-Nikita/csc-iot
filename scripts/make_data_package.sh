@@ -59,11 +59,6 @@ for t in table_bands_merged table_bands_single table_bands_factored \
   [ -f "paper/generated_tables/$t.tex" ] && \
     cp "paper/generated_tables/$t.tex" "$out/generated_tables/"
 done
-if grep -rl 'Placeholder\|No Experiment Has Been Run' "$out" >/dev/null 2>&1; then
-  echo "REFUSED: a placeholder reached the data package" >&2
-  grep -rl 'Placeholder\|No Experiment Has Been Run' "$out" >&2
-  exit 1
-fi
 # RESULTS.md is not optional decoration: the manuscript's transcribed tables are
 # checked against it, and the supplement tells a reader the archive is what lets
 # them recompute the reported figures. `|| true` here once meant a package could
@@ -91,6 +86,31 @@ done
 }
 cp secondstand/results.jsonl.provenance.json "$out/rcaeval/"
 cp analysis/recompute_crc_independent.py "$out/"
+
+# The placeholder guard runs HERE, after every file is in place. It used to run
+# immediately after the generated tables were copied, which was before RESULTS.md,
+# EXPERIMENT_PROTOCOL.md, CRC_AUDIT.md and the whole rcaeval/ directory existed in
+# the package: it could not have seen a placeholder in any of them. A guard that
+# cannot see most of what it guards is worse than no guard, because it reports ok.
+#
+# The three top-level documents are excluded from the hard failure and reported
+# instead: EXPERIMENT_PROTOCOL.md legitimately quotes both phrases in the sentence
+# that specifies this very check, the same way RESULTS.md legitimately states the
+# superseded 0.1174 inside its correction note. A document that describes an audit
+# has to be allowed to name what the audit looks for.
+docs="RESULTS.md EXPERIMENT_PROTOCOL.md CRC_AUDIT.md"
+excl=""
+for d in $docs; do excl="$excl --exclude=$d"; done
+if grep -rl 'Placeholder\|No Experiment Has Been Run' "$out" $excl >/dev/null 2>&1; then
+  echo "REFUSED: a placeholder reached the data package" >&2
+  grep -rn 'Placeholder\|No Experiment Has Been Run' "$out" $excl >&2
+  exit 1
+fi
+for d in $docs; do
+  [ -f "$out/$d" ] || continue
+  hits=$(grep -n 'Placeholder\|No Experiment Has Been Run' "$out/$d" || true)
+  [ -n "$hits" ] && { echo "note: $d names the placeholder phrases, read these lines:"; echo "$hits" | sed 's/^/      /'; }
+done
 
 ( cd "$out" && find . -type f ! -name SHA256SUMS -print0 | sort -z \
     | xargs -0 shasum -a 256 > SHA256SUMS )

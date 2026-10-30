@@ -272,6 +272,24 @@ is near-oracle (0.974 / 0.946 / 0.885 / 0.863); the abstention follows from
 which equation (9) forces `tau_hat = 0.0447` below the risk of any failing action.
 `delta`, `theta` and `tau_hat` are frozen as declared.
 
+Replayed on the analysis host on 2026-10-30 by `analysis/recompute_crc_independent.py`,
+which reads only the frozen ledger `crc_calibration.csv` and imports nothing from
+this project -- not the CRC module, not the predictor, only `argparse`, `csv` and
+`math`. It reports `rows=1080 runs=20 theta=0.06019238095 u_max=0.15 delta=0.1`,
+`tau_hat=0.04468686866`, `empirical_risk=0.05` and `corrected_risk=0.09523809524`.
+The corrected risk is at or below `delta = 0.10`, as equation (9) requires, and the
+threshold agrees with the reported `0.0447` to the precision the paper states. The
+reconstruction also refuses a non-monotone loss curve and did not refuse, so the
+monotonicity the derivation assumes holds on the real calibration data rather than
+only in the implementation that produced it.
+
+This is an implementation-independent replay, not an independent audit: the same
+person ran it, on the host that produced the data. What it rules out is a defect in
+the project's own CRC code or an arithmetic slip in transcription. What it cannot
+rule out is a problem in the ledger's construction -- which runs entered the
+calibration pool, and whether they are exchangeable with a future run. Those two
+checks are in `CRC_AUDIT.md` and remain open for someone outside this work.
+
 ## 6. Replay dispersion
 
 | run | mechanisms | eta_J pooled | worst cell | ratio |

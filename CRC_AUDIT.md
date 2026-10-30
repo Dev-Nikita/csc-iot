@@ -70,5 +70,25 @@ and all calibration constants. `analysis/recompute_crc_independent.py` consumes
 only that CSV and Python's standard library; it does not import the project CRC
 or predictor implementation. The archive packager refuses to build without the
 ledger and its independently reconstructed curve. These tools make the external
-audit possible, but their real-data output cannot be produced in this checkout
-because the reported matrices remain on the analysis host.
+audit possible.
+
+## Replay executed on the analysis host, 2026-10-30
+
+`export_crc_ledger.py` wrote 1080 calibration branches to
+`data/raw/161b4e3893c01695/b5-matrix-v2/crc_calibration.csv`, and
+`recompute_crc_independent.py` reconstructed the curve from that file alone:
+
+    rows=1080 runs=20 theta=0.06019238095 u_max=0.15 delta=0.1
+    tau_hat=0.04468686866
+    empirical_risk=0.05 corrected_risk=0.09523809524
+
+The threshold matches the reported `tau_hat = 0.0447` and `theta = 0.0602`, the
+corrected risk sits under `delta = 0.10`, the calibration unit is the run and
+there are 20 of them as declared, and the monotonicity refusal did not fire.
+
+Item 2 of the four remaining checks above is therefore satisfied as a
+code-independent recomputation. Items 1, 3 and 4 -- the run identifiers against
+the manifests, the ordering of predictor fitting and `U_max` selection against
+calibration, and the search for evidence against exchangeability -- are not
+satisfied by this replay, and none of the four is satisfied as an *independent*
+audit, because the author ran all of it on the host that produced the data.

@@ -75,5 +75,10 @@ if [ -n "$stale" ]; then
 fi
 echo "RESULTS.md: corrected (0.1011 present; 0.1174 only in the correction note)"
 echo
+# make_data_package.sh already fails on a placeholder outside the three documents
+# and prints the documented mentions inside them. This scan is the second pair of
+# eyes on the same question, with the same exclusions, so a clean build prints
+# nothing and anything printed here is a real finding.
 echo "placeholder scan (must print nothing):"
-grep -rl "No Experiment Has Been Run" dist/zenodo-data || true
+grep -rn "No Experiment Has Been Run\|Placeholder" dist/zenodo-data \
+  --exclude=RESULTS.md --exclude=EXPERIMENT_PROTOCOL.md --exclude=CRC_AUDIT.md || true
