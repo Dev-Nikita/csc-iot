@@ -1,6 +1,6 @@
-# Generated from the published archive 10.5281/zenodo.23814731
+# Generated inside the data package.
 #
-# analysis/independent_units.py
+# independent_units.py
 
 b5-matrix-v2
   branches                      6210
@@ -54,8 +54,8 @@ total across the matrices listed
   scenarios  161
   configurations appearing in more than one matrix: 0
 
-# analysis/crc_replay_sensitivity.py, 2000 draws
-ledger /sessions/rcw-01vqftxssfy1xkjqz9yu7zvw/vop-run/zenodo-data/b5-matrix-v2/crc_calibration.csv
+# crc_replay_sensitivity.py, 2000 draws
+ledger b5-matrix-v2/crc_calibration.csv
   rows 1080  cells 360  repeats per cell [3]  runs 20
   delta 0.1  u_max 0.15
   point estimate, all repeats: tau_hat = 0.04468686866

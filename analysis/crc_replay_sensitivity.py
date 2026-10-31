@@ -22,6 +22,7 @@ import bisect
 import collections
 import csv
 import math
+import os
 import random
 import sys
 
@@ -90,7 +91,13 @@ def main():
         return runs
 
     point = tau_hat(assemble(lambda v: v), grid, delta, u_max)
-    print(f"ledger {path}")
+    # The ledger is named by its matrix and file, not by where the caller keeps
+    # it: the package regenerates this output from a relative path while a
+    # working tree may use an absolute one, and an output that records the
+    # caller's directory cannot be compared between the two.
+    where = os.path.join(os.path.basename(os.path.dirname(os.path.abspath(path))),
+                         os.path.basename(path))
+    print(f"ledger {where}")
     print(f"  rows {len(rows)}  cells {len(cells)}  repeats per cell {sizes}  "
           f"runs {len({k[0] for k in cells})}")
     print(f"  delta {delta:g}  u_max {u_max:g}")
