@@ -342,6 +342,9 @@ chk "the data package carries the RCAEval cases"  grep -q 'secondstand/results.j
 chk "the package regenerates its own frozen outputs" bash -c '
   grep -q "Generated inside the data package" scripts/make_data_package.sh &&
   grep -q "disagrees with what the package produces" scripts/make_data_package.sh'
+chk "the data package carries the scenario definitions" bash -c '
+  grep -q "scenarios.json" scripts/make_data_package.sh &&
+  grep -q "scenarios_hash" scripts/make_data_package.sh'
 chk "the data package carries every cited analysis" bash -c '
   for f in value_of_protocol.py value_of_protocol_output.txt independent_units.py \
            crc_replay_sensitivity.py units_and_sensitivity_output.txt VALUE_OF_PROTOCOL.md; do

@@ -27,6 +27,27 @@ for root in "$@"; do
   done
   mkdir -p "$out/$name"
   cp "$root/matrix.json" "$root/jobs.csv" "$out/$name/"
+  # matrix.json names scenarios_file and scenarios_hash but the file itself was
+  # never packaged, so a reader could see WHICH design points were declared only
+  # by their name. Without it the per-scenario seeds, onsets, severities and
+  # loads are unrecoverable from the archive, and the design cannot be re-run.
+  # The runner copies it beside the branches; it travels with them from now on,
+  # and its hash is checked against what the manifest claims.
+  if [ -f "$root/scenarios.json" ]; then
+    cp "$root/scenarios.json" "$out/$name/"
+    python3 - "$root/matrix.json" "$root/scenarios.json" <<'HASHCHK' || exit 1
+import json, sys
+man = json.load(open(sys.argv[1]))
+sc = json.load(open(sys.argv[2]))
+want, got = man.get("scenarios_hash"), sc.get("scenarios_hash")
+if want and got and want != got:
+    sys.exit(f"REFUSED: {sys.argv[2]} hashes {got}, manifest claims {want}")
+HASHCHK
+  else
+    echo "REFUSED: $root/scenarios.json is missing; the design points it declares" >&2
+    echo "         cannot be recovered from the package without it" >&2
+    exit 1
+  fi
   case "$name" in
     b5-matrix-v2)
       required=(structural.csv decisions.csv crc_calibration.csv crc_curve_independent.csv) ;;
