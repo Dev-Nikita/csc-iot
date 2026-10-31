@@ -224,4 +224,26 @@ then run, and do not apply updates until the campaign ends.** The stamped
 `runtime_stack_id` is recorded here before the first run and every branch is
 checked against it:
 
-    stack id for this campaign: ________________  (fill before step 0)
+    stack id for this campaign: 99982ee46a1999be
+    stamped 2026-10-31 on kernel 7.0.0-38-generic, nats-server v2.15.2,
+    rpc stdlib-framed-tcp, impairment kernel_netem, netem seed 424242,
+    confined to eth0 of device-sim and verified by scripts/netem_smoke.sh.
+
+    scenario set: configs/scenarios-bdg.json, hash 064f7ab679849152,
+    twelve design points whose factors and per-scenario seeds were copied from
+    the original matrices' own scenario files, every factor checked against the
+    table above by scripts/gen_campaign_scenarios.py, which refuses on a
+    mismatch. The mapping c01..c12 to (matrix, scenario) is in that file.
+
+**2, 2026-10-31. Step 0 measured the rate and the budget does not hold as
+written.** A single branch through `make m2prime-nats` takes about five seconds,
+but the matrix runner builds a fresh topology per branch, and an interrupted
+step-0 run spent 25 minutes 29 seconds on a prefix of the matrix. The branch
+count that fits the declared 72-hour ceiling is recomputed from that measurement
+before the rest of the campaign starts, and the reduction rule in the budget
+section applies. The measured rate and the resulting decision are recorded here
+before any further run.
+
+    measured seconds per branch: ________________
+    branches that fit 72 hours:  ________________
+    decision (12 points / 8 points / other): ________________
