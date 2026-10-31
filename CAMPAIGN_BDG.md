@@ -189,4 +189,39 @@ containers on one host. Each stays an open gate in `PRESUBMISSION.md`.
 
 ## Amendments
 
-(none yet)
+**1, 2026-10-31, before any run. The substrate changes when the stack is rebuilt,
+and the design did not account for it.**
+
+`runtime_stack_id` is a SHA-256 over the substrate: bus version, kernel, Go
+version, container images, netem configuration and process topology. The three
+reported matrices carry `161b4e3893c01695`, `15192a04761cca10` and
+`408a36b2a908cf6d`; the stamp currently in the working tree is
+`7e660d0c4a54bee7`, from a different machine entirely. Rebuilding the stack on
+the analysis host will mint a new id, because the kernel and the images have
+moved since October. Two consequences the protocol above missed:
+
+*The seed comparison was confounded.* Part D as written would have compared five
+new seeds on a new substrate against seed 42 on the old one, so a difference
+could not be attributed to the seed. **Part B therefore runs at seed 42**, which
+makes B's mode-F output the within-substrate baseline D needs, and D compares its
+five derived seeds against that. Nothing is compared across substrates as if the
+substrate were held fixed.
+
+*And the change is worth measuring rather than merely avoided.* Comparing the new
+stack's seed-42 mode-F output against the archived old-stack seed-42 results for
+the same twelve design points costs nothing beyond what B already runs, and it
+measures something this work has never looked at: how much of the result is a
+property of the substrate. It is reported as a third axis beside design point and
+seed, with the caveat that one substrate change is an anecdote and not an
+estimate of substrate variance.
+
+*Operational requirement that follows.* The analysis host currently reports a
+pending kernel upgrade from `7.0.0-30-generic` to `7.0.0-38-generic` and a
+required restart. A reboot part-way through would change the stack id and split
+the campaign across two substrates, which is the one thing that would make the
+whole comparison uninterpretable. **Reboot into the final kernel, then stamp,
+then run, and do not apply updates until the campaign ends.** The stamped
+`runtime_stack_id` is recorded here before the first run and every branch is
+checked against it:
+
+    stack id for this campaign: ________________  (fill before step 0)
