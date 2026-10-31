@@ -179,21 +179,27 @@ Expect this to add 0.2--0.4 page. It happens **before** Gate 5.
       practice for data. The audit refuses any other zenodo identifier in a
       document a reader receives. If the concept DOI starts resolving later,
       nothing needs to change.
-- [x] **Upload that tarball as a new Zenodo version, then confirm the record.**
-      Version 0.5 did this for the data; version 0.6, `10.5281/zenodo.23820907`,
-      adds the analyses the manuscript cites, so that every distribution it
-      reports can be recomputed from the archive and not only from the author's
-      host. The DOI was reserved on the draft before the tag was cut, so the
-      archived code cites the version it is in. Verified from the extracted
-      package on the analysis host and again on an unrelated machine: all 36
-      files checksum, 8118 branch rows, `tau_hat=0.04468686866`, the resampling
-      spans 0.078 and 0.021 with no draw abstaining, 161 design points, the
-      value-of-protocol tables, and `INDEPENDENT RCAEval VERIFICATION OK`.
+- [x] **Publish the archive and confirm it from outside.** Version 0.7,
+      `10.5281/zenodo.23835333`, two files, DOI reserved on the draft before the
+      tag so the archived code cites the version it is in.
 
-      Versions 0.3 and 0.4 are superseded and carried code only; 0.4 was created
-      automatically by the GitHub release webhook, which packages the repository
-      and nothing else. The webhook is off. Do not re-enable it: an archive that
-      must carry data cannot be assembled by a tool that only knows about code.
+      It carries the three matrices, the calibration ledger, the RCAEval cases
+      and every analysis the manuscript cites, and it produces its own frozen
+      outputs: `make_data_package.sh` runs the packaged scripts against the
+      packaged data with `python3 -I` and refuses to build if the result differs
+      from what the working tree claims. The first run of that check refused, on
+      a recorded absolute path rather than on a number, which is what a check
+      that has never fired usefully is supposed to look like the first time.
+
+      Verified on a machine unrelated to the testbed or the author's laptop: 36
+      files checksum, 8118 branch rows, `tau_hat=0.04468686866`, resampling spans
+      0.078 and 0.021 with no draw abstaining, 161 design points, the
+      four-criterion tables, and `INDEPENDENT RCAEval VERIFICATION OK`. The
+      package's own `value_of_protocol_output.txt` matches a fresh run inside it.
+
+      Versions 0.3 to 0.6 are superseded. Do not re-enable the GitHub release
+      webhook: it packages the repository and nothing else, which is how 0.4 was
+      published carrying no data.
 - [ ] **Register and record ORCID for both authors. Confirmed required.** The
       TNSM submission page states: "All IEEE publications require an Open
       Researcher and Contributor ID (ORCID) for all authors," and that a
