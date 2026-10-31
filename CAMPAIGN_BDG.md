@@ -244,6 +244,20 @@ before the rest of the campaign starts, and the reduction rule in the budget
 section applies. The measured rate and the resulting decision are recorded here
 before any further run.
 
-    measured seconds per branch: ________________
-    branches that fit 72 hours:  ________________
-    decision (12 points / 8 points / other): ________________
+    measured seconds per branch: 15.9  (96 branches in 1529 s, stack
+      99982ee46a1999be, fresh topology per branch)
+    branches that fit 72 hours:  16274
+    decision: TWELVE POINTS STAND. The campaign's 6018 branches come to
+      26.6 hours, well inside the ceiling, so the reduction rule
+      in the budget section is not invoked and the point list is unchanged.
+
+Two consequences of the anchor list, recorded because they are deviations from
+the archived design rather than from this protocol. The runner takes one anchor
+list for the whole scenario file, so all twelve points run at anchors
+2, 8, 14, 20, 26, 30. The archived `d45-matrix-v1` used five anchors and
+`d6-pilot-v2` two, so for those points anchor 30 --- and for the D6 points
+several others --- has no archived counterpart. The substrate comparison of
+amendment 1 therefore runs on the overlapping anchors only, and the extra
+anchors are additional evidence for B rather than a replacement of anything.
+The branch count rises from 59 anchors to 72, and 2160 branches for the F pass
+rather than 1770; the budget absorbs it.
