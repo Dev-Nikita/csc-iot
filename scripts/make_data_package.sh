@@ -124,6 +124,45 @@ for d in $docs; do
   [ -n "$hits" ] && { echo "note: $d names the placeholder phrases, read these lines:"; echo "$hits" | sed 's/^/      /'; }
 done
 
+# The frozen outputs are REGENERATED HERE, by the packaged scripts reading the
+# packaged data, with -I so the interpreter cannot import anything from outside.
+# Copying outputs that were produced elsewhere would mean the tables in the paper
+# are traceable to a working tree rather than to the archive, which is the
+# circularity an external review asked us to close. If the packaged code and the
+# packaged data disagree with what was copied in, the build says so and stops.
+for g in value_of_protocol independent_units; do
+  [ -f "$out/$g.py" ] || { echo "REFUSED: $out/$g.py is missing" >&2; exit 1; }
+done
+(
+  cd "$out"
+  {
+    echo "# Generated inside the data package by value_of_protocol.py,"
+    echo "# reading only the matrices in this package. Rules frozen in"
+    echo "# VALUE_OF_PROTOCOL.md; amendment 1 adds the four-criterion columns."
+    python3 -I value_of_protocol.py . d45-matrix-v1 b5-matrix-v2
+  } > value_of_protocol_output.txt 2>&1
+  {
+    echo "# Generated inside the data package."
+    echo "#"
+    echo "# independent_units.py"
+    python3 -I independent_units.py . b5-matrix-v2 d45-matrix-v1 d6-pilot-v2
+    echo
+    echo "# crc_replay_sensitivity.py, 2000 draws"
+    python3 -I crc_replay_sensitivity.py b5-matrix-v2/crc_calibration.csv 2000
+  } > units_and_sensitivity_output.txt 2>&1
+)
+# The working tree's copies must agree with what the package just produced, on
+# everything but the provenance header, or the manuscript is transcribed against
+# numbers the archive does not yield.
+for g in value_of_protocol_output.txt units_and_sensitivity_output.txt; do
+  if ! diff -q <(grep -v '^#' "analysis/$g") <(grep -v '^#' "$out/$g") >/dev/null; then
+    echo "REFUSED: analysis/$g disagrees with what the package produces" >&2
+    diff <(grep -v '^#' "analysis/$g") <(grep -v '^#' "$out/$g") | head -20 >&2
+    exit 1
+  fi
+done
+echo "frozen outputs regenerated inside the package and matched against analysis/"
+
 ( cd "$out" && find . -type f ! -name SHA256SUMS -print0 | sort -z \
     | xargs -0 shasum -a 256 > SHA256SUMS )
 

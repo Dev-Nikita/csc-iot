@@ -350,9 +350,11 @@ The supplement's five rows use the **median** over repeats and this analysis use
 the **mean**; that is the whole of the difference between its `-0.1737` and the
 `-0.1682` here. One definition has to be chosen for the manuscript.
 
-**Neither claim depends on the band.** Repeating the classification under all
-four declared bands (pooled, worst cell, contrast-local, and a bootstrap interval
-on the difference of means excluding zero):
+**Neither claim depends on the criterion.** The first three below are readings
+of the band and ask whether the gap exceeds replay noise; the fourth asks whether
+the difference is distinguishable from zero given the repeats, which is a
+different question. They are a sensitivity analysis, not four estimates of one
+error probability.
 
 | criterion | unresolved d45 | unresolved b5 | S vs R changed d45 | S vs R changed b5 |
 |---|---|---|---|---|

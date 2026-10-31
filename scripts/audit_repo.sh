@@ -339,6 +339,9 @@ chk "CRC has a portable calibration ledger"       test -f analysis/export_crc_le
 chk "CRC has an implementation-independent replay" test -f analysis/recompute_crc_independent.py
 chk "the data package requires the CRC ledger"    grep -q 'crc_calibration.csv' scripts/make_data_package.sh
 chk "the data package carries the RCAEval cases"  grep -q 'secondstand/results.jsonl' scripts/make_data_package.sh
+chk "the package regenerates its own frozen outputs" bash -c '
+  grep -q "Generated inside the data package" scripts/make_data_package.sh &&
+  grep -q "disagrees with what the package produces" scripts/make_data_package.sh'
 chk "the data package carries every cited analysis" bash -c '
   for f in value_of_protocol.py value_of_protocol_output.txt independent_units.py \
            crc_replay_sensitivity.py units_and_sensitivity_output.txt VALUE_OF_PROTOCOL.md; do

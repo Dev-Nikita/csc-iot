@@ -200,6 +200,36 @@ Expect this to add 0.2--0.4 page. It happens **before** Gate 5.
       registered ORCID is needed to submit a manuscript or review a proof. An
       earlier note here recorded this as unconfirmed; it is confirmed, and it is a
       hard blocker on the submission form, not a recommendation.
+- [ ] **A limited seed control, specified here and not yet run.** One master
+      seed, $42$, drives all three matrices, so nothing in this work distinguishes
+      "this effect is a property of the system" from "this effect is a property of
+      this realisation of the randomness". Reproducing the archive does not touch
+      the question: that establishes that the computation repeats, not that the
+      finding does. Re-running the whole design is not warranted, but ruling the
+      question out in advance is not defensible either, so the control is
+      specified now, before it is run, and the decision rule with it.
+
+      **Design.** Twelve design points, chosen by a rule fixed here and not by
+      inspecting outcomes: the first six `b5` D1 points, the first three `b5` D3
+      points and the first three `d45` D4 points in scenario-identifier order.
+      Each re-executed over its full anchor x action x repeat grid under master
+      seed `20261101`, everything else unchanged. That is 648 branches, about
+      8 per cent of the reported total, hours rather than a week.
+
+      **What is compared, decided before the run.** On those twelve points only,
+      under seed 42 and under the new seed: the pooled band `eta_J`; the share of
+      anchors classed unresolved; and the number of anchors at which a single
+      execution and repeated execution choose differently.
+
+      **Decision rule.** If the unresolved share on the twelve points moves by
+      more than 10 percentage points, or if the band moves by more than a factor
+      of two, the seed dependence is material and the manuscript must either run
+      the full design under a second seed or restrict its claim to the realisation
+      it measured. If it moves by less, the control is reported as a bounded
+      check -- twelve points, one additional seed -- and the limitation stays
+      stated rather than removed. Either outcome is reported; the control is not
+      re-specified after its result is seen.
+
 - [ ] **Decision overhead.** Still not measured, and it is the most obvious
       reviewer question about a runtime mechanism. A single instrumented run on
       the existing testbed would answer it. Either do it or state in the Discussion
