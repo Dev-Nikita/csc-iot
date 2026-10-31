@@ -53,6 +53,18 @@ def edit(path, pairs, required=True):
     return 1
 
 
+def bump_versions(path, old_ver, new_ver):
+    """Rewrite every `version~X` / `Version~X` / `version X` in a LaTeX file."""
+    p = pathlib.Path(path)
+    s = p.read_text()
+    pattern = re.compile(r"([Vv]ersion[~ ]\$?)" + re.escape(old_ver) + r"(\$?)")
+    s2, n = pattern.subn(lambda m: m.group(1) + new_ver + m.group(2), s)
+    if n == 0:
+        sys.exit(f"REFUSED: {path} states no version {old_ver}")
+    p.write_text(s2)
+    print(f"  {path}: {n} version mention(s) -> {new_ver}")
+
+
 def append_superseded(version):
     """Add a version to README's superseded list, in order, once."""
     p = pathlib.Path("README.md")
@@ -89,10 +101,12 @@ def main():
     # The records URL appears in README.md only; listing it for every file would
     # make the script refuse on a file that is perfectly correct.
     pairs = doi
-    edit("paper/main.tex", pairs + [
-        (f"(version~{OLD_VER})", f"(version~{new_ver})")])
-    edit("paper/supplement.tex", [
-        (f"Archive version~${OLD_VER}$", f"Archive version~${new_ver}$")])
+    # Every spelling of the version, not just the parenthesised one. The
+    # availability paragraph said "Version~0.5 of the archive" and survived two
+    # renames, because the script matched "(version~0.5)" and nothing else.
+    edit("paper/main.tex", pairs)
+    bump_versions("paper/main.tex", OLD_VER, new_ver)
+    bump_versions("paper/supplement.tex", OLD_VER, new_ver)
     edit("paper/submission-ready-keep/cover_letter.md", pairs + [
         (f"(version {OLD_VER})", f"(version {new_ver})")])
     edit("paper/submission-ready-keep/email_to_editorial_office.md", pairs)

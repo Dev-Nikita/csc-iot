@@ -463,6 +463,24 @@ if [ -f paper/main.tex ]; then
     # The cover letter carried the manuscript's PREVIOUS title through a retarget
     # and a full rewrite of the contribution. Nobody reads a letter's subject line
     # twice. Compare it against the title the PDF actually prints.
+    # A version number in prose is not an identifier, so the DOI guard never saw
+    # it: "Version 0.5 of the archive" sat in the availability paragraph through
+    # two renames while the DOI beside it was current, and a full REPO AUDIT OK
+    # was reported over it twice. Read the version out of the BUILT PDFs, which
+    # is what a reader is handed, and require every mention to be the one
+    # CITATION.cff declares.
+    chk "every archive version printed in the PDFs is the current one" bash -c '
+      want=$(sed -n '"'"'s/^version: *"\([0-9.]*\)"/\1/p'"'"' CITATION.cff)
+      [ -n "$want" ] || { echo "CITATION.cff states no version" >&2; exit 1; }
+      bad=0
+      for pdf in paper/submission-ready/main.pdf paper/submission-ready/supplement.pdf; do
+        txt=$(pdfpage "$pdf" 1 40) || { echo "could not read $pdf" >&2; exit 1; }
+        for v in $(printf "%s" "$txt" | grep -oE "[Vv]ersion[ ~]+[0-9]+\.[0-9]+" |
+                     grep -oE "[0-9]+\.[0-9]+" | sort -u); do
+          [ "$v" = "$want" ] || { echo "$pdf prints version $v, CITATION.cff says $want" >&2; bad=1; }
+        done
+      done
+      [ "$bad" = 0 ]'
     chk "the cover letter names the manuscript's current title" bash -c '
       t=$(pdfpage paper/submission-ready/main.pdf 1 1 |
             tr "\n" " " | tr -s " " |
