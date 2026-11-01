@@ -310,3 +310,23 @@ anchors are 2 x 72 x 3 x 3 = 1296 branches, about 5.7 hours at the measured
 With the F pass already run, the campaign's remaining cost is Q and R plus part
 D, which is 1296 + 2655 branches, about 17.5 hours.
 
+**4, 2026-11-01. The modes are implemented; how to run them.**
+
+`cmd/csc-orchestrator` takes `-ablate quiescence`: it checks quiescence with a
+50 ms timeout so the barrier cannot do its work, never refuses, and records
+every epoch that was not quiescent in `branch.json` under `ablation_notes`, with
+read points marked. The branch therefore says how often the guard would have
+fired rather than merely running without it.
+
+`scripts/m2prime_nats_matrix.sh` takes `MODE=full|quiescence|reset`. `reset`
+drops `--force-recreate`, so a branch runs on whatever state its predecessor
+left; the manifest then records `fresh_topology_per_branch: false` and
+`mode`, and the runner refuses to start unless the experiment name contains the
+mode, because an ablated matrix under an innocent name is the one mistake here
+that cannot be corrected afterwards.
+
+Order, and why: Q and R at seed 42 on the twelve points, three repeats each,
+1296 branches, about 5.7 hours. Then part D, mode `full`, the five derived seeds,
+2655 branches, about 11.7 hours. N and A' are analyses of what is already on
+disk and cost nothing.
+

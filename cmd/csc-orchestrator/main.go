@@ -51,8 +51,24 @@ func main() {
 		outDir   = flag.String("out-dir", "", "branch directory: anchor.json, outcome.json and branch.json are written here")
 		branchID = flag.String("branch-id", "", "identifier of this branch within the matrix")
 		prodCSV  = flag.String("producers", "gw00,gw01", "nodes that must close every epoch before it can be read")
+		// Mode Q of the B+D+G campaign. The transport-quiescence barrier is the
+		// one runtime guard this system has, and the campaign asks what it is
+		// worth by removing it and measuring what changes. Ablating a guard is
+		// not the same as not having one: the branch still CHECKS quiescence,
+		// without waiting and without refusing, and records what it found, so a
+		// run in this mode says how often the guard would have fired.
+		ablate = flag.String("ablate", "", `ablation for the mode study: "" or "quiescence"`)
 	)
 	flag.Parse()
+
+	if *ablate != "" && *ablate != "quiescence" {
+		log.Fatalf("-ablate: unknown ablation %q (want \"\" or \"quiescence\")", *ablate)
+	}
+	// An ablated branch must never be mistaken for a full one later.
+	var ablationNotes []string
+	if *ablate != "" {
+		log.Printf("ABLATED RUN: %s -- this branch is not a reportable full-protocol branch", *ablate)
+	}
 
 	nodes := strings.Split(*nodesCSV, ",")
 	if *outDir != "" && *epochs < *anchor+*horizon {
@@ -119,7 +135,19 @@ func main() {
 		// but the edge had not finished draining, and the fingerprint captured
 		// the difference as if it were state.
 		isReadPoint := k == *anchor || (*horizon > 0 && k == *anchor+*horizon)
-		if err := wm.AwaitQuiescent(ctx, k, *timeout); err != nil {
+		if *ablate == "quiescence" {
+			// Check without waiting, so the barrier cannot do its work, and
+			// record the answer instead of acting on it. A long timeout here
+			// would wait for quiescence and quietly restore the guard.
+			if err := wm.AwaitQuiescent(ctx, k, 50*time.Millisecond); err != nil {
+				note := fmt.Sprintf("epoch %d not quiescent: %v", k, err)
+				if isReadPoint {
+					note = "READ POINT " + note
+				}
+				ablationNotes = append(ablationNotes, note)
+				log.Printf("ablated(quiescence): %s", note)
+			}
+		} else if err := wm.AwaitQuiescent(ctx, k, *timeout); err != nil {
 			if isReadPoint {
 				log.Fatalf("epoch %d: refusing to fingerprint an undrained transport: %v", k, err)
 			}
@@ -155,9 +183,16 @@ func main() {
 			// Separating them is how an anchor came to record
 			// drained:edge00:gw00 = 1866 against end:gw00 = 2000: the check had
 			// passed, and the numbers written were not the numbers checked.
+			// The getter returns the watermarks even when it refuses them, so
+			// the ablated mode keeps the evidence and drops only the refusal.
 			q, err := wm.TransportQuiescenceFingerprintVerified(k)
 			if err != nil {
-				log.Fatalf("anchor %d: refusing to write an anchor over an undrained transport: %v", k, err)
+				if *ablate != "quiescence" {
+					log.Fatalf("anchor %d: refusing to write an anchor over an undrained transport: %v", k, err)
+				}
+				note := fmt.Sprintf("anchor %d written over an undrained transport: %v", k, err)
+				ablationNotes = append(ablationNotes, note)
+				log.Printf("ablated(quiescence): %s", note)
 			}
 			fp.TransportQuiescence = q
 			hash := fp.Hash()
@@ -254,7 +289,10 @@ func main() {
 			RuntimeStackID string         `json:"runtime_stack_id"`
 			Action         string         `json:"action"`
 			ActionAck      *bus.ActionAck `json:"action_ack,omitempty"`
-		}{runID, *branchID, *stackID, appliedAction, verifiedActionAck}, "", "  ")
+			Ablate         string         `json:"ablate,omitempty"`
+			AblationNotes  []string       `json:"ablation_notes,omitempty"`
+		}{runID, *branchID, *stackID, appliedAction, verifiedActionAck,
+			*ablate, ablationNotes}, "", "  ")
 		target := filepath.Join(*outDir, "branch.json")
 		f, err := os.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o444)
 		if err != nil {

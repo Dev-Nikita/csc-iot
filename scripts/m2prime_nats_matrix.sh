@@ -73,6 +73,21 @@ SCENARIOS="${SCENARIOS:-}"
 SEED="${SEED:-42}"
 NETEM_SEED="${NETEM_SEED:-424242}"
 ROOT="${ROOT:-data/raw}"
+# Mode of the B+D+G campaign. "full" is the protocol as published. "quiescence"
+# removes the transport barrier inside the orchestrator. "reset" removes the
+# fresh topology per branch, so a branch runs on whatever state its predecessor
+# left and only the declared initial reset separates them -- which is what an
+# evaluation that replays without reconstructing looks like. Anything else is
+# refused rather than silently treated as full.
+MODE="${MODE:-full}"
+case "$MODE" in
+  full|quiescence|reset) ;;
+  *) echo "FAIL: MODE=$MODE (want full | quiescence | reset)"; exit 2 ;;
+esac
+if [ "$MODE" != full ]; then
+  echo "note: MODE=$MODE -- this run is an ABLATION and is not a reportable"
+  echo "      full-protocol matrix. It is written under its own experiment name."
+fi
 GIT_COMMIT="${GIT_COMMIT:-$(git rev-parse --short HEAD 2>/dev/null || sed -n '1p' SOURCE_REVISION 2>/dev/null || echo unknown)}"
 
 compose() { docker compose -f "$COMPOSE_FILE" "$@"; }
@@ -162,6 +177,13 @@ SCENARIOS_HASH="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])
 SCENARIO_COUNT="$(python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))["scenarios"]))' "$SCENARIOS")"
 OUT="$ROOT/$STACK_ID/$EXPERIMENT"
 [ ! -e "$OUT" ] || { echo "FAIL: $OUT exists; experiments are append-only"; exit 2; }
+# An ablated matrix carrying a name that does not say so is the one mistake here
+# that cannot be corrected afterwards: the branches look exactly like full ones.
+if [ "$MODE" != full ] && [ "${EXPERIMENT#*$MODE}" = "$EXPERIMENT" ]; then
+  echo "FAIL: MODE=$MODE but EXPERIMENT=$EXPERIMENT does not contain \"$MODE\"."
+  echo "      Name an ablated run for its ablation, e.g. EXPERIMENT=bdg-$MODE-s42."
+  exit 2
+fi
 mkdir -p "$OUT"
 CONFIG_HASH="$(python3 -c 'import hashlib,sys; print(hashlib.sha256(sys.argv[1].encode()).hexdigest()[:16])' \
   "$ANCHOR_SPEC|$REPEATS|$ACTIONS|$HORIZON|$PERIOD|$EMIT_SPREAD|$SEED|$NETEM_SEED|$SCENARIOS_HASH")"
@@ -187,7 +209,8 @@ cat > "$OUT/matrix.json" <<JSON
   "master_seed": $SEED,
   "netem_seed": $NETEM_SEED,
   "bus_impl": "nats",
-  "fresh_topology_per_branch": true,
+  "fresh_topology_per_branch": $([ "$MODE" = reset ] && echo false || echo true),
+  "mode": "$MODE",
   "started_utc": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 }
 JSON
@@ -288,9 +311,16 @@ MANIFEST
   # is becoming unreliable, which is exactly the kind of thing that must appear
   # in the evidence rather than in nobody's memory.
   local attempt=0 started=0
+  # MODE=reset is the ablation: no --force-recreate, so containers that are
+  # already up keep their queues, counters and routing from the previous branch.
+  # The stack is still brought up if it is not running, because a branch cannot
+  # execute against nothing; what is removed is the guarantee that it starts
+  # from the same place as its siblings.
+  local recreate="--force-recreate"
+  if [ "$MODE" = reset ]; then recreate=""; fi
   while [ "$attempt" -lt "${STARTUP_ATTEMPTS:-3}" ]; do
     attempt=$((attempt+1))
-    if compose up -d --force-recreate --wait --wait-timeout 90 --no-build \
+    if compose up -d $recreate --wait --wait-timeout 90 --no-build \
          >>"$dir/compose-up.log" 2>&1; then
       started=1
       break
@@ -329,7 +359,9 @@ MANIFEST
        -period "$PERIOD" -timeout 90s -action "$action" -action-target gw00 \
        -action-edge edge01 -action-limit 50 -runtime-stack-id "$STACK_ID" \
        -git-commit "$GIT_COMMIT" -config-hash "$CONFIG_HASH" \
-       -branch-id "$branch" -out-dir "$dir" >"$dir/orchestrator.log" 2>&1; then
+       -branch-id "$branch" -out-dir "$dir" \
+       $([ "$MODE" = quiescence ] && echo "-ablate quiescence") \
+       >"$dir/orchestrator.log" 2>&1; then
     compose logs --no-color >"$dir/compose.log" 2>&1 || true
     echo "orchestrator refused branch; see orchestrator.log" >"$dir/REFUSED.txt"
     return 1
