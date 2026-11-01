@@ -409,6 +409,45 @@ there failed, so using all three repeats is the strictest reading of the
 calibration data. Replay nondeterminism could only have made the gate more
 permissive.
 
+## 5d. Prefix identity: where it holds, and where it does not
+
+Found 2026-11-01, after repairing `analysis/m2prime_report.py`, whose per-cell
+verdict was computed into a flag nothing read; with `--prefix-only` it printed
+`PASS` and returned 0 whatever it found.
+
+| matrix | cells | cells with more than one prefix state |
+|---|---|---|
+| `b5-matrix-v2` | 1035 | 0 |
+| `d6-pilot-v2` | 12 | 0 |
+| `d45-matrix-v1` | 200 | **13** |
+
+All thirteen are D5 scenarios -- s02, s04, s06, s16, s18, s22, s28, s30, s34,
+s36, s40 -- and all at anchors 14, 20 or 26, never 2 or 8. Eleven of the twenty
+D5 scenarios are affected. Two cells reconstructed three states, eleven two.
+D1, D3, D4 and D6 are clean.
+
+What changes when all thirteen are excluded:
+
+| quantity | all cells | without the thirteen |
+|---|---|---|
+| `eta_J` (d45) | 0.0183 | 0.0185 |
+| value of protocol, P vs R | 23 / 7 / 170 | 23 / 7 / **157** |
+| S vs R changed | 0 of 30 | 0 of 30 |
+| sign test resolvable | 101 | **101** |
+| sign reproduced | 96 | **96** |
+| flipped signs | 5 (all D4) | **the same 5** |
+
+Nothing moves. The thirteen anchors were already unresolved under every band, so
+removing them only shrinks the unresolved count; not one of the 101 resolvable
+contrasts lies in a split cell; and the band rises by 1.0 per cent because the
+split cells are *quieter* than the rest -- within-cell Q0.95 of 0.0122 against
+0.0185 elsewhere. The structural fingerprint distinguishes states the objective
+does not.
+
+The defect is real and the published claim that prefix identity held everywhere
+was wrong. No reported result rests on a comparison between branches that did
+not share a prefix.
+
 ## 6. Replay dispersion
 
 | run | mechanisms | eta_J pooled | worst cell | ratio |
