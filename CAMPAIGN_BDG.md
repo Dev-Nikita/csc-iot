@@ -261,3 +261,52 @@ amendment 1 therefore runs on the overlapping anchors only, and the extra
 anchors are additional evidence for B rather than a replacement of anything.
 The branch count rises from 59 anchors to 72, and 2160 branches for the F pass
 rather than 1770; the budget absorbs it.
+
+**3, 2026-11-01, before the ablation runs. Mode S cannot be built, because the
+guard it ablates is not a guard.**
+
+Reading the implementation to build the modes turned up something the protocol
+assumed and the manuscript should state plainly.
+
+*Transport quiescence is a runtime guard.* `cmd/csc-orchestrator` calls
+`AwaitQuiescent` before fingerprinting and exits with "refusing to fingerprint an
+undrained transport" when producers and consumers disagree. Mode **Q** is a real
+ablation of a real check, and it needs one flag on the orchestrator.
+
+*Application-state equivalence is not a runtime guard.* Nothing compares the
+structural fingerprint of one branch against another branch of the same cell and
+refuses the odd one out. Equivalence is established **by construction** --- a
+fresh topology per branch, the same per-scenario seed, the same configuration,
+the prefix re-executed rather than snapshotted --- and then **measured after the
+fact** by `analysis/m2prime_report.py --prefix-only`. There is no admission
+control to remove, so mode **S as written cannot be implemented**.
+
+This is worth more than a protocol fix. The cover letter and the manuscript say
+the alternatives are executed "from a state verified equivalent in each respect
+the recorded state exposes", which a reader may fairly take as admission
+control. It is not: it is construction plus measurement. Both are defensible,
+and the second is what the paper actually did, but only one of them is what the
+sentence says. The wording is corrected before submission, and this amendment is
+the record of why.
+
+*The modes become:*
+
+| | Mode | Ablates | Cost |
+|---|---|---|---|
+| F | full | nothing; the reference | run, done |
+| Q | no transport barrier | the one runtime guard there is | one orchestrator flag |
+| R | no reconstruction | the fresh topology per branch; actions run back to back on whatever state the previous branch left | runner change |
+| N | same action twice | nothing; the null | free, read off F's repeats |
+| A' | prefix agreement not required | the post-hoc filter, in analysis only | free |
+
+`A'` replaces `S` and is honest about what it is: not a runtime ablation but a
+decision about which branches an analysis is willing to use. It answers the same
+question --- does requiring equivalent prefixes change any conclusion --- without
+pretending to disable something that was never enabled.
+
+*The budget falls.* Q and R at three repeats over the twelve points and six
+anchors are 2 x 72 x 3 x 3 = 1296 branches, about 5.7 hours at the measured
+15.9 seconds, instead of the 1944 the three-mode plan assumed. N and A' are free.
+With the F pass already run, the campaign's remaining cost is Q and R plus part
+D, which is 1296 + 2655 branches, about 17.5 hours.
+
