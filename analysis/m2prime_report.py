@@ -54,12 +54,44 @@ def read_json(path):
 
 def load(root):
     records = []
-    patterns = ("s*-a*-*-r*", "a*-*-r*")
+    # The patterns used to be ("s*-a*-*-r*", "a*-*-r*"), which assumed every
+    # scenario id begins with "s". A campaign whose points are named c01..c12 to
+    # keep them distinct from the archived ones produced 2160 good branches and
+    # was reported as expected=2160 actual=0: the second time this checker has
+    # failed a healthy matrix by not recognising the names in it. Widening the
+    # glob again would only move the assumption, so the prefixes come from the
+    # recorded scenario set, and the generic pattern is the fallback.
+    patterns = []
+    spath = os.path.join(root, "scenarios.json")
+    if os.path.exists(spath):
+        try:
+            ids = [s["scenario_id"] for s in read_json(spath)["scenarios"]]
+            patterns += [f"{sid}-a*-*-r*" for sid in ids]
+        except (KeyError, TypeError, ValueError):
+            pass
+    patterns += ["*-a*-*-r*", "a*-*-r*"]
+
     dirs = []
-    for pat in patterns:
-        dirs = sorted(glob.glob(os.path.join(root, pat)))
-        if dirs:
-            break
+    for pat in patterns[:-2] or [None]:
+        if pat:
+            dirs += sorted(glob.glob(os.path.join(root, pat)))
+    if not dirs:
+        for pat in patterns[-2:]:
+            dirs = sorted(glob.glob(os.path.join(root, pat)))
+            if dirs:
+                break
+
+    # A checker that sees nothing where branch directories plainly exist must
+    # say so, not return an empty set that reads as a failed experiment.
+    if not dirs:
+        anylike = [d for d in sorted(glob.glob(os.path.join(root, "*-*-*")))
+                   if os.path.isdir(d)]
+        if anylike:
+            raise SystemExit(
+                f"REFUSED: {len(anylike)} branch-like directories are present in "
+                f"{root} and none matched the naming this checker understands, "
+                f"for example {os.path.basename(anylike[0])}. The matrix is not "
+                f"being judged incomplete; the checker cannot read it.")
     for directory in dirs:
         name = os.path.basename(directory)
         parts = name.split("-")
