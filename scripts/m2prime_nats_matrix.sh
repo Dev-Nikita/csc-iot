@@ -176,7 +176,6 @@ ANCHOR_COUNT="$(echo "$ANCHOR_SEQ" | wc -w)"
 SCENARIOS_HASH="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["scenarios_hash"])' "$SCENARIOS")"
 SCENARIO_COUNT="$(python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))["scenarios"]))' "$SCENARIOS")"
 OUT="$ROOT/$STACK_ID/$EXPERIMENT"
-[ ! -e "$OUT" ] || { echo "FAIL: $OUT exists; experiments are append-only"; exit 2; }
 # An ablated matrix carrying a name that does not say so is the one mistake here
 # that cannot be corrected afterwards: the branches look exactly like full ones.
 if [ "$MODE" != full ] && [ "${EXPERIMENT#*$MODE}" = "$EXPERIMENT" ]; then
@@ -184,6 +183,7 @@ if [ "$MODE" != full ] && [ "${EXPERIMENT#*$MODE}" = "$EXPERIMENT" ]; then
   echo "      Name an ablated run for its ablation, e.g. EXPERIMENT=bdg-$MODE-s42."
   exit 2
 fi
+[ ! -e "$OUT" ] || { echo "FAIL: $OUT exists; experiments are append-only"; exit 2; }
 mkdir -p "$OUT"
 CONFIG_HASH="$(python3 -c 'import hashlib,sys; print(hashlib.sha256(sys.argv[1].encode()).hexdigest()[:16])' \
   "$ANCHOR_SPEC|$REPEATS|$ACTIONS|$HORIZON|$PERIOD|$EMIT_SPREAD|$SEED|$NETEM_SEED|$SCENARIOS_HASH")"
