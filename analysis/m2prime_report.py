@@ -117,6 +117,32 @@ def load(root):
     return records
 
 
+def prefix_verdict(by_cell):
+    """Which cells reconstructed more than one prefix state.
+
+    Extracted so the verdict can be tested. It used to be inline, computed into
+    a `bad_prefix` flag that nothing ever read: the report printed PASS and
+    returned 0 whatever it found, so a cell holding three different prefix
+    states was reported as "complete and exact". The flag is the point of the
+    check, so it is now both the printed finding and the exit status.
+
+    Returns (lines_to_print, split_cells) where each split cell is
+    (label, branches, distinct_states, group_sizes_descending).
+    """
+    lines, split_cells = [], []
+    for key in sorted(by_cell):
+        hashes = by_cell[key]
+        distinct = len(set(hashes))
+        label = "-".join(key) if key[0] != "s00" else key[1]
+        marker = "" if distinct == 1 else "   <-- NOT ONE STATE"
+        lines.append(f"  {label}: n={len(hashes)} distinct={distinct}{marker}")
+        if distinct != 1:
+            counts = collections.Counter(hashes)
+            split_cells.append((label, len(hashes), distinct,
+                                sorted(counts.values(), reverse=True)))
+    return lines, split_cells
+
+
 def expected_cells(root):
     meta = read_json(os.path.join(root, "matrix.json"))
     actions = meta["actions"]
@@ -258,13 +284,10 @@ def main():
     for rec in records:
         by_cell[(rec["scenario_id"], rec["anchor_name"])].append(rec["anchor"]["hash"])
     print("PREFIX REPRODUCIBILITY (per scenario and anchor)")
-    bad_prefix = False
-    for key in sorted(by_cell):
-        hashes = by_cell[key]
-        distinct = len(set(hashes))
-        label = "-".join(key) if key[0] != "s00" else key[1]
-        print(f"  {label}: n={len(hashes)} distinct={distinct}")
-        bad_prefix = bad_prefix or distinct != 1
+    lines, split_cells = prefix_verdict(by_cell)
+    for line in lines:
+        print(line)
+    bad_prefix = bool(split_cells)
     # Whether the fault reached the system cannot be answered from the prefix
     # hash. The node reports its degradation configuration in the structural
     # state, so the hash differs between scenarios whose CONFIGURATION differs
@@ -278,10 +301,27 @@ def main():
     # analysis/audit_accounting.py: a degraded edge cannot have served more work
     # than its declared post-onset capacity allows.
     scenarios = sorted({k[0] for k in by_cell})
-    if len(scenarios) > 1:
+    # This sentence used to be printed unconditionally and read as a finding. It
+    # is now printed only when it is true.
+    if len(scenarios) > 1 and not bad_prefix:
         print(f"  {len(scenarios)} scenarios; prefix identity holds within every")
         print(f"  cell. Whether the declared fault took effect is checked on")
         print(f"  throughput by audit_accounting.py, not on this hash.")
+
+    if bad_prefix:
+        print("", file=sys.stderr)
+        print(f"PREFIX IDENTITY FAILURE: {len(split_cells)} of {len(by_cell)} "
+              f"cells reconstructed more than one state.", file=sys.stderr)
+        print("  Branches in such a cell did not start from the same prefix, so "
+              "the actions compared", file=sys.stderr)
+        print("  there were not applied to the same state and the comparison is "
+              "not licensed.", file=sys.stderr)
+        for label, n, distinct, sizes in split_cells[:30]:
+            print(f"    {label}: {n} branches, {distinct} states, "
+                  f"group sizes {sizes}", file=sys.stderr)
+        if len(split_cells) > 30:
+            print(f"    ... and {len(split_cells) - 30} more", file=sys.stderr)
+        return 1
 
     if args.prefix_only:
         print(f"PASS: {len(records)}/{len(expected)} prefix branches are complete and exact")
