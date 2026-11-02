@@ -330,3 +330,34 @@ Order, and why: Q and R at seed 42 on the twelve points, three repeats each,
 2655 branches, about 11.7 hours. N and A' are analyses of what is already on
 disk and cost nothing.
 
+**5, 2026-11-02. The first reset run ablated nothing, and what it is instead.**
+
+`MODE=reset` dropped `--force-recreate` from the `compose up`. Four lines above
+it the runner calls `cleanup`, which is `compose down --remove-orphans`, once
+per branch. With the stack already destroyed there was nothing left to recreate,
+so the flag changed nothing. `bdg-reset-s42` is **not an ablation** and must
+never be read as one.
+
+Three independent signs said so and the first two were visible before any
+conclusion was drawn: every branch's `compose-up.log` records the networks being
+created, and the run took 20.5 seconds a branch against the full protocol's
+20.4. An ablation that removes the rebuilding of nine containers cannot cost the
+same as one that does the rebuilding.
+
+*What the run is worth.* It is a clean second execution of the full protocol at
+three repeats on the same seed and the same substrate, and that makes it
+evidence of something else: its anchor state matches the ten-repeat run in all
+71 cells where it is self-consistent, and mode Q's matches in all 68 of its.
+Reproducing an anchor state across independent matrix runs is a result the
+campaign did not set out to measure and should report.
+
+*The fix.* `MODE=reset` now removes the per-branch `cleanup`, which is the fresh
+topology itself. Each branch records `tore_down_first` in `startup.json`, and
+`m2prime_report.py` refuses a matrix whose manifest says `mode: reset` while
+every branch tore down anyway: an ablation that did not ablate looks exactly
+like a result, which is the worst failure available here.
+
+*What this costs.* Mode R must be run again under a new name. The void run keeps
+its directory, with a `VOID.txt` beside the manifest, because deleting evidence
+of a mistake is how the same mistake returns.
+

@@ -274,6 +274,29 @@ def main():
         print("\n".join("  " + x for x in anchor_errors[:30]), file=sys.stderr)
         return 1
 
+    # An ablation that did not ablate is the worst outcome available here,
+    # because it looks exactly like a result. MODE=reset removes the per-branch
+    # teardown; if every branch tore down anyway, the run is a full-protocol run
+    # wearing an ablation's name. The first reset run was exactly that.
+    meta = read_json(os.path.join(args.root, "matrix.json"))
+    if meta.get("mode") == "reset":
+        tore = 0
+        total = 0
+        for rec in records:
+            su = os.path.join(rec["dir"], "startup.json")
+            if os.path.exists(su):
+                total += 1
+                tore += int(read_json(su).get("tore_down_first", 1))
+        if total and tore == total:
+            print("", file=sys.stderr)
+            print(f"VOID ABLATION: mode=reset, yet all {total} branches tore the "
+                  f"topology down first.", file=sys.stderr)
+            print("  Nothing was ablated. This matrix is a full-protocol run "
+                  "under an ablation's name", file=sys.stderr)
+            print("  and must not be read as evidence about the fresh topology.",
+                  file=sys.stderr)
+            return 1
+
     # Prefix identity is a claim about ONE cell: the repeats of an action at an
     # anchor within a scenario must reconstruct the same state. Grouped by anchor
     # alone it also demanded that different scenarios agree, which they must not

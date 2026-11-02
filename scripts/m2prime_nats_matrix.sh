@@ -302,7 +302,18 @@ json.dump({
     "edge_faulted": int(edgefault),
 }, open(out, "w"), indent=2, sort_keys=True)
 MANIFEST
-  cleanup
+  # THE fresh topology. `cleanup` is `compose down --remove-orphans`, and it runs
+  # before every branch, so the stack is destroyed and rebuilt 648 times in a
+  # 648-branch matrix. MODE=reset previously only dropped --force-recreate from
+  # the `up` four lines below, which changed nothing at all: there was nothing to
+  # recreate because everything had just been removed. The first reset run was
+  # therefore not an ablation, and its timing gave it away -- 20.5 seconds a
+  # branch against the full protocol's 20.4.
+  local tore_down=0
+  if [ "$MODE" != reset ]; then
+    cleanup
+    tore_down=1
+  fi
   # Bringing nine containers up occasionally fails transiently: a node exits
   # before the bus accepts it and --wait gives up. On a 900-branch matrix a
   # single such failure would otherwise end the whole run.
@@ -331,7 +342,10 @@ MANIFEST
     cleanup
     sleep 3
   done
-  echo "{\"startup_attempts\": $attempt}" > "$dir/startup.json"
+  # Whether this branch really got a fresh topology is recorded per branch, so
+  # an ablation that silently failed to ablate is visible in the evidence rather
+  # than only in the wall clock.
+  echo "{\"startup_attempts\": $attempt, \"tore_down_first\": $tore_down}" > "$dir/startup.json"
   if [ "$started" -ne 1 ]; then
     echo "compose startup failed after $attempt attempts" >"$dir/REFUSED.txt"; return 1
   fi
