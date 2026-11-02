@@ -361,3 +361,37 @@ like a result, which is the worst failure available here.
 its directory, with a `VOID.txt` beside the manifest, because deleting evidence
 of a mistake is how the same mistake returns.
 
+
+**6, 2026-11-02. Part D needs no runner change, the seed formula was ambiguous,
+and the budget for D was computed on the wrong anchor count.**
+
+*No runner change.* The runner exports each scenario's own `seed` field as
+`MASTER_SEED` for the branch, and `csc-node` takes it as a `uint64`. Five seeds
+per design point are therefore five scenario sets, not a new runner interface,
+and a 32-bit derived seed is in range. `scripts/gen_campaign_seeds.py` emits one
+set per k with the factors copied and only the seed replaced;
+`scripts/run_campaign_d.sh` runs the five arms as ordinary mode-F matrices named
+`bdg-d-k<k>-s42`, skipping any arm already on disk.
+
+*The formula was ambiguous and the ambiguity is resolved here.* The protocol
+freezes `seed(matrix, point, k) = sha256(f"csc-iot-BDG-{matrix}-{point}-{k}")`
+without saying what `matrix` and `point` are. Two readings existed: the
+campaign's own matrix name with its `c01..c12` ids, or the origin matrix and
+scenario each point was copied from. **The origin pair is used** --
+`csc-iot-BDG-b5-matrix-v2-s91-1` -- because that pair is the identity of the
+design point and survives any renaming of a campaign run, while `c07` is a label
+this campaign happens to use. The generator prints the exact hashed string for
+every point so the seeds can be checked by hand.
+
+*What varies, and what does not.* Only the per-scenario workload seed. The netem
+draw stays at 424242 and the matrix `master_seed` stays 42, because varying the
+impairment at the same time would confound the two. Part D therefore measures
+seed variance **of the workload**, not of the substrate, and must be described
+that way.
+
+*The budget was wrong.* The table above gives D as 2655 branches and about 11.7
+hours, from 59 anchor-scenario pairs. The campaign runs twelve points at six
+anchors, which is 72 pairs: 72 x 3 actions x 3 repeats x 5 seeds = **3240
+branches**, and at the 20.4 seconds a branch the full protocol actually measured
+in this campaign that is about **18.4 hours**, not 11.7. The arms are separate
+matrices and can be run on separate days.
