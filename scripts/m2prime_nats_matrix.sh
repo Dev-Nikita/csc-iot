@@ -217,8 +217,55 @@ JSON
 
 cp "$SCENARIOS" "$OUT/scenarios.json"
 export EMIT_SPREAD COMPOSE_FILE
+# ---- one matrix run at a time, per repository ----------------------------
+# Two runners sharing one Docker stack destroy each other's topology: the
+# per-branch `compose down` of either one tears down the containers the other is
+# mid-branch on. The second run then refuses its first branch and the first run
+# loses the branch it was on, and neither message says why. This happened: part
+# D was started while the reset ablation still had two hours to go, and it
+# refused on c01-a02-NO_OP-r01 with nothing in the output to connect the two.
+#
+# The lock is a file whose first line is the holding pid, created with
+# noclobber so the test and the creation are one step. A lock whose pid is gone
+# is stale and is removed with a note, because a crashed run must not block the
+# next one for ever.
+LOCK="${LOCK:-data/raw/.matrix-run.lock}"
+mkdir -p "$(dirname "$LOCK")"
+acquire_lock() {
+  if (set -o noclobber; printf '%s\n%s\n%s\n' "$$" "$EXPERIMENT" \
+        "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$LOCK") 2>/dev/null; then
+    return 0
+  fi
+  local pid name at
+  pid="$(sed -n 1p "$LOCK" 2>/dev/null || true)"
+  name="$(sed -n 2p "$LOCK" 2>/dev/null || true)"
+  at="$(sed -n 3p "$LOCK" 2>/dev/null || true)"
+  if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+    echo "FAIL: another matrix run holds the stack."
+    echo "      pid $pid, experiment ${name:-unknown}, started ${at:-unknown}."
+    echo "      Two runners on one Docker stack tear down each other's"
+    echo "      containers, so this run would corrupt both. Wait for it, or"
+    echo "      stop it deliberately; do not remove $LOCK while it is alive."
+    return 2
+  fi
+  echo "note: removing a stale run lock (pid ${pid:-unknown}, experiment" \
+       "${name:-unknown}, started ${at:-unknown}); that process is gone."
+  rm -f "$LOCK"
+  (set -o noclobber; printf '%s\n%s\n%s\n' "$$" "$EXPERIMENT" \
+     "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$LOCK") 2>/dev/null || {
+    echo "FAIL: cannot take $LOCK"; return 2; }
+}
+release_lock() {
+  [ -n "${LOCK:-}" ] || return 0
+  [ "$(sed -n 1p "$LOCK" 2>/dev/null || true)" = "$$" ] && rm -f "$LOCK"
+  return 0
+}
+acquire_lock || exit 2
+
+# `cleanup` runs per branch as well as at exit, so it must not touch the lock:
+# releasing it four lines into the run would defeat the whole guard.
 cleanup() { compose down --remove-orphans >/dev/null 2>&1 || true; }
-trap cleanup EXIT
+trap 'cleanup; release_lock' EXIT
 
 run_branch() {
   local sidx="$1" anchor="$2" action="$3" repeat="$4" branch dir version transport_hash

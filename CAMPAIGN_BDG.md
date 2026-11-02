@@ -395,3 +395,24 @@ anchors, which is 72 pairs: 72 x 3 actions x 3 repeats x 5 seeds = **3240
 branches**, and at the 20.4 seconds a branch the full protocol actually measured
 in this campaign that is about **18.4 hours**, not 11.7. The arms are separate
 matrices and can be run on separate days.
+
+**7, 2026-11-02. Two runners on one Docker stack, and a refusal that did not
+say so.**
+
+Part D arm k=1 was started while the corrected reset ablation still had about
+two hours to run. Both runners drive the same `docker compose` project, and the
+full protocol tears the topology down and rebuilds it once per branch, so each
+run was destroying the containers the other was mid-branch on. Arm k=1 refused
+its first branch, `c01-a02-NO_OP-r01`, and nothing in either output connected
+the two events.
+
+`scripts/m2prime_nats_matrix.sh` now takes a run lock, `data/raw/.matrix-run.lock`,
+created with `noclobber` so the test and the creation are one step. A second
+runner prints the holder's pid, experiment and start time and refuses. A lock
+whose process is gone is stale, and is reclaimed with a note rather than
+blocking the next run for ever. The lock is released only at exit and only by
+the process that took it: `cleanup` also runs per branch, so releasing there
+would have defeated the guard four lines into the run.
+
+Arm k=1's incomplete directory is quarantined rather than deleted, under
+`data/raw/_quarantine/`, which the generators already exclude.
