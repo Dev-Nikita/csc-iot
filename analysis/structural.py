@@ -192,7 +192,7 @@ def main():
 
     truth = {r["branch"]: float(r["J_obs"]) for r in csv.DictReader(open(args.jobs_csv))}
     matrix = branches.read_matrix(args.root)
-    pattern = "s*-a*" if glob.glob(os.path.join(args.root, "s*-a*")) else "a*"
+    pattern = branches.branch_pattern(args.root)
     rows = []
     for d in sorted(glob.glob(os.path.join(args.root, pattern))):
         name = os.path.basename(d)

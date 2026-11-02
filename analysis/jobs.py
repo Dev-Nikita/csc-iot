@@ -307,7 +307,7 @@ def main():
 
     rows = []
     matrix = branches.read_matrix(args.root)
-    pattern = "s*-a*" if glob.glob(os.path.join(args.root, "s*-a*")) else "a*"
+    pattern = branches.branch_pattern(args.root)
     for d in sorted(glob.glob(os.path.join(args.root, pattern))):
         path = os.path.join(d, "outcome.json")
         if not os.path.exists(path):

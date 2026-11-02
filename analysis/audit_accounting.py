@@ -263,7 +263,7 @@ def main():
     args = ap.parse_args()
 
     matrix = branches.read_matrix(args.root)
-    pattern = "s*-a*" if glob.glob(os.path.join(args.root, "s*-a*")) else "a*"
+    pattern = branches.branch_pattern(args.root)
     dirs = sorted(glob.glob(os.path.join(args.root, pattern)))
     if not dirs:
         print(f"no branches under {args.root}", file=sys.stderr)

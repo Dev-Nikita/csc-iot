@@ -48,7 +48,7 @@ def main():
     legacy_healthy = set(args.healthy_anchors.split(",")) if args.healthy_anchors else set()
 
     matrix = branches.read_matrix(args.root)
-    pattern = "s*-a*" if glob.glob(os.path.join(args.root, "s*-a*")) else "a*"
+    pattern = branches.branch_pattern(args.root)
 
     # A calibration is a declared rule applied to a COMPLETED dedicated run.
     # Applied while the run is still executing it silently uses whatever branches

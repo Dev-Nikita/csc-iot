@@ -38,8 +38,8 @@ def main():
     import os
     import features as _feat
     root = os.path.dirname(os.path.abspath(args.jobs_csv))
-    dirs = sorted(glob.glob(os.path.join(root, "s*-a*"))) or \
-        sorted(glob.glob(os.path.join(root, "a*")))
+    import branches as _br
+    dirs = _br.branch_dirs(root)
     have = 0
     checked = 0
     for d in dirs[:200]:

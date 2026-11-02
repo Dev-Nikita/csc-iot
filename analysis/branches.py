@@ -11,10 +11,32 @@ reportable single-scenario result. Their factors are reconstructed from the
 matrix manifest and the recorded node state, and the reconstruction is marked
 `legacy: true` so nothing can silently mix the two.
 """
+import glob
 import json
 import os
 
 LEGACY_SCENARIO = "s00"
+
+
+def branch_pattern(root):
+    """The glob that finds this matrix's branch directories.
+
+    Seven analyses carried `"s*-a*" if glob(...) else "a*"` inline, which
+    assumed every scenario id starts with "s". A campaign whose points are named
+    c01..c12 matched neither pattern, so each of them would have found zero
+    branches and said nothing about it. The rule lives here now: the protocol-0.9
+    shape first, then any scenario prefix, then the pre-0.9 single-scenario
+    shape.
+    """
+    for pat in ("s*-a*", "*-a*", "a*"):
+        if glob.glob(os.path.join(root, pat)):
+            return pat
+    return "s*-a*"
+
+
+def branch_dirs(root):
+    """Every branch directory of a matrix, sorted."""
+    return sorted(glob.glob(os.path.join(root, branch_pattern(root))))
 
 
 def _legacy(path, name, matrix):

@@ -74,7 +74,7 @@ def recruited(observed):
 
 def load(root):
     rows = {}
-    for d in sorted(glob.glob(os.path.join(root, "s*-a*-*-r*"))):
+    for d in branches.branch_dirs(root):
         try:
             with open(os.path.join(d, "outcome.json")) as fh:
                 doc = json.load(fh)

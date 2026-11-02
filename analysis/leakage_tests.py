@@ -44,7 +44,7 @@ MARGIN = 0.20  # the telemetry model must cut error by at least this fraction
 
 def load(root):
     matrix = branches.read_matrix(root)
-    pattern = "s*-a*" if glob.glob(os.path.join(root, "s*-a*")) else "a*"
+    pattern = branches.branch_pattern(root)
     rows = []
     for d in sorted(glob.glob(os.path.join(root, pattern))):
         if not os.path.exists(os.path.join(d, "outcome.json")):

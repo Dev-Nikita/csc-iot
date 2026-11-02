@@ -27,7 +27,7 @@ section() { printf '\n\n========== %s ==========\n\n' "$1"; }
   echo "stack      $LIVE"
   echo "generated  $(date -u +%FT%TZ)"
   echo "revision   $(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
-  echo "branches   $(find "$R" -maxdepth 1 -type d -name 's*-a*' | wc -l)"
+  echo "branches   $(find "$R" -maxdepth 1 -type d -name '*-a*' | wc -l)"
 
   section "1. accounting audit -- the measurement before the interpretation"
   if python3 -u analysis/audit_accounting.py "$R"; then
