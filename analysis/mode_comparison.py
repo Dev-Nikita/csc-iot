@@ -100,12 +100,27 @@ def load_matrix(root, name):
 
 
 def scenario_hash(m):
+    """The hash of the scenario set this matrix ran, from the set itself.
+
+    The runner copies the declared set into the matrix as scenarios.json and
+    records its `scenarios_hash` in the manifest. The copy is preferred because
+    the manifest records what the runner was told and the copy records what it
+    used; they agree, and if they ever do not, the comparison should refuse.
+    """
     p = os.path.join(m["dir"], "scenarios.json")
+    declared = (m["meta"].get("scenarios_hash")
+                or m["meta"].get("scenario_set_hash"))
     if os.path.exists(p):
         doc = read_json(p)
-        if isinstance(doc, dict) and doc.get("hash"):
-            return doc["hash"]
-    return m["meta"].get("scenario_set_hash") or m["meta"].get("scenarios_hash")
+        if isinstance(doc, dict):
+            used = doc.get("scenarios_hash") or doc.get("hash")
+            if used and declared and used != declared:
+                refuse(f"{m['name']}: the manifest records scenarios_hash "
+                       f"{declared} and its own copy of the set hashes to "
+                       f"{used}. One of the two is not what ran.")
+            if used:
+                return used
+    return declared
 
 
 def require_same_substrate(ms):
