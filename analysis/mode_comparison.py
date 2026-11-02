@@ -196,18 +196,30 @@ def band_interval(rows, draws=BOOT_DRAWS, seed=BOOT_SEED):
         for _ in keys:
             pool.extend(per_cell[keys[rng.randrange(len(keys))]])
         draws_out.append(quantile(pool, 0.95))
-    draws_out.sort()
-    lo = draws_out[int(0.025 * (draws - 1) + 0.5)]
-    hi = draws_out[int(0.975 * (draws - 1) + 0.5)]
+    # The percentiles need the draws sorted; the ratio needs them in DRAW ORDER.
+    # Returning only the sorted list is what made the first ratio interval
+    # wrong: see ratio_interval.
+    ordered = sorted(draws_out)
+    lo = ordered[int(0.025 * (draws - 1) + 0.5)]
+    hi = ordered[int(0.975 * (draws - 1) + 0.5)]
     return lo, hi, draws_out
 
 
 def ratio_interval(abl_rows, full_rows, draws=BOOT_DRAWS, seed=BOOT_SEED):
     """Interval for band(ablated)/band(F3), resampling cells in both arms.
 
-    The two arms are resampled independently with the same stream, which is the
-    right pairing here: the modes are separate runs of the system, not two
-    measurements of one set of units.
+    The arms are resampled independently -- the modes are separate runs of the
+    system, not two measurements of one set of units -- and the b-th draw of one
+    is divided by the b-th draw of the other.
+
+    The first version of this function divided the two SORTED draw vectors,
+    because band_interval returned its draws sorted for the percentile step. That
+    pairs the k-th smallest of one arm with the k-th smallest of the other, a
+    perfectly comonotonic coupling, which cancels most of the variance the
+    interval exists to carry. It reported [1.043, 1.343] for Q and announced that
+    the interval excluded 1, while the two band intervals themselves overlapped
+    over almost their whole length -- a manufactured significance, produced by
+    the one line of plumbing between the estimator and the thing being claimed.
     """
     a = band_interval(abl_rows, draws, seed)
     f = band_interval(full_rows, draws, seed + 1)

@@ -167,14 +167,43 @@ def test_a_single_cell_has_no_band_interval():
     assert mc.band_interval(rows(spec)) is None
 
 
-def test_identical_arms_give_a_ratio_interval_containing_one():
+def _twelve_cells(scale=1.0):
     spec = {}
     for cell in range(1, 13):
         for i in (1, 2, 3):
-            spec[("c01", f"a{cell:02d}", "NO_OP", f"r{i:02d}")] = float(i * cell)
-    rs = rows(spec)
+            spec[("c01", f"a{cell:02d}", "NO_OP", f"r{i:02d}")] = float(i * cell) * scale
+    return rows(spec)
+
+
+def test_identical_arms_give_a_ratio_interval_containing_one():
+    rs = _twelve_cells()
     lo, hi = mc.ratio_interval(rs, rs, draws=400, seed=7)
     assert lo <= 1.0 <= hi
+
+
+def test_the_ratio_interval_is_not_a_comonotonic_coupling():
+    """The bug this guards: dividing two SORTED draw vectors.
+
+    band_interval sorts its draws for the percentile step. Dividing the sorted
+    vectors pairs the k-th smallest of one arm with the k-th smallest of the
+    other, which cancels nearly all of the variance and reports an interval
+    around 1 so tight that it excludes 1 for any point estimate away from it.
+    On mode Q it announced [1.043, 1.343] while the two band intervals
+    overlapped over almost their whole length.
+
+    Two arms with the same distribution must therefore give a ratio interval of
+    real width, not a hairline around 1.
+    """
+    rs = _twelve_cells()
+    lo, hi = mc.ratio_interval(rs, rs, draws=600, seed=11)
+    assert hi / lo > 1.10, f"ratio interval [{lo}, {hi}] is too tight to be independent"
+
+
+def test_band_interval_returns_its_draws_in_draw_order():
+    """Sorted draws are what made the ratio wrong; the percentiles sort a copy."""
+    lo, hi, draws = mc.band_interval(_twelve_cells(), draws=200, seed=3)
+    assert draws != sorted(draws)
+    assert lo == sorted(draws)[int(0.025 * 199 + 0.5)]
 
 
 def test_the_matched_null_reading_uses_three_repeats_a_side():

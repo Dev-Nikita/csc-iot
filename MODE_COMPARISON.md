@@ -160,3 +160,32 @@ the ablation's reproducibility, which still needs a second seed.
 A band ratio whose interval contains 1 is **not** evidence that the ablation
 inflated the band, and will be reported as inconclusive however suggestive the
 point estimate looks.
+
+## Amendment 2, 2026-11-02: the band-ratio interval announced a significance it had manufactured
+
+The interval added by amendment 1 reported, for mode Q, a band ratio of 1.202
+with a 95 % interval of [1.043, 1.343], and said the interval excluded 1. It
+does not, and the error was one line.
+
+`band_interval` sorts its bootstrap draws, because the percentile step needs
+them sorted. `ratio_interval` then divided the two arms' draw vectors element by
+element -- that is, the k-th smallest draw of the ablated arm by the k-th
+smallest draw of the reference arm. That is a perfectly comonotonic coupling of
+two independent samples: it cancels almost all of the variance the interval
+exists to carry and produces a hairline around the ratio of the two point
+estimates, which then excludes 1 for any point estimate that is not 1.
+
+The tell was visible in the same block of output and I did not read it: the two
+band intervals, [0.018498, 0.025386] and [0.019301, 0.034173], overlap over
+almost their whole length. Two intervals that overlap like that cannot yield a
+ratio interval that excludes 1.
+
+The draws are now returned in draw order and sorted only for the percentiles,
+so the b-th draw of one arm divides the b-th draw of the other, which is the
+independent pairing the two modes' separate runs call for. A regression test
+asserts that two arms with the same distribution give a ratio interval of real
+width rather than a hairline around 1.
+
+Every band ratio printed before this amendment is withdrawn. The conclusion
+labels, the resolvable fractions, the per-fault breakdown and both null readings
+are unaffected: they never used the ratio interval.
