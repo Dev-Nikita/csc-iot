@@ -41,14 +41,24 @@ STACK="$(python3 check_reportable_stack.py --print-stack-id 2>/dev/null)"
 MANIFEST="data/raw/$STACK/$REF/matrix.json"
 [ -f "$MANIFEST" ] || { echo "FAIL: $MANIFEST not found"; exit 2; }
 
-eval "$(python3 - "$MANIFEST" <<'PY'
+# `eval "$(python3 ...)"` discards the exit status of the command substitution,
+# so a refusal inside the reader printed FAIL and the script carried on to an
+# unbound-variable error three lines later, naming the wrong cause. The factors
+# are captured first, the status is checked, and only then evaluated.
+FACTORS="$(python3 - "$MANIFEST" <<'PY'
 import json, shlex, sys
 m = json.load(open(sys.argv[1]))
 if m.get("mode", "full") != "full":
     sys.exit(f"FAIL: the reference {m['experiment']} ran in mode "
              f"{m['mode']!r}; an ablation is not a reference for an ablation.")
-if m.get("purpose", "reportable") != "reportable":
-    sys.exit(f"FAIL: the reference ran for purpose {m.get('purpose')!r}.")
+# Only one purpose is disqualifying: a budget-calibration matrix ran with a
+# placeholder latency budget, so its objective is not a measurement. Every other
+# purpose string is a label the campaign chose for its own set -- the B+D+G
+# scenarios declare "campaign-bdg" -- and refusing those refused the only
+# reference this script exists to copy.
+if m.get("purpose", "reportable") == "budget-calibration":
+    sys.exit("FAIL: the reference ran for budget calibration, with a "
+             "placeholder budget. It is not a reference for anything.")
 out = {
     "ANCHOR_LIST": m["anchor_spec"] if "," in str(m["anchor_spec"]) else "",
     "ANCHORS": m["anchors"],
@@ -65,7 +75,8 @@ out = {
 for k, v in out.items():
     print(f"{k}={shlex.quote(str(v))}")
 PY
-)"
+)" || { echo "$FACTORS"; exit 2; }
+eval "$FACTORS"
 
 [ -f "$SCENARIOS" ] || { echo "FAIL: $SCENARIOS, the reference's scenario set, is gone"; exit 2; }
 HAVE="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["scenarios_hash"])' "$SCENARIOS")"

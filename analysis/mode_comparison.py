@@ -29,10 +29,13 @@ import glob
 import itertools
 import json
 import os
+import random
 import sys
 
 ABLATION_REPEATS = 3
-N_SPLIT = 5  # the null mode's half-split of F's ten repeats
+N_SPLIT = 5  # the unmatched half-split of F's ten repeats, kept for the record
+BOOT_DRAWS = 2000
+BOOT_SEED = 20261102
 
 
 def quantile(xs, p):
@@ -148,16 +151,73 @@ def subset(rows, repeats):
     return [r for r in rows if r["repeat"] in keep]
 
 
+def band_pairs(rows):
+    """The within-cell pairwise |dJ_obs|, grouped by contrast cell.
+
+    Grouped, because the bootstrap resamples cells: repeats inside one cell are
+    replays of one prefix and are not independent of each other, so resampling
+    the pairs themselves would understate the band's own spread.
+    """
+    by_action = collections.defaultdict(list)
+    for r in rows:
+        by_action[(r["scenario"], r["anchor"], r["action"])].append(r["J_obs"])
+    per_cell = collections.defaultdict(list)
+    for (sc, an, _), v in by_action.items():
+        per_cell[(sc, an)].extend(abs(a - b)
+                                  for a, b in itertools.combinations(v, 2))
+    return {k: v for k, v in per_cell.items() if v}
+
+
 def pooled_band(rows):
     """Q0.95 of within-cell pairwise |dJ_obs|, inside this set and no other."""
-    by_cell = collections.defaultdict(list)
-    for r in rows:
-        by_cell[(r["scenario"], r["anchor"], r["action"])].append(r["J_obs"])
-    diffs = [abs(a - b) for v in by_cell.values()
-             for a, b in itertools.combinations(v, 2)]
+    per_cell = band_pairs(rows)
+    diffs = [d for v in per_cell.values() for d in v]
     if not diffs:
         refuse("no within-cell repeat pairs: the band cannot be measured")
     return quantile(diffs, 0.95), len(diffs)
+
+
+def band_interval(rows, draws=BOOT_DRAWS, seed=BOOT_SEED):
+    """A 95% percentile interval for the band, resampling contrast cells.
+
+    The comparison between modes turns on the ratio of two bands, each a Q0.95
+    of a few hundred differences from one run. Without an interval the rules
+    would read any ratio away from 1 as a degraded measurement, which is not
+    something a point estimate of a high quantile can support.
+    """
+    per_cell = band_pairs(rows)
+    keys = sorted(per_cell)
+    if len(keys) < 2:
+        return None
+    rng = random.Random(seed)
+    draws_out = []
+    for _ in range(draws):
+        pool = []
+        for _ in keys:
+            pool.extend(per_cell[keys[rng.randrange(len(keys))]])
+        draws_out.append(quantile(pool, 0.95))
+    draws_out.sort()
+    lo = draws_out[int(0.025 * (draws - 1) + 0.5)]
+    hi = draws_out[int(0.975 * (draws - 1) + 0.5)]
+    return lo, hi, draws_out
+
+
+def ratio_interval(abl_rows, full_rows, draws=BOOT_DRAWS, seed=BOOT_SEED):
+    """Interval for band(ablated)/band(F3), resampling cells in both arms.
+
+    The two arms are resampled independently with the same stream, which is the
+    right pairing here: the modes are separate runs of the system, not two
+    measurements of one set of units.
+    """
+    a = band_interval(abl_rows, draws, seed)
+    f = band_interval(full_rows, draws, seed + 1)
+    if a is None or f is None:
+        return None
+    rs = sorted(x / y for x, y in zip(a[2], f[2]) if y > 0)
+    if not rs:
+        return None
+    return (rs[int(0.025 * (len(rs) - 1) + 0.5)],
+            rs[int(0.975 * (len(rs) - 1) + 0.5)])
 
 
 def cells(rows, band):
@@ -211,6 +271,9 @@ def compare(full, abl, clean_only=None):
         a_rows = [r for r in a_rows if (r["scenario"], r["anchor"]) in clean_only]
     bf, nf = pooled_band(f_rows)
     ba, na = pooled_band(a_rows)
+    cif = band_interval(f_rows)
+    cia = band_interval(a_rows)
+    ratio_ci = ratio_interval(a_rows, f_rows)
     cf, ca = cells(f_rows, bf), cells(a_rows, ba)
     shared = sorted(set(cf) & set(ca))
 
@@ -233,6 +296,8 @@ def compare(full, abl, clean_only=None):
 
     return {"ablated": abl["name"], "mode": abl["mode"],
             "band_full": bf, "band_abl": ba, "pairs_full": nf, "pairs_abl": na,
+            "ci_full": cif[:2] if cif else None,
+            "ci_abl": cia[:2] if cia else None, "ratio_ci": ratio_ci,
             "cells_full": len(cf), "cells_abl": len(ca), "shared": len(shared),
             "resolved_full": sum(c["resolved"] for c in cf.values()),
             "resolved_abl": sum(c["resolved"] for c in ca.values()),
@@ -242,13 +307,21 @@ def compare(full, abl, clean_only=None):
             "only_abl": sorted(set(ca) - set(cf))}
 
 
-def null_mode(full):
-    """Mode N: F's ten repeats split five and five, treated as two actions."""
-    lo = subset(full["rows"], range(1, N_SPLIT + 1))
-    hi = subset(full["rows"], range(N_SPLIT + 1, 2 * N_SPLIT + 1))
-    if not hi:
+def null_mode(full, left, right, band_rows, label):
+    """Mode N: two disjoint sets of F's repeats, treated as two actions.
+
+    There is no effect between them by construction, so the fraction called
+    resolvable is the band procedure's false-positive rate -- but only if the
+    two halves hold the SAME number of repeats as the contrasts the band is used
+    on. Amendment 1: the five-against-five split compares a mean of five against
+    a band built from single-repeat differences, which reports near zero
+    whatever the data do. The matched split is three against three, read against
+    the F3 band, which is the band the ablation comparisons use.
+    """
+    lo, hi = subset(full["rows"], left), subset(full["rows"], right)
+    if not lo or not hi:
         return None
-    band, npairs = pooled_band(full["rows"])
+    band, npairs = pooled_band(band_rows)
     acc = collections.defaultdict(lambda: ([], []))
     for r in lo:
         acc[(r["scenario"], r["anchor"], r["action"])][0].append(r["J_obs"])
@@ -263,16 +336,30 @@ def null_mode(full):
         gaps.append(gap)
         total += 1
         resolved += gap > band
-    return {"band": band, "pairs": npairs, "contrasts": total,
+    return {"label": label, "band": band, "pairs": npairs, "contrasts": total,
+            "n_per_side": (len(left), len(right)),
             "resolved": resolved, "gaps": gaps,
             "rate": resolved / total if total else float("nan")}
 
 
 def report_compare(r, title):
     print(f"\n{'='*78}\n{title}")
+    ratio = r["band_abl"] / r["band_full"] if r["band_full"] else float("nan")
     print(f"  pooled band  F3 {r['band_full']:.6f} over {r['pairs_full']} pairs"
-          f"   {r['mode']} {r['band_abl']:.6f} over {r['pairs_abl']} pairs"
-          f"   ratio {r['band_abl']/r['band_full'] if r['band_full'] else float('nan'):.3f}")
+          + (f"  95% [{r['ci_full'][0]:.6f}, {r['ci_full'][1]:.6f}]"
+             if r["ci_full"] else ""))
+    print(f"               {r['mode']} {r['band_abl']:.6f} over "
+          f"{r['pairs_abl']} pairs"
+          + (f"  95% [{r['ci_abl'][0]:.6f}, {r['ci_abl'][1]:.6f}]"
+             if r["ci_abl"] else ""))
+    if r["ratio_ci"]:
+        lo, hi = r["ratio_ci"]
+        verdict = ("INCONCLUSIVE: the interval contains 1"
+                   if lo <= 1.0 <= hi else
+                   "the interval excludes 1")
+        print(f"  band ratio   {ratio:.3f}  95% [{lo:.3f}, {hi:.3f}]  -- {verdict}")
+    else:
+        print(f"  band ratio   {ratio:.3f}  (no interval: too few cells)")
     print(f"  contrast cells  F3 {r['cells_full']}  {r['mode']} {r['cells_abl']}"
           f"  shared {r['shared']}")
     if r["only_full"] or r["only_abl"]:
@@ -349,21 +436,37 @@ def main():
           f"{res10}/{len(c10)} cells resolved = "
           f"{res10/len(c10) if c10 else float('nan'):.1%}")
 
-    nm = null_mode(full)
-    if nm is None:
-        print("\nmode N unavailable: F does not have "
-              f"{2*N_SPLIT} repeats per cell")
-    else:
-        print(f"\nmode N, the false-positive calibration: F's repeats split "
-              f"r01-r05 against r06-r10,\n  {nm['resolved']} of "
-              f"{nm['contrasts']} null contrasts exceed the F10 band "
-              f"{nm['band']:.6f} = {nm['rate']:.1%}")
-        print("  There is no effect in a null contrast by construction, so this "
-              "is the\n  procedure's own false-positive rate. The Q0.95 band "
-              "expects about 5%.")
+    # Mode N twice: the matched reading, which is the false-positive rate, and
+    # the five-against-five reading specified first, which is not, kept visible
+    # because amendment 1 replaced it after it had produced a flattering number.
+    f3 = subset(full["rows"], range(1, ABLATION_REPEATS + 1))
+    readings = [
+        null_mode(full, range(1, 4), range(4, 7), f3,
+                  "N3 (matched: 3 against 3, F3 band)"),
+        null_mode(full, range(1, N_SPLIT + 1),
+                  range(N_SPLIT + 1, 2 * N_SPLIT + 1), full["rows"],
+                  "N5 (unmatched: 5 against 5, F10 band)"),
+    ]
+    print("\nmode N, the false-positive calibration of the band")
+    print("  There is no effect in a null contrast by construction, so the "
+          "fraction called\n  resolvable is the procedure's own "
+          "false-positive rate -- and only the reading\n  whose halves hold as "
+          "many repeats as the real contrasts measures that.")
+    for nm in readings:
+        if nm is None:
+            print("    unavailable: F does not have the repeats this reading needs")
+            continue
         g = sorted(nm["gaps"])
-        print("  null gap quantiles: " + "  ".join(
+        print(f"\n    {nm['label']}")
+        print(f"      {nm['resolved']} of {nm['contrasts']} null contrasts "
+              f"exceed the band {nm['band']:.6f} = {nm['rate']:.1%}"
+              f"   (expected about 5%)")
+        print("      null gap quantiles: " + "  ".join(
             f"Q{p:.2f} {quantile(g,p):.6f}" for p in (0.5, 0.9, 0.95, 1.0)))
+    print("\n    N5 is reported for the record only. A difference of two "
+          "five-repeat means\n    against a band built from single-repeat "
+          "differences reports near zero\n    whatever the data do; see "
+          "MODE_COMPARISON.md amendment 1.")
 
     for m in abls:
         report_compare(compare(full, m), f"{m['name']} (mode {m['mode']}) "

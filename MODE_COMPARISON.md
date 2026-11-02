@@ -115,3 +115,48 @@ say otherwise. Conclusions are therefore limited to: no disagreement at all, or
 a disagreement large enough to be visible against the band ratio. An ablation
 that lands in between is reported as inconclusive and stays that way until it is
 run again at another seed.
+
+---
+
+## Amendment 1, 2026-11-02: two defects in the rules above, found by running them
+
+Both were found in the first output of `analysis/mode_comparison.py`, on mode Q.
+Both are defects in the rules, not in the result, and both are recorded here
+with the numbers the original rules produced, because an amendment that hides
+what it replaces is a rewrite.
+
+**The null mode as specified is not a matched test, and it flatters the band.**
+N splits F's ten repeats five against five and compares the two means. The
+pooled band is Q0.95 over *single-repeat* pairwise differences. A difference of
+two five-repeat means is tighter than a difference of two single repeats by
+construction, so the comparison is a mean against a band built for individuals,
+and it will report a near-zero false-positive rate whatever the data do. It did:
+0 of 216 null contrasts exceeded the band, against the 5 % the Q0.95 band is
+supposed to admit, with the largest null gap 0.017291 against a band of
+0.021611.
+
+That number must not be reported as the procedure's false-positive rate, and it
+is exactly the kind of number that gets reported because it is favourable.
+
+The matched test uses the same repeat count as the comparison it calibrates:
+F's `r01..r03` against `r04..r06`, read against the **F3** band, which is the
+band the Q and R comparisons actually use. `N5` is kept and printed beside it,
+labelled as the unmatched reading it is.
+
+**The band is a point estimate and the comparison turns on its ratio.** Q's band
+came out 1.202 times F3's, and 1.333 times on prefix-clean cells, which the
+rules above would read as a degraded measurement. But Q0.95 of 648 pairwise
+differences has sampling error of its own, and a ratio of two such estimates
+from one run of each mode has more. With no replicate of either mode, the rules
+as written cannot tell a real inflation from the spread of the estimator.
+
+The band therefore gets an interval: 2000 bootstrap resamples **of contrast
+cells**, with replacement, recomputing Q0.95 over the resampled cells' pairs,
+reported as a 95 % percentile interval for each mode's band and for the ratio.
+Cells are the resampling unit because repeats within a cell are not independent
+of each other. The interval is a statement about this run's precision, not about
+the ablation's reproducibility, which still needs a second seed.
+
+A band ratio whose interval contains 1 is **not** evidence that the ablation
+inflated the band, and will be reported as inconclusive however suggestive the
+point estimate looks.

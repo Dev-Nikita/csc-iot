@@ -130,3 +130,70 @@ def test_a_different_substrate_is_refused(tmp_path):
     ms = [mc.load_matrix(str(tmp_path), "f"), mc.load_matrix(str(tmp_path), "q")]
     with pytest.raises(SystemExit):
         mc.require_same_substrate(ms)
+
+
+# --- amendment 1: the band's interval, and the matched null reading ---------
+
+def _ten_repeats(jitter):
+    return rows({("c01", "a01", "NO_OP", f"r{i:02d}"): jitter[i - 1]
+                 for i in range(1, 11)})
+
+
+def test_band_pairs_group_by_cell_not_by_action():
+    spec = {}
+    for ac in ("NO_OP", "REROUTE"):
+        for i in (1, 2):
+            spec[("c01", "a01", ac, f"r{i:02d}")] = float(i)
+    per_cell = mc.band_pairs(rows(spec))
+    # one cell, two actions, one pair each: the pairs pool into the cell
+    assert list(per_cell) == [("c01", "a01")]
+    assert sorted(per_cell[("c01", "a01")]) == [1.0, 1.0]
+
+
+def test_the_band_interval_brackets_the_point_estimate():
+    spec = {}
+    for cell in range(1, 13):
+        for i in (1, 2, 3):
+            spec[("c01", f"a{cell:02d}", "NO_OP", f"r{i:02d}")] = float(i * cell)
+    rs = rows(spec)
+    point, _ = mc.pooled_band(rs)
+    lo, hi, draws = mc.band_interval(rs, draws=400, seed=1)
+    assert lo <= point <= hi
+    assert len(draws) == 400
+
+
+def test_a_single_cell_has_no_band_interval():
+    spec = {("c01", "a01", "NO_OP", f"r{i:02d}"): float(i) for i in (1, 2, 3)}
+    assert mc.band_interval(rows(spec)) is None
+
+
+def test_identical_arms_give_a_ratio_interval_containing_one():
+    spec = {}
+    for cell in range(1, 13):
+        for i in (1, 2, 3):
+            spec[("c01", f"a{cell:02d}", "NO_OP", f"r{i:02d}")] = float(i * cell)
+    rs = rows(spec)
+    lo, hi = mc.ratio_interval(rs, rs, draws=400, seed=7)
+    assert lo <= 1.0 <= hi
+
+
+def test_the_matched_null_reading_uses_three_repeats_a_side():
+    full = {"rows": _ten_repeats([0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 9, 9, 9, 9])}
+    f3 = mc.subset(full["rows"], range(1, 4))
+    nm = mc.null_mode(full, range(1, 4), range(4, 7), f3, "N3")
+    assert nm["n_per_side"] == (3, 3)
+    # the two halves differ by exactly 1.0 and the F3 band is zero: resolvable
+    assert nm["contrasts"] == 1 and nm["resolved"] == 1
+    assert nm["band"] == 0.0
+
+
+def test_the_unmatched_null_reading_is_the_one_that_flatters():
+    # halves that differ in the mean by less than the single-repeat spread
+    jitter = [0.0, 1.0, 0.0, 1.0, 0.1, 1.0, 0.0, 1.0, 0.0, 0.9]
+    full = {"rows": _ten_repeats(jitter)}
+    n5 = mc.null_mode(full, range(1, 6), range(6, 11), full["rows"], "N5")
+    assert n5["n_per_side"] == (5, 5)
+    # the band is built on single-repeat differences, which here reach 1.0,
+    # while the gap between two five-repeat means is a fraction of that
+    assert n5["band"] >= 0.9
+    assert n5["resolved"] == 0
