@@ -485,3 +485,37 @@ probably still on the host as untagged layers.
 substrate is restored, or the campaign continues on `4df75e0d98c288c5` with part
 B and mode Q re-run on it. Mixing them is not available: eta_J is measured per
 stack and the comparison refuses a mismatched pair.
+
+**10, 2026-11-04. The substrate did not change. The stamper mis-read itself.**
+
+The evidence, all of it from the host: every container image is dated
+2026-10-31 14:13, the originals; there are no untagged leftovers, so nothing
+was rebuilt; `uname -r` on the host and inside `gateway00` both give
+7.0.0-38-generic, the recorded kernel; the bus reports v2.15.2, the recorded
+version. Kernel, bus, images and netem configuration are all unchanged, and
+those are four of the eight fields the stack id hashes.
+
+What remains is `go_version`, and the stamper had a silent fallback in it.
+`containerGoVersion` asks the running container's own binary for its version and,
+when that read fails, substituted the **stackstamp host's** toolchain version and
+carried on. The condition under which the read fails is precisely the one that
+held: the stamp ran against containers that had been up for ten seconds. A
+failed `docker exec` therefore minted a new substrate out of an unchanged one.
+
+*The fallback is now a blocker.* A fallback that feeds the identity is worse
+than a failure: it cannot be noticed downstream, because every field it affects
+looks like a legitimate value. The read is retried three times with a backoff,
+and if it still fails the stamp carries a blocker and
+`check_reportable_stack.py` refuses it. No id is recorded from a host
+substitution.
+
+*What this does not excuse.* The old stamp file was overwritten before any of
+this was known, so the diagnosis rests on the composition recorded in amendment
+1 plus the host evidence above rather than on a field-by-field diff of the two
+stamps. Amendment 9's four changes are what make the next occurrence diffable
+instead of deducible, and they stand whatever this one turns out to be.
+
+*The decision in amendment 9 is withdrawn* if the re-stamp against ready
+containers returns 99982ee46a1999be: there is then nothing to decide, because
+the campaign's substrate was never left. If it returns something else, the two
+options there stand and the difference will this time be visible field by field.

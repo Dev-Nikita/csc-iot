@@ -61,14 +61,24 @@ func containerKernel(service string) string {
 	return "unknown"
 }
 
+// The marker is matched by the blocker check below, so it is named once rather
+// than spelled twice.
+const hostFallbackMarker = "stackstamp host fallback"
+
 func containerGoVersion(service string) string {
 	cid, err := run("docker", "compose", "ps", "-q", service)
 	if err == nil && cid != "" {
-		if out, err := run("docker", "exec", cid, "/usr/local/bin/app", "-version"); err == nil && out != "" {
-			return out
+		// Retried, because the usual reason this read fails is a container that
+		// has been up for ten seconds and is not serving yet -- and the price of
+		// failing it is a different stack id, not a missing field.
+		for attempt := 1; attempt <= 3; attempt++ {
+			if out, err := run("docker", "exec", cid, "/usr/local/bin/app", "-version"); err == nil && out != "" {
+				return out
+			}
+			time.Sleep(time.Duration(attempt) * 2 * time.Second)
 		}
 	}
-	return runtime.Version() + " (stackstamp host fallback)"
+	return runtime.Version() + " (" + hostFallbackMarker + ")"
 }
 
 func composeImages() map[string]string {
@@ -189,6 +199,25 @@ func main() {
 	}
 	if s.Kernel == "unknown" {
 		s.Blockers = append(s.Blockers, "container kernel could not be determined")
+	}
+	// A fallback that feeds the stack id is worse than a failure. The Go version
+	// is read from the running container's own binary; when that read fails the
+	// stamper used to substitute the HOST toolchain version and carry on, which
+	// changes runtime_stack_id and so mints a new substrate out of a failed
+	// docker exec. The containers, the kernel, the bus and the images can all be
+	// byte-identical and the stack will still look different.
+	//
+	// This is not hypothetical: it is the most likely explanation for
+	// 99982ee46a1999be becoming 4df75e0d98c288c5 on 2026-11-04 with the images
+	// still dated 2026-10-31 and the kernel unchanged. A freshly started
+	// container is the condition under which the read fails.
+	if strings.Contains(s.GoVersion, hostFallbackMarker) {
+		s.Blockers = append(s.Blockers,
+			"go_version came from the stackstamp host, not from the running "+
+				"container ("+s.GoVersion+"). The host toolchain is not what the "+
+				"measured binaries were built with, and substituting it changes "+
+				"runtime_stack_id. Wait for the containers to be ready and stamp "+
+				"again rather than recording this id.")
 	}
 	if s.TransportConfigHash == "" {
 		s.Blockers = append(s.Blockers, "transport_config_hash is empty")
