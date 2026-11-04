@@ -398,3 +398,54 @@ answering that it is in the supplement will not do. The working model is:
 That is usually 200--400 words of main-text growth per reviewer, which is what
 the R1--R4 reserve is sized for. The supplement is not an automatic escape from
 a major revision; it is what keeps the growth to sentences instead of pages.
+
+---
+
+## 2026-11-04, measured on a clean build, not estimated
+
+Built from the working tree in an isolated directory with `latexmk -pdf`, three
+passes, bibliography resolved, no undefined references or citations, no overfull
+boxes. The only warnings are missing small-caps-italic font shapes in the title
+font, which do not affect layout.
+
+- **`main.pdf` is 12 pages**, not the 13 recorded earlier. Removing the two
+  co-authors who withdrew took the biographies down and recovered a page. Twelve
+  is exactly the TDSC free allowance, so the overlength charge is **not** owed as
+  the paper stands --- and the margin is **zero**. Page 12 holds 991 words; it is
+  a full page, not a stub. Anything the campaign adds to Section V puts the paper
+  at 13 pages and US$220, and that is now a planning decision rather than a
+  discovery.
+- **`supplement.pdf` is 9 pages**, not 7. It grew with S12.
+- **The abstract was 244 rendered words against a 100-to-200-word limit.** IEEE
+  Computer Society sets "Regular/special-issue paper -- 100 to 200 words" for
+  journal abstracts, read at the first source on 2026-11-04. The abstract was
+  186 words when it was last checked against TNSM's 75-to-200 rule; it grew to
+  244 when the value-of-protocol result was written into it and nobody re-counted.
+  **This was a formal violation of the target venue's rules, standing in the
+  submission package.** It is now **191 words**, counted the same way: left column
+  of page 1, label excluded. Every number and every claim is unchanged; only
+  wording was compressed. Re-count after any edit:
+  `pdftotext -f 1 -l 1 -x 0 -y 0 -W 306 -H 792 main.pdf - | sed -n '/Abstract/,/Index Terms/p'`
+- `paper/page_budget.conf` now carries `ABSTRACT_MIN_WORDS` and
+  `ABSTRACT_MAX_WORDS` with the source, so the build guard can enforce what was
+  previously checked by hand once and then left.
+
+### The TNSM desk reject, restated, because it decides the TDSC procedure
+
+The manuscript was never the problem. The portal merged the review package into
+one proof PDF --- 4 pages of cover sheet + 10 of `main.pdf` + 7 of
+`supplement.pdf` = 21 --- and the administrative check counted that file against
+a 16-page limit. Today the same arithmetic gives 4 + 12 + 9 = **25**.
+
+IEEE CS policy says supplemental material goes in separate files, must not be
+inside the main PDF, and is not counted. That is the policy and it is not what
+failed: policy wording does not control what ScholarOne generates. So, for TDSC:
+
+1. Submit the manuscript **alone** and let the archive DOI carry the supplement.
+   The main text was written so that every claim in it can be assessed without
+   the supplement; that insurance exists precisely for this, and this is when to
+   spend it.
+2. On the final review step, **open the merged proof the portal generates and
+   count its pages before pressing submit.** This single action would have
+   prevented the TNSM return outright, and it is the only check that does not
+   depend on reading a policy page correctly.
