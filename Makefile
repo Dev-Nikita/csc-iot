@@ -190,8 +190,8 @@ stack-nats: netem-apply ## Apply impairment, stamp, and validate the NATS stack
 	@if [ -f experiments/manifests/reportable_stack.json ]; then \
 	  mkdir -p experiments/manifests/history; \
 	  id=$$(python3 -c 'import json;print(json.load(open("experiments/manifests/reportable_stack.json"))["runtime_stack_id"])' 2>/dev/null || echo unknown); \
-	  cp -n experiments/manifests/reportable_stack.json \
-	     "experiments/manifests/history/reportable_stack.$$id.json" || true; \
+	  dest="experiments/manifests/history/reportable_stack.$$id.json"; \
+	  [ -f "$$dest" ] || cp experiments/manifests/reportable_stack.json "$$dest"; \
 	  echo "kept the previous stamp as experiments/manifests/history/reportable_stack.$$id.json"; \
 	fi
 	COMPOSE_FILE=docker-compose.nats.yml $(GO) run ./cmd/csc-stackstamp \

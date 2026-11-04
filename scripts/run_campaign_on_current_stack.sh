@@ -59,6 +59,26 @@ STACK="$A"
 echo "live stack $STACK, reproducible across two stamps"
 make stack-nats   # promote it, keeping the previous stamp in history/
 
+# The runner refuses a bin/ older than the Go sources, and it is right to: a
+# stale orchestrator once produced 27 clean-looking branches whose outcomes were
+# missing the observed block entirely. This week's commits touched internal/, so
+# the binaries are rebuilt here rather than left for the chain to trip over
+# eleven hours in.
+#
+# `make build` compiles host binaries only -- the container images are built by
+# up-nats from go.Dockerfile -- so it cannot move the stack id. Verified rather
+# than asserted: the stamp is taken again afterwards.
+step "0b/6  rebuilding bin/ and confirming the identity did not move"
+make build TAGS=nats || { echo "STOP: the build failed"; exit 2; }
+C="$(bash scripts/verify_stack.sh 2>/dev/null | awk '/^live stack/{print $3}')"
+if [ "$C" != "$STACK" ]; then
+  echo "STOP: the stack id moved from $STACK to $C across a host-side build."
+  echo "      That should be impossible -- the id hashes container images, not"
+  echo "      bin/ -- so something else is moving and must be found first."
+  exit 2
+fi
+echo "stack $STACK unchanged after the build"
+
 # ---- the reference arm's factors, from the old manifest -------------------
 FACTORS="$(python3 - "data/raw/$OLD_STACK/$OLD_REF/matrix.json" <<'PY'
 import json, shlex, sys
