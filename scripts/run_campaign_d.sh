@@ -18,6 +18,9 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 REF="${REF:-bdg-b-s42}"
+# Arms are named for the substrate their reference belongs to, so a directory
+# name says which stack it is on without opening a manifest.
+case "$REF" in bdg2-*) D_PREFIX="${D_PREFIX:-bdg2}" ;; esac
 BASE="${BASE:-configs/scenarios-bdg.json}"
 REPEATS_D="${REPEATS_D:-3}"
 ARMS=("$@")
@@ -52,7 +55,7 @@ echo
 
 for K in "${ARMS[@]}"; do
   SET="configs/scenarios-bdg-k$K.json"
-  NAME="bdg-d-k$K-s42"
+  NAME="${D_PREFIX:-bdg}-d-k$K-s42"
   OUT="data/raw/$STACK/$NAME"
   if [ -e "$OUT" ]; then
     echo "== arm k=$K: $NAME exists with $(find "$OUT" -maxdepth 1 -type d -name '*-a*' | wc -l) branches; skipped"

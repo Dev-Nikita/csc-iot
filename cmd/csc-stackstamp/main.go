@@ -21,6 +21,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/TODO-OWNER/csc-iot/internal/fingerprint"
 )
 
 type stamp struct {
@@ -263,28 +265,12 @@ func stackID(s stamp) string {
 	var sb strings.Builder
 	fmt.Fprintf(&sb, "%s|%s|%s|%s|%s|%s|%s|%s|",
 		s.GoVersion, s.Kernel, s.BusType, s.BusVersion,
-		s.TransportConfigHash, s.RPCType, s.ProcessTopology, stableNetemConfig(s.NetemConfig))
+		s.TransportConfigHash, s.RPCType, s.ProcessTopology,
+		fingerprint.StableNetemConfig(s.NetemConfig))
 	for _, k := range keys {
 		fmt.Fprintf(&sb, "%s=%s;", k, s.ContainerImages[k])
 	}
 	return sha16(sb.String())
-}
-
-// Linux assigns qdisc handles and refcnt values at runtime. They are useful in
-// the evidence manifest but are not semantic stack configuration, so they must
-// not make an otherwise identical recreated branch acquire a new stack id.
-func stableNetemConfig(raw string) string {
-	target := raw
-	if i := strings.Index(raw, ":"); i >= 0 {
-		target = raw[:i]
-	}
-	fields := strings.Fields(raw)
-	for i, field := range fields {
-		if field == "limit" {
-			return target + ":data-egress " + strings.Join(fields[i:], " ")
-		}
-	}
-	return raw
 }
 
 func sha16(s string) string {

@@ -519,3 +519,61 @@ instead of deducible, and they stand whatever this one turns out to be.
 containers returns 99982ee46a1999be: there is then nothing to decide, because
 the campaign's substrate was never left. If it returns something else, the two
 options there stand and the difference will this time be visible field by field.
+
+**11, 2026-11-04. The old stack id is not reproducible, and which field moved
+cannot be named.**
+
+Everything checkable on the host says the substrate did not change. All nine
+container image digests are intact and predate or match the campaign: the eight
+locally built services are dated 2026-10-31 14:13 and `nats` 2026-10-27, so
+nothing was rebuilt and the bus image was not re-pulled. The host kernel and
+`gateway00`'s kernel are both 7.0.0-38-generic, the recorded one. The bus
+reports v2.15.2, the recorded one. `rpc_type`, `process_topology` and
+`transport_config_hash` are flag defaults and the Makefile's constant, and git
+shows no commit touching `cmd/csc-stackstamp`, the Makefile or the compose file
+between 2026-10-28 and today other than this week's own. The Go version came
+from the container, not from the host fallback, so amendment 10's mechanism is
+not what happened either.
+
+The hash was reimplemented independently and reproduces the live id
+`4df75e0d98c288c5` exactly from the stamp's own fields, so the inputs are fully
+known. Ninety-eight single-field variants were then tried against
+`99982ee46a1999be` -- sixteen Go toolchains in four spellings each, five
+kernels, seven bus-version spellings, netem variants, an empty image map, short
+image ids, and both serialisations of the identity. **None reproduces it.**
+
+So the honest position is not "the substrate changed" and not "the substrate is
+the same". It is that the campaign's recorded stack id cannot be reproduced from
+the stack that is standing here, and the field responsible cannot be named,
+because amendment 9's check overwrote the only full record of it before any of
+this was known. That was my error and it is the thing that cost the attribution.
+
+*What follows for the campaign.* The mode study and part D move to the live
+stack in full, under `scripts/run_campaign_on_current_stack.sh` and the `bdg2-`
+prefix. The reference arm there is F at SIX repeats, not ten, because the
+comparison reads F at three by a rule frozen before the numbers existed and the
+matched null calibration needs three more: 1296 branches instead of 2160, with
+nothing the comparison uses lost. The old ten-repeat matrix keeps its id and
+remains the paper's main-results matrix. Mode Q as already run on the old stack
+is **not** carried over.
+
+*What is explicitly NOT claimed.* The old and new arms are not presented as a
+comparison of two substrates. Two stack ids that cannot be reconciled are not
+two substrates -- an unexplained discrepancy dressed as an external-validity
+result would be the worst thing in this file. The cross-substrate question goes
+back to being unanswered, and is stated as unanswered.
+
+**12. One identity, not two.**
+
+Found while looking for the missing field: the stack identity had two
+implementations. `internal/fingerprint.RuntimeStack.ID` hashed the netem
+configuration RAW and serialised images as `img[svc]=digest;`, while
+`cmd/csc-stackstamp` stabilised the netem line and wrote `svc=digest;`. The same
+stack had two different ids depending on which code asked, and the fingerprint
+copy would have minted a new id on every recreation of the topology -- the exact
+defect `stableNetemConfig` exists to prevent, left standing in the second copy.
+Nothing on disk depended on it, because the orchestrator receives the id through
+`-runtime-stack-id`. There is now one implementation, in `fingerprint`, which
+the stamper calls, and three assertions: the two serialisations agree, a
+recreated identical topology keeps its id, and a real change of impairment
+changes it.

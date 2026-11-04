@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strings"
 )
 
 // Structural is the exact-match semantic state at an anchor.
@@ -196,13 +197,52 @@ type RuntimeStack struct {
 }
 
 // ID is the value recorded beside every eta_J.
+//
+// This used to be a SECOND, disagreeing implementation of the stack identity.
+// cmd/csc-stackstamp computed its own, with two differences: it stabilised the
+// netem configuration (stripping the qdisc handle and refcnt, which Linux
+// assigns at runtime) and it serialised the image map as "svc=digest;" rather
+// than "img[svc]=digest;". The same stack therefore had two different ids
+// depending on which code asked, and this copy -- hashing the raw netem string
+// -- would mint a new id every time the topology was recreated, which is
+// exactly the defect stableNetemConfig was written to prevent.
+//
+// Nothing on disk depended on this function: the orchestrator receives the id
+// through -runtime-stack-id. The serialisation is now the stamper's, and
+// TestRuntimeStackIDMatchesStampSerialisation pins the two together.
 func (r RuntimeStack) ID() string {
 	h := sha256.New()
 	fmt.Fprintf(h, "%s|%s|%s|%s|%s|%s|%s|%s|",
 		r.GoVersion, r.Kernel, r.BusType, r.BusVersion,
-		r.TransportHash, r.RPCType, r.ProcessTopology, r.NetemConfig)
-	writeStrMap(h, "img", r.Images)
+		r.TransportHash, r.RPCType, r.ProcessTopology,
+		StableNetemConfig(r.NetemConfig))
+	keys := make([]string, 0, len(r.Images))
+	for k := range r.Images {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		fmt.Fprintf(h, "%s=%s;", k, r.Images[k])
+	}
 	return hex.EncodeToString(h.Sum(nil))[:16]
+}
+
+// StableNetemConfig drops the parts of a tc qdisc line that Linux assigns at
+// runtime -- the handle and the refcnt -- so that an identical recreated
+// topology keeps its identity. It lives here, beside the identity it feeds, and
+// cmd/csc-stackstamp calls it rather than keeping a copy.
+func StableNetemConfig(raw string) string {
+	target := raw
+	if i := strings.Index(raw, ":"); i >= 0 {
+		target = raw[:i]
+	}
+	fields := strings.Fields(raw)
+	for i, field := range fields {
+		if field == "limit" {
+			return target + ":data-egress " + strings.Join(fields[i:], " ")
+		}
+	}
+	return raw
 }
 
 func writeStrMap(h interface{ Write([]byte) (int, error) }, tag string, m map[string]string) {
