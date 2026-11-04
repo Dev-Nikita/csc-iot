@@ -29,10 +29,37 @@ Q_NAME="${Q_NAME:-bdg-quiescence-s42}"
 
 exec > >(tee -a "$LOG") 2>&1
 
-STACK="$(python3 check_reportable_stack.py --print-stack-id 2>/dev/null)"
-[ -n "$STACK" ] || { echo "FAIL: no validated stack"; exit 2; }
+EXPECT_STACK="${EXPECT_STACK:-99982ee46a1999be}"
 
 step() { printf '\n\n===== %s  %s =====\n\n' "$(date -u +%FT%TZ)" "$1"; }
+
+# ---- 0. the substrate, re-stamped, before twenty-two hours are spent on it --
+# The stamp is a file and survives a reboot; the kernel it describes does not.
+# csc-stackstamp reads `uname -sr` inside gateway00, which on Linux is the host
+# kernel, so a kernel upgrade and a restart give a different runtime_stack_id
+# while the old stamp sits on disk saying otherwise. Part B, mode Q and the
+# archived corpus are all on 99982ee46a1999be, and a campaign arm on a different
+# substrate is not comparable to them -- the comparison would refuse it, after
+# the hours.
+step "0/5  re-stamping the stack and checking it is still $EXPECT_STACK"
+make up-nats
+make stack-nats
+if ! python3 check_reportable_stack.py --expect-stack-id "$EXPECT_STACK"; then
+  echo
+  echo "STOP: the validated stack is not $EXPECT_STACK any more."
+  echo "      Everything already measured in this campaign -- part B, mode Q --"
+  echo "      is on $EXPECT_STACK, and eta_J belongs to one stack. Running an"
+  echo "      arm here would produce numbers that cannot be compared with them,"
+  echo "      and mode_comparison.py would refuse the pair."
+  echo
+  echo "      If this is a kernel change from a reboot, the choice is a"
+  echo "      decision, not a command: either the campaign continues on the new"
+  echo "      substrate with part B re-run on it, or the old kernel is restored."
+  echo "      Do not pick one by starting a run."
+  exit 2
+fi
+STACK="$(python3 check_reportable_stack.py --print-stack-id)"
+echo "stack $STACK confirmed"
 
 step "1/5  mode R as $R_NAME"
 if ! bash scripts/rerun_ablation.sh "$REF" reset "$R_NAME" --repeats 3; then
