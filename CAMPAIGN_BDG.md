@@ -416,3 +416,32 @@ would have defeated the guard four lines into the run.
 
 Arm k=1's incomplete directory is quarantined rather than deleted, under
 `data/raw/_quarantine/`, which the generators already exclude.
+
+**8, 2026-11-02/04. The collision cost both runs, not one.**
+
+The diagnosis of amendment 7 is confirmed from the record. Part D arm k=1
+recorded `compose startup failed after 3 attempts` and never reached the
+orchestrator -- there is no `orchestrator.log` in its first branch -- so the
+failure was in bringing the stack up, not in the measurement, the seed or the
+observables.
+
+What amendment 7 did not say is that the corrected reset run died too, and
+later: `bdg-reset-v3`'s predecessor `bdg-reset-v2-s42` stopped at
+`c09-a20-REROUTE-r02` with 467 branches of 648 written, at the time arm k=1 was
+starting. The collision was symmetric; the run that had been going for three
+hours is the one that lost the most.
+
+*Both directories are quarantined, and the surviving branches of the reset run
+are not salvaged.* Branches written before 20:06 UTC are probably clean and the
+mtimes would partition them, but the window cannot be bounded from the record --
+the manifest records when a runner started, not when its per-branch `compose
+down` calls landed -- and a partial matrix is refused by the completeness
+checker in any case. Three and a half hours of rerun is cheaper than an
+ablation arm that might carry a contaminated tail, and far cheaper than
+discovering it later.
+
+*The rest of the campaign now runs as one chain.* `scripts/run_remaining_campaign.sh`
+runs mode R, validates it, analyses it, runs the three-mode comparison and then
+part D, in that order, sequentially, in one tmux session. It stops before part D
+if R comes back void, because the ablation is the cheap thing to fix and the
+comparison depends on it.
