@@ -216,6 +216,16 @@ cat > "$OUT/matrix.json" <<JSON
 JSON
 
 cp "$SCENARIOS" "$OUT/scenarios.json"
+# A matrix recorded only the stack id, which is a hash. When the live stack
+# later stopped matching it, nothing on disk could say WHICH field had changed,
+# because the one stamp file had been overwritten. Every matrix now carries the
+# stamp it ran under: go version, kernel, bus version, netem config and the
+# image id of every container.
+if [ -f experiments/manifests/reportable_stack.json ]; then
+  cp experiments/manifests/reportable_stack.json "$OUT/reportable_stack.json"
+else
+  echo "WARN: no reportable_stack.json to record beside the matrix"
+fi
 export EMIT_SPREAD COMPOSE_FILE
 # ---- one matrix run at a time, per repository ----------------------------
 # Two runners sharing one Docker stack destroy each other's topology: the

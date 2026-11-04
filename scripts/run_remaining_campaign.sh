@@ -41,10 +41,20 @@ step() { printf '\n\n===== %s  %s =====\n\n' "$(date -u +%FT%TZ)" "$1"; }
 # archived corpus are all on 99982ee46a1999be, and a campaign arm on a different
 # substrate is not comparable to them -- the comparison would refuse it, after
 # the hours.
-step "0/5  re-stamping the stack and checking it is still $EXPECT_STACK"
-make up-nats
-make stack-nats
-if ! python3 check_reportable_stack.py --expect-stack-id "$EXPECT_STACK"; then
+step "0/5  verifying the stack is still $EXPECT_STACK"
+# `make up-nats` can rebuild the locally built images, and a rebuilt image has a
+# new image ID, which is part of the stack id. Bringing the stack up is
+# therefore not a neutral act here: the branches do it per branch with the
+# images that already exist, so the stack is left alone and only verified.
+if ! docker compose -f docker-compose.nats.yml ps --status running \
+     --format '{{.Service}}' | grep -q gateway00; then
+  echo "note: the stack is not running; bringing it up WITHOUT rebuilding"
+  docker compose -f docker-compose.nats.yml up -d --no-build || {
+    echo "FAIL: could not bring the stack up without a rebuild. A rebuild would"
+    echo "      change the image IDs and with them the stack id; do it only as"
+    echo "      a deliberate decision."; exit 2; }
+fi
+if ! bash scripts/verify_stack.sh "$EXPECT_STACK"; then
   echo
   echo "STOP: the validated stack is not $EXPECT_STACK any more."
   echo "      Everything already measured in this campaign -- part B, mode Q --"

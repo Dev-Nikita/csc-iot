@@ -54,7 +54,11 @@ x-go-build: &go-build
 # run. Changing these values changes the configuration the results belong to.
 services:
   nats:
-    image: nats:2-alpine
+    # Pinned: `nats:2-alpine` is a floating tag and the bus version is part of
+    # runtime_stack_id, so the tag moving would change the substrate under a
+    # campaign without anyone touching the repository. v2.15.2 is the version
+    # this campaign's stack was stamped with.
+    image: nats:2.15.2-alpine
     command: ["-js=false", "-m", "8222"]
     networks: [gateway-edge, control]
     # Published so the orchestrator, which runs on the host rather than in a

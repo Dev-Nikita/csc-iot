@@ -183,6 +183,17 @@ m2prime-nats-matrix: ## Reportable 30x3x10 M2' (requires validated NATS stack)
 
 .PHONY: stack-nats
 stack-nats: netem-apply ## Apply impairment, stamp, and validate the NATS stack
+	@# The stamp is the only record of what a campaign's stack was made of, and
+	@# this target overwrites it. A verification that destroys its own reference
+	@# cost exactly that once: use scripts/verify_stack.sh to CHECK, and keep
+	@# every stamp this target replaces.
+	@if [ -f experiments/manifests/reportable_stack.json ]; then \
+	  mkdir -p experiments/manifests/history; \
+	  id=$$(python3 -c 'import json;print(json.load(open("experiments/manifests/reportable_stack.json"))["runtime_stack_id"])' 2>/dev/null || echo unknown); \
+	  cp -n experiments/manifests/reportable_stack.json \
+	     "experiments/manifests/history/reportable_stack.$$id.json" || true; \
+	  echo "kept the previous stamp as experiments/manifests/history/reportable_stack.$$id.json"; \
+	fi
 	COMPOSE_FILE=docker-compose.nats.yml $(GO) run ./cmd/csc-stackstamp \
 	  -bus nats \
 	  -bus-version "$$(docker compose -f docker-compose.nats.yml exec -T nats nats-server -v 2>/dev/null | tr -d '\r' || echo unknown)" \

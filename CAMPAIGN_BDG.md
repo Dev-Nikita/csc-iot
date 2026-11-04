@@ -445,3 +445,43 @@ runs mode R, validates it, analyses it, runs the three-mode comparison and then
 part D, in that order, sequentially, in one tmux session. It stops before part D
 if R comes back void, because the ablation is the cheap thing to fix and the
 comparison depends on it.
+
+**9, 2026-11-04. The substrate moved, the guard caught it, and the check
+destroyed its own reference.**
+
+Step 0 of the chain reported `4df75e0d98c288c5` against the campaign's
+`99982ee46a1999be` and stopped before any run. That is the guard working: part B
+and mode Q are on the old stack and nothing was spent on an incomparable arm.
+
+*What the guard got wrong.* It verified by running `make stack-nats`, which
+overwrites `experiments/manifests/reportable_stack.json` -- the only record of
+what this campaign's stack was made of. So the check consumed the evidence
+needed to say which field had changed. The recorded composition in amendment 1
+survives (kernel 7.0.0-38-generic, nats-server v2.15.2) and the new stamp also
+reports v2.15.2, so the bus is not the difference.
+
+*The likely cause, and why it is checkable.* `composeImages()` identifies a
+locally built image by its image ID, because a locally built image has no repo
+digest. Every Go service here is locally built. A rebuild produces new image IDs
+even from identical source, so `make up-nats` rebuilding is sufficient on its own
+to change the stack id, with no kernel change at all. The old images are
+probably still on the host as untagged layers.
+
+*Four changes.*
+
+1. `scripts/verify_stack.sh` stamps to a temporary file, prints a field-by-field
+   comparison against the recorded stamp, and never writes it. The chain's step 0
+   uses it, and brings the stack up with `--no-build` when it is down, because
+   bringing it up is not a neutral act when a rebuild changes the identity.
+2. `make stack-nats` keeps every stamp it replaces under
+   `experiments/manifests/history/reportable_stack.<id>.json`.
+3. Every matrix now carries `reportable_stack.json` beside its manifest, so a
+   stack id on disk always has its composition behind it rather than being a
+   bare hash.
+4. The bus image is pinned to `nats:2.15.2-alpine`. A floating major tag can
+   move the substrate under a campaign with nobody touching the repository.
+
+*The decision this leaves.* Either the old images are still on the host and the
+substrate is restored, or the campaign continues on `4df75e0d98c288c5` with part
+B and mode Q re-run on it. Mixing them is not available: eta_J is measured per
+stack and the comparison refuses a mismatched pair.
