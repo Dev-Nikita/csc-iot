@@ -613,3 +613,43 @@ and asserts the decision is byte-identical.
 
 *Cost of the stop:* five days of idle machine. The chain resumes at mode Q
 without rerunning F.
+
+**14, 2026-11-09. The chain stamped the stack before impairing it, and the id it
+got was real, reproducible and the wrong stack's.**
+
+Step 0 reported `d2dd796a0277c34f` from two consecutive stamps, then
+`make stack-nats` produced `4df75e0d98c288c5` and the build check stopped the
+chain for a substrate that appeared to move under a host-side `go build`.
+Nothing moved. The check was looking before the impairment existed.
+
+The netem qdisc lives inside the `device-sim` container and is created by
+`make netem-apply`. A container just brought up with `compose up -d --no-build`
+has none, so `csc-stackstamp` records `impairment_mode: application_layer` with
+an empty netem configuration and hashes a stack that is the campaign's images,
+kernel and bus **without its impairment**. That id is stable --- two stamps
+agreed on it --- which is exactly what makes it dangerous: a reproducible
+identity for a system nobody intends to measure on.
+
+`d2dd796a0277c34f` is not a guess. The independent reimplementation of the hash
+written on 2026-11-04 to search for the missing field computed that exact value
+for "this stack with an empty netem configuration", before it ever appeared on
+the server. The hash model is confirmed correct and the event is fully
+explained.
+
+*Three fixes.* `verify_stack.sh` prints `impairment_mode` and the netem line and
+**refuses** an id whose impairment is not `kernel_netem`, because a degraded
+reading that mints a plausible identity is the same defect as the Go host
+fallback in amendment 10. The chain now builds, brings the stack up, applies the
+impairment, and only then stamps --- and it honours `verify_stack.sh`'s exit
+status instead of scraping one line of its output, which is how an unimpaired
+stamp got through a check written to catch exactly that.
+
+*What this does not explain.* The original `99982ee46a1999be` is still not
+reproducible and still not attributed. It was stamped through `make stack-nats`,
+which applies the impairment, so this is not the same mechanism. One hypothesis
+now worth recording: `stableNetemConfig` strips the handle and refcnt only by
+locating the token `limit`; if a qdisc line ever lacks it, the function returns
+the raw string **including the runtime-assigned handle**, and the id becomes
+unreproducible by construction. That would explain why no single-field variant
+reproduced it. It is a hypothesis, it is not tested, and the paper claims
+nothing about that id beyond the composition recorded in amendment 1.

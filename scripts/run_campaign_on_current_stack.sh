@@ -34,15 +34,36 @@ step() { printf '\n\n===== %s  %s =====\n\n' "$(date -u +%FT%TZ)" "$1"; }
 # The whole reason this script exists is a stack id that could not be
 # reproduced. Spending thirty-three hours on a substrate whose identity is not
 # stable across two consecutive stamps would repeat the mistake exactly.
-step "0/6  is the live stack id reproducible across two stamps?"
+# ---- 0. build, impair, then verify -- in that order ----------------------
+# The order is the whole point and getting it wrong cost a day. The netem qdisc
+# is created inside device-sim by `make netem-apply`; a freshly upped container
+# has none. Stamping before that gives the id of an unimpaired stack --
+# d2dd796a0277c34f here -- reproducibly, and then `make stack-nats` applies the
+# qdisc and the id changes, which the next check reads as a substrate that moves
+# under a host build. Nothing was moving. The check was looking too early.
+#
+# The host binaries are built first for the same reason: so that nothing after
+# the baseline stamp can change anything at all.
+step "0a/6  building host binaries"
+make build TAGS=nats || { echo "STOP: the build failed"; exit 2; }
+
+step "0b/6  bringing the stack up without rebuilding, and applying the impairment"
 if ! docker compose -f docker-compose.nats.yml ps --status running \
      --format '{{.Service}}' | grep -q gateway00; then
   docker compose -f docker-compose.nats.yml up -d --no-build || {
     echo "FAIL: could not bring the stack up without rebuilding"; exit 2; }
   sleep 30
 fi
+make netem-apply || { echo "STOP: the impairment could not be applied"; exit 2; }
+
+step "0c/6  is the stack id reproducible across two stamps?"
+# verify_stack.sh refuses an unimpaired stack and a stamp with blockers, so its
+# EXIT STATUS is part of the check. Scraping one line of its output and ignoring
+# the status is what let an unimpaired stamp through.
+bash scripts/verify_stack.sh || { echo "STOP: the live stack does not verify"; exit 2; }
 A="$(bash scripts/verify_stack.sh 2>/dev/null | awk '/^live stack/{print $3}')"
 sleep 20
+bash scripts/verify_stack.sh >/dev/null || { echo "STOP: the second stamp does not verify"; exit 2; }
 B="$(bash scripts/verify_stack.sh 2>/dev/null | awk '/^live stack/{print $3}')"
 if [ -z "$A" ] || [ "$A" != "$B" ]; then
   echo "STOP: two consecutive stamps gave '$A' and '$B'."
@@ -56,28 +77,16 @@ if [ "$A" = "$OLD_STACK" ]; then
   exit 2
 fi
 STACK="$A"
-echo "live stack $STACK, reproducible across two stamps"
-make stack-nats   # promote it, keeping the previous stamp in history/
+echo "live stack $STACK, reproducible across two stamps, impairment applied"
 
-# The runner refuses a bin/ older than the Go sources, and it is right to: a
-# stale orchestrator once produced 27 clean-looking branches whose outcomes were
-# missing the observed block entirely. This week's commits touched internal/, so
-# the binaries are rebuilt here rather than left for the chain to trip over
-# eleven hours in.
-#
-# `make build` compiles host binaries only -- the container images are built by
-# up-nats from go.Dockerfile -- so it cannot move the stack id. Verified rather
-# than asserted: the stamp is taken again afterwards.
-step "0b/6  rebuilding bin/ and confirming the identity did not move"
-make build TAGS=nats || { echo "STOP: the build failed"; exit 2; }
-C="$(bash scripts/verify_stack.sh 2>/dev/null | awk '/^live stack/{print $3}')"
+step "0d/6  promoting the stamp, keeping the previous one in history/"
+make stack-nats || { echo "STOP: the stamp could not be promoted"; exit 2; }
+C="$(python3 check_reportable_stack.py --print-stack-id 2>/dev/null)"
 if [ "$C" != "$STACK" ]; then
-  echo "STOP: the stack id moved from $STACK to $C across a host-side build."
-  echo "      That should be impossible -- the id hashes container images, not"
-  echo "      bin/ -- so something else is moving and must be found first."
+  echo "STOP: the promoted stamp records $C and the verified stack is $STACK."
   exit 2
 fi
-echo "stack $STACK unchanged after the build"
+echo "stack $STACK promoted and confirmed"
 
 # ---- the reference arm's factors, from the old manifest -------------------
 FACTORS="$(python3 - "data/raw/$OLD_STACK/$OLD_REF/matrix.json" <<'PY'

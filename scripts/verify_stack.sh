@@ -35,6 +35,8 @@ recorded = json.load(open(sys.argv[2])) if os.path.exists(sys.argv[2]) else None
 expect = sys.argv[3] or None
 
 print(f"live stack      {live['runtime_stack_id']}  stamped {live['stamped_at']}")
+print(f"impairment      {live.get('impairment_mode')}")
+print(f"netem           {live.get('netem_config') or '<none>'}")
 if recorded:
     print(f"recorded stack  {recorded['runtime_stack_id']}  stamped "
           f"{recorded['stamped_at']}  ({sys.argv[2]})")
@@ -60,6 +62,19 @@ if recorded:
 if expect and live["runtime_stack_id"] != expect:
     print(f"\nMISMATCH: the live stack is {live['runtime_stack_id']}, not {expect}.")
     print("eta_J belongs to one stack and does not transfer to another.")
+    sys.exit(1)
+# The netem qdisc lives inside the device-sim container and is created by
+# `make netem-apply`. A container that has just been brought up has none, so a
+# stamp taken then is a stamp of a DIFFERENT stack -- same images, same kernel,
+# no impairment -- and it is perfectly reproducible, which is what makes it
+# dangerous. This is what happened on 2026-11-09: two consecutive stamps agreed
+# on d2dd796a0277c34f, the id of this stack with an empty netem configuration,
+# and the campaign's own id appeared only after netem-apply ran.
+if live.get("impairment_mode") != "kernel_netem":
+    print(f"\nREFUSED: impairment_mode is {live.get('impairment_mode')!r}, not "
+          f"kernel_netem. The qdisc is not on the interface, so this id belongs "
+          f"to an unimpaired stack. Run `make netem-apply` and stamp again; do "
+          f"not record this id.")
     sys.exit(1)
 if live.get("blockers"):
     print("\nBLOCKERS: " + "; ".join(live["blockers"]))
