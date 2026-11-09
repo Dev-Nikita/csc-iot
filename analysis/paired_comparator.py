@@ -38,6 +38,34 @@ def mean(xs):
     return sum(xs) / len(xs)
 
 
+def min_two_sided_p(na, nb, limit=ENUMERATION_LIMIT):
+    """The smallest two-sided p this group-size pair can attain. Computed.
+
+    It is not 1/C(n,k) and it is not always 2/C(n,k). With EQUAL group sizes
+    every split is paired with its complement, which swaps the groups and leaves
+    |Delta| unchanged, so every attainable p is an even multiple of 1/C(2n,n)
+    and the floor is 2/C(2n,n). With unequal sizes the complement has the wrong
+    size and is not in the reference set, so the floor is 1/C(n,k).
+
+    This matters operationally and not only pedantically:
+
+        3 vs 3  ->  2/20  = 0.1000     6 vs 6  ->  2/924 = 0.0022
+        5 vs 5  ->  2/252 = 0.0079     5 vs 6  ->  1/462 = 0.0022
+
+    At THREE repeats per action the floor is 0.10, so after Holm over three
+    pairs at a family-wise 0.05 the test can never reject anything. Modes Q and
+    R and every arm of part D run at three repeats. The second comparator is
+    therefore available for mode F at six repeats and is structurally unable to
+    decide a single comparison in the others, and a count of zero decided cells
+    there is a property of the repeat count rather than a finding about the
+    data. The tool says so rather than printing the zero.
+    """
+    n, k = na + nb, na
+    total = math.comb(n, k)
+    floor = (2.0 if na == nb else 1.0) / total
+    return floor, total
+
+
 def permutation_p(a, b, seed=PERM_SEED, limit=ENUMERATION_LIMIT):
     """Two-sided p for |mean(a) - mean(b)| under exchangeability of the label.
 
@@ -128,6 +156,31 @@ def main():
         sys.exit(f"REFUSED: no rows in {args.jobs_csv}")
     band, npairs = pooled_band(cells)
 
+    # Can this design decide anything at all? The answer is arithmetic and it is
+    # known before the data are read, so it is read first.
+    sizes = collections.Counter(
+        (len(v) for per_action in cells.values() for v in per_action.values()))
+    typical = sizes.most_common(1)[0][0]
+    n_pairs_family = max(
+        (len(per_action) * (len(per_action) - 1)) // 2
+        for per_action in cells.values())
+    floor, ref = min_two_sided_p(typical, typical)
+    holm_strictest = args.alpha / max(1, n_pairs_family)
+    undecidable = floor > holm_strictest
+    print(f"  repeats per action: {dict(sorted(sizes.items()))}; "
+          f"reference set {ref} splits at {typical} vs {typical}")
+    print(f"  smallest attainable two-sided p = {floor:.4f}; strictest Holm "
+          f"threshold = {holm_strictest:.4f}")
+    if undecidable:
+        print("")
+        print("  THIS DESIGN CANNOT DECIDE ANY COMPARISON. The smallest p the")
+        print("  reference set can produce exceeds the strictest Holm threshold,")
+        print(f"  so no pair can be rejected at family-wise {args.alpha} whatever")
+        print("  the data say. A count of zero decided cells below is a property")
+        print("  of the repeat count, not a finding. Report it as unavailable,")
+        print("  never as agreement between the band and a test.")
+        print("")
+
     print("SECOND COMPARATOR: exact permutation test inside the cell, Holm over")
     print("the cell's action pairs. Rules frozen in STATISTICAL_COMPARATOR.md.")
     print(f"  cells {len(cells)}   family-wise alpha {args.alpha}   "
@@ -177,6 +230,11 @@ def main():
     n = len(rows)
     print(f"\n  resolved at the band      {resolved:4d} / {n}  "
           f"{resolved / n:6.1%}")
+    if undecidable:
+        print("  decided by the test        UNAVAILABLE at this repeat count "
+              "(see above)")
+        print("  The remaining lines are printed for completeness and must not "
+              "be reported.")
     print(f"  decided by the test       {decided:4d} / {n}  {decided / n:6.1%}")
     print(f"  both                      {both:4d} / {n}  {both / n:6.1%}")
     print(f"  test only, under the band {test_only:4d} / {n}  "

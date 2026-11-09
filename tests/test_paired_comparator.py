@@ -74,3 +74,38 @@ def test_holm_adjusted_values_are_monotone():
     out = pc.holm([("a", 0.01), ("b", 0.02), ("c", 0.04)], 0.05)
     adj = [out[k][1] for k in ("a", "b", "c")]
     assert adj == sorted(adj)
+
+
+# --- the attainable floor, and the design that cannot decide anything -------
+
+def test_the_two_sided_floor_is_even_for_equal_groups_and_odd_for_unequal():
+    """Corrected 2026-11-09: it is neither always 1/C nor always 2/C."""
+    assert pc.min_two_sided_p(6, 6) == (2 / 924, 924)
+    assert pc.min_two_sided_p(5, 5) == (2 / 252, 252)
+    assert pc.min_two_sided_p(5, 6) == (1 / 462, 462)
+    assert pc.min_two_sided_p(6, 5) == (1 / 462, 462)
+
+
+def test_the_computed_floor_matches_an_actual_perfect_separation():
+    for na, nb in ((6, 6), (5, 5), (5, 6), (3, 3)):
+        floor, ref = pc.min_two_sided_p(na, nb)
+        p, nref, exact = pc.permutation_p([0.0] * na, [1.0] * nb)
+        assert exact and nref == ref
+        assert p == pytest.approx(floor)
+
+
+def test_three_repeats_cannot_reject_at_family_wise_five_percent():
+    """Modes Q and R and every arm of part D run at three repeats."""
+    floor, _ = pc.min_two_sided_p(3, 3)
+    assert floor == pytest.approx(0.10)
+    strictest_holm = 0.05 / 3
+    assert floor > strictest_holm
+    # and the test confirms it on data as separated as data can be
+    p, _, _ = pc.permutation_p([0.0, 0.0, 0.0], [1.0, 1.0, 1.0])
+    assert p == pytest.approx(0.10)
+    assert pc.holm([("a", p), ("b", 1.0), ("c", 1.0)], 0.05)["a"][2] is False
+
+
+def test_six_repeats_can_reject_after_holm():
+    p, _, _ = pc.permutation_p([0.0] * 6, [1.0] * 6)
+    assert pc.holm([("a", p), ("b", 1.0), ("c", 1.0)], 0.05)["a"][2] is True

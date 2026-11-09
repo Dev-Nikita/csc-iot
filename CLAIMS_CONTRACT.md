@@ -183,6 +183,26 @@ alone would replace the question of what an evaluation can *see* with the
 question of what it can *detect given enough repeats*, which is the substitution
 this paper exists to object to.
 
+**Where C7 does not apply, computed before the data were read.** The smallest
+two-sided p an exact permutation test can attain at three repeats per action is
+0.10, against a strictest Holm threshold of 0.0167. Modes Q and R and every arm
+of part D run at three repeats, so the test cannot reject there whatever the data
+say. C7 is asserted **for mode F at six repeats only**, and in the three-repeat
+matrices the comparator is reported as unavailable --- never as agreement between
+the band and a test, which is what a naive count of zero decided cells would
+look like.
+
+**And a qualification that travels with every p-value.** The test is exact under
+exchangeability of the action label, which is the sharp null of equal
+distributions, not of equal means. The runner executes a cell in a fixed order
+and the block order is identical in every cell, so position-in-cell and action
+identity are the same column and a position effect is **not identifiable from
+this data**. What is measurable --- within-block trend, across-matrix drift
+inside each action, and the per-action dispersion that makes a spread-driven
+rejection visible --- is measured by `analysis/order_effects.py` and reported.
+Randomising the action order is a change for the next matrix, not for a running
+campaign.
+
 ## What is claimed nowhere in this paper
 
 * That CSC improves availability, SLA violations or end-to-end latency. There is

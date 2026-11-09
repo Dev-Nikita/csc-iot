@@ -49,6 +49,9 @@ section() { printf '\n\n========== %s ==========\n\n' "$1"; }
   section "3b. the second comparator -- a different question, printed beside the band"
   python3 -I analysis/paired_comparator.py "$R/jobs.csv" --by-point | tail -110
 
+  section "3c. order effects -- what the fixed execution order permits and forbids"
+  python3 -I analysis/order_effects.py "$R/jobs.csv" | tail -45
+
   section "4. leakage -- these gate every model result below"
   python3 -u analysis/leakage_tests.py "$R" "$R/jobs.csv" | tail -30
   LEAK=$?

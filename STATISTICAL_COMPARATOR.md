@@ -58,11 +58,33 @@ the cell's `n_a + n_b` observations into groups of `n_a` and `n_b`, computes
 
     p = (number of splits with |Delta| >= |Delta_observed|) / (number of splits)
 
-two-sided, with the observed split included in both counts. At six repeats per
-action this is 924 splits and the test is **exact**; the smallest attainable
-p-value is 1/924 = 0.00108, which is small enough for a 5 % level after
-correction over three action pairs. Where a prefix exclusion leaves five repeats
-against six, it is 462 splits and still exact. Enumeration is used whenever the
+two-sided, with the observed split included in both counts.
+
+**The attainable floor, corrected 2026-11-09 and computed rather than reasoned
+about.** An earlier version of this file said the smallest attainable two-sided
+p at six repeats is 1/924. That is wrong, and so is the blanket rule that it is
+always 2/C(n,k). With **equal** group sizes every split pairs with its
+complement, which swaps the groups and leaves `|Delta|` unchanged, so every
+attainable p is an even multiple of 1/C(2n,n); with **unequal** sizes the
+complement has the wrong size and is not in the reference set. Enumerated:
+
+| repeats | reference set | smallest two-sided p |
+|---|---|---|
+| 3 vs 3 | 20 | **0.1000** |
+| 5 vs 5 | 252 | 0.0079 |
+| 6 vs 6 | 924 | 0.0022 |
+| 5 vs 6 | 462 | 0.0022 |
+
+**The consequence is operational and it is the important part of this
+correction.** The strictest Holm threshold over three action pairs at a
+family-wise 0.05 is 0.0167. At three repeats per action the floor is 0.10, so
+**no comparison can be rejected at any usable level whatever the data say.**
+Modes Q and R and every arm of part D run at three repeats. The second
+comparator is therefore available for **mode F at six repeats only**, and a
+count of zero decided cells in the three-repeat matrices is a property of the
+repeat count, not a finding about the data, and above all not agreement between
+the band and a test. `analysis/paired_comparator.py` computes the floor before
+reading the data and prints UNAVAILABLE instead of a zero. Enumeration is used whenever the
 split count is at most 20000; beyond that the reference set is sampled with a
 seed fixed in this file (`PERM_SEED = 20261109`) and the output says so and gives
 the count, because a p-value from a sampled reference set is an estimate and must
@@ -87,14 +109,40 @@ not presented as one.
 
 ## The assumptions, stated so a reviewer can check them
 
-1. **Exchangeability of the action label within a cell under the null.** This is
-   what the common verified prefix buys and it is the whole reason the test is
-   available. If prefix identity fails in a cell, the assumption fails with it,
-   which is why `prefix_exclusions.json` is applied before this runs.
-2. **No assumption of normality, equal variance or symmetry.** None is used.
-3. **Nothing about independence across cells** at L1. Dependence between cells of
+1. **Exchangeability of the action label within a cell under the null, and the
+   null is equality of DISTRIBUTIONS, not of means.** This is a correction: a
+   permutation test is exact for the sharp null that the label carries no
+   information. It is *not* exact for "equal means with unequal dispersion",
+   which is the Behrens--Fisher situation, and this paper is about dispersion,
+   so the possibility is live rather than academic. A rejection therefore means
+   the label carries information --- in location, in spread, or in both --- and
+   `analysis/order_effects.py` prints the within-cell range per action so a
+   rejection driven by spread is visible instead of being described as a
+   difference in means.
+
+   The common verified prefix gives comparability of the starting state. It does
+   **not** by itself give exchangeability, and this file previously implied that
+   it did.
+2. **Execution order is fixed and the confound it creates is partly not
+   identifiable.** The runner executes a cell as scenario, anchor, action,
+   repeat, so each action holds a contiguous block of wall-clock time, and the
+   block order is the same in every cell. "First block" and "NO_OP" are
+   therefore the same column: **a position-in-cell effect cannot be separated
+   from an action effect by any analysis of this data.** Randomising the action
+   order fixes it for a future matrix; it is not a change to make mid-campaign,
+   and it is listed as such.
+
+   What is measurable is measured: `analysis/order_effects.py` reports the
+   within-block trend of `J_obs` against repeat index, and the across-matrix
+   drift computed separately inside each action so the action effect is removed
+   by construction. Both being nil makes a block-level drift large enough to
+   matter less likely, which is weaker than excluded and is reported as weaker.
+   The test is therefore **exact conditional on the declared exchangeability
+   null**, and that qualification travels with every number it produces.
+3. **No assumption of normality, equal variance or symmetry.** None is used.
+4. **Nothing about independence across cells** at L1. Dependence between cells of
    one design point is handled at L2 by resampling design points.
-4. **The test is about `J_obs` as measured.** A reduced cost term is still a
+5. **The test is about `J_obs` as measured.** A reduced cost term is still a
    reduced cost term; see the objective's own caveat.
 
 ## What this comparator cannot do
