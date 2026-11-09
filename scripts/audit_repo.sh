@@ -557,6 +557,14 @@ fi
 if [ "$blockers" -eq 0 ]; then echo "  none"; fi
 fi
 
+# The register is the source of the manuscript's statement about
+# reproducibility. A register whose own flags contradict each other -- a level-A
+# result that also needs the analysis host, a level-C result described as
+# publicly reproducible -- would put a claim in the paper that a reviewer can
+# falsify in an afternoon. The schema check is cheap, so it runs every time.
+chk "data-availability register is self-consistent" \
+  python3 -I scripts/audit_data_availability.py --schema-only
+
 echo
 if [ "$fail" -eq 0 ]; then
   echo "REPO AUDIT OK"

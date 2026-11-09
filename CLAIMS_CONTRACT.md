@@ -192,9 +192,23 @@ matrices the comparator is reported as unavailable --- never as agreement betwee
 the band and a test, which is what a naive count of zero decided cells would
 look like.
 
-**And a qualification that travels with every p-value.** The test is exact under
-exchangeability of the action label, which is the sharp null of equal
-distributions, not of equal means. The runner executes a cell in a fixed order
+**And the qualification that travels with every p-value, in the exact words
+that go into the methods section and the limitations:**
+
+> The permutation procedure provides exact conditional inference under
+> exchangeability of action labels. Because execution order was fixed and
+> confounded with action identity, this assumption cannot be verified or
+> guaranteed by the experimental design. Results are therefore reported as
+> conditional sensitivity analyses rather than design-valid randomization tests.
+
+So C7 is **not** a claim of design-valid inference even in mode F. It is a claim
+that a conditional test, under a stated and unverifiable assumption, decides a
+different set of cells than the band does. That is still worth reporting, and it
+is less than a randomization test would be worth. The register entry is
+`L-ORDER-001`.
+
+The test is exact under exchangeability of the action label, which is the sharp
+null of equal distributions, not of equal means. The runner executes a cell in a fixed order
 and the block order is identical in every cell, so position-in-cell and action
 identity are the same column and a position effect is **not identifiable from
 this data**. What is measurable --- within-block trend, across-matrix drift
