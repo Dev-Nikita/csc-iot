@@ -111,3 +111,21 @@ def test_load_refuses_a_foreign_policy_version(tmp_path):
         json.dumps({"policy": "something-else", "excluded_branches": []}))
     with pytest.raises(SystemExit):
         px.load(str(tmp_path))
+
+
+def test_the_spread_of_the_exclusion_set_over_actions_is_reported():
+    comp = px.composition(["c09-a14-REROUTE-r06", "c09-a20-NO_OP-r06",
+                           "c09-a26-NO_OP-r05", "c09-a30-THROTTLE-r03",
+                           "c10-a26-THROTTLE-r01"])
+    assert comp["by_action"] == {"NO_OP": 2, "REROUTE": 1, "THROTTLE": 2}
+    assert comp["by_repeat"] == {"r01": 1, "r03": 1, "r05": 1, "r06": 2}
+    assert comp["max_share_one_action"] == 0.4
+    assert comp["single_action_only"] is False
+
+
+def test_an_exclusion_set_confined_to_one_action_is_flagged():
+    """The one way a decision blind to the objective can still bias it."""
+    comp = px.composition(["c09-a14-REROUTE-r06", "c09-a20-REROUTE-r02",
+                           "c09-a26-REROUTE-r05"])
+    assert comp["single_action_only"] is True
+    assert comp["max_share_one_action"] == 1.0

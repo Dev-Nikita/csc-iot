@@ -83,3 +83,30 @@ the gateway admission fault's interaction with the per-branch topology rebuild
 leaves a timing-dependent residue that the recorded state exposes at late
 anchors but not at early ones. That is a hypothesis, it is labelled as one, and
 it is not tested in this paper.
+
+---
+
+## Addendum, 2026-11-09: the composition of the exclusion set, checked
+
+The criterion cannot see the objective. That is necessary and it is not
+sufficient: if every excluded branch happened to be the same action, that action
+would be compared on fewer replays than its rivals precisely in the cells where
+the instrument misbehaved, and the contrast would be biased without a single
+outcome having been looked at. The spread is therefore computed, recorded in
+`prefix_exclusions.json` and judged.
+
+For `bdg2-f-s42` the five excluded branches are
+
+    c09-a14-REROUTE-r06   c09-a20-NO_OP-r06   c09-a26-NO_OP-r05
+    c09-a30-THROTTLE-r03  c10-a26-THROTTLE-r01
+
+which is NO_OP 2, THROTTLE 2, REROUTE 1, at repeats 1, 3, 5, 6 and 6. No action
+holds more than 40 % of the set and no repeat index dominates. The divergence is
+therefore not tied to a particular action and not tied to the last repeat of a
+cell, which is what a residue left by the preceding branch would look like. The
+branch-level reading is safe to use as the primary here.
+
+Had the set been confined to one action, the cell-level exclusion would have
+been the correct primary instead, and the tool says so rather than leaving the
+reader to notice. This rule is stated now, with the composition in hand but with
+no objective computed, so it cannot be a rationalisation later.

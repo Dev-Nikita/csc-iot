@@ -84,9 +84,41 @@ def decide(states):
             excluded_cells.append(label)
             excluded_branches.extend(sorted(per_branch))
         cells.append(rec)
-    return {"policy": POLICY, "split_cells": cells,
-            "excluded_branches": sorted(excluded_branches),
-            "excluded_cells": sorted(excluded_cells)}
+    out = {"policy": POLICY, "split_cells": cells,
+           "excluded_branches": sorted(excluded_branches),
+           "excluded_cells": sorted(excluded_cells)}
+    out["composition"] = composition(out["excluded_branches"])
+    return out
+
+
+def composition(names):
+    """How the excluded branches spread over actions and repeats.
+
+    This is the one way the policy could distort the comparison it exists to
+    protect. The exclusion criterion cannot see the objective, but it does not
+    need to: if every excluded branch were a REROUTE, then REROUTE would be
+    compared on fewer replays than its rivals in exactly the cells where the
+    instrument misbehaved, and the contrast would be biased without a single
+    outcome having been looked at.
+
+    So the spread is computed, recorded and judged. Concentration in one action
+    is not proof of bias and is not treated as a refusal -- with five branches
+    any split looks lumpy -- but it is stated, and a set that is entirely one
+    action is called out as something to resolve before the comparison, not
+    after.
+    """
+    actions, repeats = collections.Counter(), collections.Counter()
+    for name in names:
+        parts = name.split("-")
+        if len(parts) == 4:
+            actions[parts[2]] += 1
+            repeats[parts[3]] += 1
+    worst = max(actions.values()) if actions else 0
+    return {"by_action": dict(sorted(actions.items())),
+            "by_repeat": dict(sorted(repeats.items())),
+            "n": len(names),
+            "max_share_one_action": (worst / len(names)) if names else 0.0,
+            "single_action_only": bool(actions) and len(actions) == 1}
 
 
 def load(root):
@@ -132,6 +164,21 @@ def main():
         print(f"    {b}")
     if decision["excluded_cells"]:
         print(f"  excluded whole cells: {', '.join(decision['excluded_cells'])}")
+    comp = decision["composition"]
+    if comp["n"]:
+        print(f"  spread over actions: {comp['by_action']}")
+        print(f"  spread over repeats: {comp['by_repeat']}")
+        print(f"  largest share in one action: "
+              f"{comp['max_share_one_action']:.0%}")
+        if comp["single_action_only"]:
+            print("  WARNING: every excluded branch is the SAME action. The "
+                  "criterion cannot see the")
+            print("  objective, but excluding one action's replays only in the "
+                  "cells where the")
+            print("  instrument misbehaved would bias the contrast anyway. "
+                  "Resolve this before")
+            print("  the comparison, not after -- the cell-level reading is the "
+                  "safe primary here.")
 
     path = os.path.join(args.root, "prefix_exclusions.json")
     body = json.dumps(decision, indent=2, sort_keys=True) + "\n"
