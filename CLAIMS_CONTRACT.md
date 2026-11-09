@@ -158,6 +158,31 @@ power at five seeds proves insufficient for the three-way variance split, C6 is
 reported as "consistent with, not established by" and the generalisation in the
 abstract is cut accordingly.
 
+## C7 --- The band and a controlled test disagree, and the disagreement is the finding
+
+**Claim.** An exact permutation test inside each contrast cell, with Holm over
+the cell's three action pairs at a family-wise 0.05, decides a share of the
+comparisons that the dispersion band leaves unresolved. The two comparators
+answer different questions and the gap between them is not an error in either.
+
+*Unit:* contrast cell for the test; design point for any family statement.
+*Evidence:* `analysis/paired_comparator.py`, rules frozen in
+`STATISTICAL_COMPARATOR.md` before it was run. *Dependability stake:* a
+difference that is reproducible across replays but smaller than replay noise is
+useless for choosing a recovery action in production, where one execution is all
+anyone gets --- and a test reported without the band would present exactly that
+difference as a reason to deploy one action over another.
+
+**Refuted if** the test decides essentially the same cells as the band, in which
+case the band adds nothing a standard test does not and the paper must say so;
+or if it decides essentially nothing, in which case at five or six repeats the
+test is underpowered and must be reported as such rather than as agreement.
+
+**Explicitly not claimed:** that the test is the better comparator. Reporting it
+alone would replace the question of what an evaluation can *see* with the
+question of what it can *detect given enough repeats*, which is the substitution
+this paper exists to object to.
+
 ## What is claimed nowhere in this paper
 
 * That CSC improves availability, SLA violations or end-to-end latency. There is
