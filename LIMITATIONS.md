@@ -22,13 +22,30 @@ identical in every cell of every matrix. "First block" and "NO_OP" are the same
 column. A position-in-cell effect and an action effect are not separately
 identifiable, and no adjustment recovers them.
 
-*What this does and does not touch.* It touches the **between-action gap**, which
-is the quantity an action comparison rests on. It barely touches the
-**dispersion band**: the band is built from differences between repeats of the
-*same* action, which are consecutive in time inside one block, so the only drift
-it can absorb is drift over the two minutes a block takes rather than over the
-cell. The band is the least affected quantity in the paper, and the paper's
-central claims C1 and C2 are about the band and the unresolved share.
+*What this touches, corrected 2026-11-09 after the claim below was put too
+strongly.* An earlier version of this entry said the band "barely" feels the
+confound and can absorb only two minutes of drift. That is too strong. Process
+warm-up, accumulated host state and caching all act inside a block, and
+sequential execution does not make repeats independent of each other --- it only
+makes them share a position rather than differ by one.
+
+The honest ordering is:
+
+* **within-action dispersion** --- the band --- remains a meaningful measured
+  quantity: it is the reproducibility of executing *that* action under *this*
+  protocol, which is what it is defined as. It is **less exposed** than the
+  gap, not nearly immune.
+* **the between-action gap** is exposed: action identity and block position are
+  the same column.
+* **the resolvable fraction** is a function of both, so **it is not protected
+  either**. A gap distorted by position can make a comparison look resolvable or
+  unresolvable when it is not.
+
+C1 therefore stands as a result about measured reproducibility of execution.
+**C2 --- the share of comparisons an evaluation can resolve --- inherits this
+confound and must not be read as establishing true distinguishability of action
+effects.** That is a correction to this register and to the claims contract, not
+a softening of wording.
 
 *What can be checked now, and is:* `analysis/order_effects.py` --- within-block
 trend of `J_obs` against repeat index, across-matrix drift computed inside each
@@ -38,9 +55,19 @@ trends being nil makes a block-level drift large enough to matter **less likely,
 not excluded**, and is reported that way.
 
 *What would remove it:* a randomised or balanced action order inside each cell,
-fixed before the run. That is a change for a future matrix. Changing the runner
-mid-campaign would split the campaign across two designs, which is worse than
-the limitation.
+fixed before the run. See `RANDOMISED_ORDER.md`, which specifies that matrix ---
+one arm, 1296 branches, about 7.3 hours --- and the criterion it is read against,
+written before it is run. It is **not** a change to the running campaign:
+changing the runner mid-campaign would split the campaign across two designs,
+which is worse than the limitation.
+
+*And whether it must be run before submission.* If the central claim were only
+that repeated execution has measurable dispersion, this could be future work.
+The central claim is C2, the share of between-action comparisons an evaluation
+can resolve, and that share inherits the confound. So the randomised arm is
+**required before submission**, not deferred --- the alternative is betting that
+a reviewer raises it only at major revision, and that is the bet this project has
+already lost three times.
 
 *Permitted interpretation, and this wording travels with every p-value the
 permutation test produces:*
@@ -51,12 +78,22 @@ permutation test produces:*
 > guaranteed by the experimental design. Results are therefore reported as
 > conditional sensitivity analyses rather than design-valid randomization tests.
 
-*And the part that is not a limitation.* A fixed action order is what an
-evaluation harness ordinarily does. An evaluation that executes candidate actions
-in a fixed sequence and reports the differences as action effects has this
-confound whether or not it says so, and most do not say so. That is a finding
-about benchmark design and it belongs in the paper as one --- stated as a
-requirement on reporting, not as a defence of our own design.
+*A hypothesis, labelled as one, and NOT claimed in the paper.* It is plausible
+that a fixed action order is what an evaluation harness ordinarily does, and that
+any evaluation executing candidates in a fixed sequence and reporting the
+differences as action effects carries this confound whether or not it says so.
+**That is a conjecture about other people's harnesses and this campaign
+establishes none of it.** Making it a contribution would need one of two things
+we do not have: a systematic reading of published benchmarking protocols showing
+the practice is widespread and uncontrolled, or an experiment showing that
+changing the order alone changes the comparative conclusion.
+
+What this campaign does establish is narrower and is the only thing stated: **in
+this design, action identity is perfectly confounded with execution position.**
+It is a demonstrable methodological limitation of one testbed and a requirement
+on reporting --- publish the execution order, randomise or balance it --- and it
+is not evidence of an industry-wide defect. The paper says exactly that and no
+more.
 
 ## L-REPEATS-001 --- At three repeats no comparison can be rejected
 

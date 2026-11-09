@@ -16,6 +16,7 @@ def row(**kw):
                  "recompute_command": "true", "level": "A",
                  "analysis_host_required": "no",
                  "publicly_reproducible": "yes",
+                 "claim_criticality": "supporting",
                  "validation_status": "unverified", "limitations": ""})
     base.update(kw)
     return base
@@ -83,3 +84,32 @@ def test_the_schema_check_runs_as_a_command():
          "--schema-only"], cwd=ROOT, capture_output=True, text=True)
     assert out.returncode == 0, out.stdout + out.stderr
     assert "schema consistent" in out.stdout
+
+
+def test_a_central_claim_cannot_rest_on_a_non_reproducible_result():
+    """Nineteen checkable side tables do not pay for one unverifiable central one."""
+    p = ada.check_schema([row(claim_criticality="central", level="C",
+                              publicly_reproducible="no",
+                              analysis_host_required="yes",
+                              limitations="L-REPRO-001")])
+    assert any("CENTRAL claim and is not publicly reproducible" in x for x in p)
+
+
+def test_supporting_results_may_be_non_reproducible_if_declared():
+    assert ada.check_schema([row(claim_criticality="supporting", level="C",
+                                 publicly_reproducible="no",
+                                 analysis_host_required="yes",
+                                 limitations="L-REPRO-001")]) == []
+
+
+def test_criticality_must_be_one_of_the_three_values():
+    p = ada.check_schema([row(claim_criticality="important")])
+    assert any("claim_criticality" in x for x in p)
+
+
+def test_the_checked_in_register_declares_criticality_everywhere():
+    rows = ada.load(str(ROOT / "data_availability.csv"))
+    assert all(r["claim_criticality"] in ada.CRITICALITY for r in rows)
+    central = [r for r in rows if r["claim_criticality"] == "central"]
+    assert central, "no central results declared"
+    assert all(r["publicly_reproducible"] != "no" for r in central)

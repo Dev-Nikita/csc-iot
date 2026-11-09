@@ -65,6 +65,14 @@ of contrasts, or if it agrees with the repeat-mean winner at essentially every
 contrast while the unresolved share is also small --- the two together would mean
 the repetition buys nothing.
 
+**C2 inherits L-ORDER-001, and this is stated here rather than in a footnote.**
+The resolvable share is a function of the band and of the between-action gap, and
+the gap is confounded with execution position. A gap distorted by position can
+make a comparison look resolvable or unresolvable when it is not, so C2 is a
+claim about what *this evaluation, executed in this order,* can resolve --- and
+becomes a claim about action distinguishability only once the randomised-order
+arm specified in `RANDOMISED_ORDER.md` has been run and read.
+
 Note the asymmetry that must stay in the text: repetition changes the winner at
 only **2 of 454** resolved anchors. The claim is **not** that repetition gives a
 different answer. It is that repetition gives the count of questions the evidence

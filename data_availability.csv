@@ -1,24 +1,24 @@
-claim_id,result_id,paper_location,source_run,derived_file,recompute_command,level,analysis_host_required,publicly_reproducible,validation_status,limitations
-C1,eta_J_bands,tab:bands,b5-matrix-v2;d45-matrix-v1;d6-pilot-v2,jobs.csv,python3 -I analysis/band_sensitivity.py {root}/jobs.csv,A,no,yes,unverified,
-C1,eta_J_bands_single,tab:bands-single,b5-matrix-v2,jobs.csv,python3 -I analysis/band_sensitivity.py {root}/jobs.csv,A,no,yes,unverified,
-C1,eta_J_bands_factored,tab:bands-factored,b5-matrix-v2;d45-matrix-v1,jobs.csv,python3 -I analysis/band_sensitivity.py {root}/jobs.csv,A,no,yes,unverified,
-C1,independent_units_8118,sec:results-b5 text,b5-matrix-v2;d45-matrix-v1;d6-pilot-v2,units_and_sensitivity_output.txt,python3 -I analysis/independent_units.py {package},A,no,yes,unverified,
-C2,value_of_protocol,tab:vop,b5-matrix-v2;d45-matrix-v1;d6-pilot-v2,value_of_protocol_output.txt,python3 -I analysis/value_of_protocol.py {package} b5-matrix-v2 d45-matrix-v1 d6-pilot-v2,A,no,yes,unverified,
-C2,vop_four_criteria,tab:vop,b5-matrix-v2;d45-matrix-v1;d6-pilot-v2,value_of_protocol_output.txt,python3 -I analysis/value_of_protocol.py {package} b5-matrix-v2 d45-matrix-v1 d6-pilot-v2,A,no,yes,unverified,
-C3,identifiability_187,sec:results-identifiability,d45-matrix-v1,structural.csv,python3 -I analysis/check_anchor.py --observability-audit {root},A,no,yes,unverified,
-C3,cost_sensitivity,sec:results-cost,b5-matrix-v2;d45-matrix-v1,jobs.csv,python3 -I analysis/cost_sensitivity.py {root},A,no,yes,unverified,L-COST-001
-C4,rcaeval_hit1_flip,tab:rcaeval,RE1-375-cases,rcaeval_summary.csv,python3 -I analysis/rcaeval_reanalysis.py {rcaeval_root},B,no,partial,unverified,L-RCAEVAL-001
-C4,rcaeval_replication,tab:replication-sensitivity,RE1-375-cases,rcaeval_summary.csv,python3 -I analysis/rcaeval_reanalysis.py {rcaeval_root},B,no,partial,unverified,L-RCAEVAL-001
-C5,mode_comparison,sec:results-modes,bdg2-f-s42;bdg2-quiescence-s42;bdg2-reset-s42,mode-comparison-bdg2.txt,python3 -I analysis/mode_comparison.py {raw} --full bdg2-f-s42 --ablated bdg2-quiescence-s42 --ablated bdg2-reset-s42,A,no,yes,unverified,L-REPEATS-001
-C6,seed_variance,sec:results-seeds,bdg2-d-k1-s42;bdg2-d-k2-s42;bdg2-d-k3-s42;bdg2-d-k4-s42;bdg2-d-k5-s42,TBD,TBD,A,no,yes,unverified,L-SEED-001;L-REPEATS-001
-C7,permutation_comparator,sec:results-comparator,bdg2-f-s42,jobs.csv,python3 -I analysis/paired_comparator.py {root}/jobs.csv --by-point,A,no,yes,unverified,L-ORDER-001;L-REPEATS-001
-C7,order_effects,sec:results-comparator,bdg2-f-s42,jobs.csv,python3 -I analysis/order_effects.py {root}/jobs.csv,A,no,yes,unverified,L-ORDER-001
--,crc_threshold,sec:results-crc,b5-matrix-v2,crc_ledger.csv,python3 -I analysis/recompute_crc_independent.py {package},A,no,yes,unverified,
--,crc_replay_sensitivity,sec:results-crc,b5-matrix-v2,crc_replay_sensitivity_output.txt,python3 -I analysis/crc_replay_sensitivity.py {package},A,no,yes,unverified,
--,decision_methods,tab:decision,b5-matrix-v2;d45-matrix-v1,decisions.csv,python3 -I analysis/evaluate.py {root} {root}/jobs.csv --delta 0.10,A,no,yes,unverified,
--,prediction_mae,tab:prediction,b5-matrix-v2;d45-matrix-v1,structural.csv,python3 -I analysis/structural.py {root} {root}/jobs.csv,A,no,yes,unverified,
--,predictor_retrain,tab:prediction challenger column,b5-matrix-v2,NOT PUBLISHED,python3 -m intelligence.training.train --config experiments/configs/model.yaml,C,yes,no,unverified,L-REPRO-001
--,spanning_holdout,tab:spanning,b5-matrix-v2,jobs.csv,python3 -I analysis/regime_holdout.py {root} {root}/jobs.csv --regime spanning,A,no,yes,unverified,
--,run_inventory,tab:runs,all,run_inventory.csv,python3 -I analysis/make_run_inventory.py {raw},A,no,yes,unverified,
--,scenario_design,tab:scenarios,all,scenarios.json,python3 -I scripts/gen_campaign_scenarios.py --out /dev/stdout,A,no,yes,unverified,
--,accounting_audit,sec:results-audit,b5-matrix-v2;d45-matrix-v1;d6-pilot-v2,audit output,python3 -I analysis/audit_accounting.py {root},B,no,partial,unverified,L-PACKAGE-001
+claim_id,result_id,paper_location,source_run,derived_file,recompute_command,level,analysis_host_required,publicly_reproducible,claim_criticality,validation_status,limitations
+C1,eta_J_bands,tab:bands,b5-matrix-v2;d45-matrix-v1;d6-pilot-v2,jobs.csv,python3 -I analysis/band_sensitivity.py {root}/jobs.csv,A,no,yes,central,unverified,
+C1,eta_J_bands_single,tab:bands-single,b5-matrix-v2,jobs.csv,python3 -I analysis/band_sensitivity.py {root}/jobs.csv,A,no,yes,central,unverified,
+C1,eta_J_bands_factored,tab:bands-factored,b5-matrix-v2;d45-matrix-v1,jobs.csv,python3 -I analysis/band_sensitivity.py {root}/jobs.csv,A,no,yes,central,unverified,
+C1,independent_units_8118,sec:results-b5 text,b5-matrix-v2;d45-matrix-v1;d6-pilot-v2,units_and_sensitivity_output.txt,python3 -I analysis/independent_units.py {package},A,no,yes,central,unverified,
+C2,value_of_protocol,tab:vop,b5-matrix-v2;d45-matrix-v1;d6-pilot-v2,value_of_protocol_output.txt,python3 -I analysis/value_of_protocol.py {package} b5-matrix-v2 d45-matrix-v1 d6-pilot-v2,A,no,yes,central,unverified,
+C2,vop_four_criteria,tab:vop,b5-matrix-v2;d45-matrix-v1;d6-pilot-v2,value_of_protocol_output.txt,python3 -I analysis/value_of_protocol.py {package} b5-matrix-v2 d45-matrix-v1 d6-pilot-v2,A,no,yes,central,unverified,
+C3,identifiability_187,sec:results-identifiability,d45-matrix-v1,structural.csv,python3 -I analysis/check_anchor.py --observability-audit {root},A,no,yes,central,unverified,
+C3,cost_sensitivity,sec:results-cost,b5-matrix-v2;d45-matrix-v1,jobs.csv,python3 -I analysis/cost_sensitivity.py {root},A,no,yes,supporting,unverified,L-COST-001
+C4,rcaeval_hit1_flip,tab:rcaeval,RE1-375-cases,rcaeval_summary.csv,python3 -I analysis/rcaeval_reanalysis.py {rcaeval_root},B,no,partial,central,unverified,L-RCAEVAL-001
+C4,rcaeval_replication,tab:replication-sensitivity,RE1-375-cases,rcaeval_summary.csv,python3 -I analysis/rcaeval_reanalysis.py {rcaeval_root},B,no,partial,central,unverified,L-RCAEVAL-001
+C5,mode_comparison,sec:results-modes,bdg2-f-s42;bdg2-quiescence-s42;bdg2-reset-s42,mode-comparison-bdg2.txt,python3 -I analysis/mode_comparison.py {raw} --full bdg2-f-s42 --ablated bdg2-quiescence-s42 --ablated bdg2-reset-s42,A,no,yes,central,unverified,L-REPEATS-001
+C6,seed_variance,sec:results-seeds,bdg2-d-k1-s42;bdg2-d-k2-s42;bdg2-d-k3-s42;bdg2-d-k4-s42;bdg2-d-k5-s42,TBD,TBD,A,no,yes,central,unverified,L-SEED-001;L-REPEATS-001
+C7,permutation_comparator,sec:results-comparator,bdg2-f-s42,jobs.csv,python3 -I analysis/paired_comparator.py {root}/jobs.csv --by-point,A,no,yes,supporting,unverified,L-ORDER-001;L-REPEATS-001
+C7,order_effects,sec:results-comparator,bdg2-f-s42,jobs.csv,python3 -I analysis/order_effects.py {root}/jobs.csv,A,no,yes,supporting,unverified,L-ORDER-001
+-,crc_threshold,sec:results-crc,b5-matrix-v2,crc_ledger.csv,python3 -I analysis/recompute_crc_independent.py {package},A,no,yes,supporting,unverified,
+-,crc_replay_sensitivity,sec:results-crc,b5-matrix-v2,crc_replay_sensitivity_output.txt,python3 -I analysis/crc_replay_sensitivity.py {package},A,no,yes,supporting,unverified,
+-,decision_methods,tab:decision,b5-matrix-v2;d45-matrix-v1,decisions.csv,python3 -I analysis/evaluate.py {root} {root}/jobs.csv --delta 0.10,A,no,yes,supporting,unverified,
+-,prediction_mae,tab:prediction,b5-matrix-v2;d45-matrix-v1,structural.csv,python3 -I analysis/structural.py {root} {root}/jobs.csv,A,no,yes,supporting,unverified,
+-,predictor_retrain,tab:prediction challenger column,b5-matrix-v2,NOT PUBLISHED,python3 -m intelligence.training.train --config experiments/configs/model.yaml,C,yes,no,supporting,unverified,L-REPRO-001
+-,spanning_holdout,tab:spanning,b5-matrix-v2,jobs.csv,python3 -I analysis/regime_holdout.py {root} {root}/jobs.csv --regime spanning,A,no,yes,supporting,unverified,
+-,run_inventory,tab:runs,all,run_inventory.csv,python3 -I analysis/make_run_inventory.py {raw},A,no,yes,provenance,unverified,
+-,scenario_design,tab:scenarios,all,scenarios.json,python3 -I scripts/gen_campaign_scenarios.py --out /dev/stdout,A,no,yes,provenance,unverified,
+-,accounting_audit,sec:results-audit,b5-matrix-v2;d45-matrix-v1;d6-pilot-v2,audit output,python3 -I analysis/audit_accounting.py {root},B,no,partial,central,unverified,L-PACKAGE-001

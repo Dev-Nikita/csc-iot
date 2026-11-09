@@ -35,8 +35,9 @@ REGISTER = "data_availability.csv"
 REQUIRED = ["claim_id", "result_id", "paper_location", "source_run",
             "derived_file", "recompute_command", "level",
             "analysis_host_required", "publicly_reproducible",
-            "validation_status", "limitations"]
+            "claim_criticality", "validation_status", "limitations"]
 LEVELS = {"A", "B", "C"}
+CRITICALITY = {"central", "supporting", "provenance"}
 
 
 def load(path=REGISTER):
@@ -80,6 +81,18 @@ def check_schema(rows):
                 r["publicly_reproducible"] == "yes":
             problems.append(f"line {i}: {rid} needs the analysis host and "
                             f"claims public reproducibility")
+        if r["claim_criticality"] not in CRITICALITY:
+            problems.append(f"line {i}: claim_criticality "
+                            f"{r['claim_criticality']!r} not in "
+                            f"{sorted(CRITICALITY)}")
+        # Nineteen checkable side tables do not compensate for one unverifiable
+        # result that a central claim rests on. The register must make that
+        # visible rather than let a count of levels imply the opposite.
+        if r["claim_criticality"] == "central" and \
+                r["publicly_reproducible"] == "no":
+            problems.append(f"line {i}: {rid} carries a CENTRAL claim and is "
+                            f"not publicly reproducible. Either publish what it "
+                            f"needs, or the claim it supports must be lowered.")
         if r["publicly_reproducible"] == "no" and not r["limitations"].strip():
             problems.append(f"line {i}: {rid} is not publicly reproducible and "
                             f"names no limitation; say what a reader cannot check")
@@ -119,6 +132,25 @@ def main():
         by_level.setdefault(r["level"], []).append(r["result_id"])
     for level in sorted(by_level):
         print(f"  level {level}: {len(by_level[level])} results")
+    crit = {}
+    for r in rows:
+        crit.setdefault(r["claim_criticality"], []).append(r)
+    print("  by criticality, which is what a level count hides:")
+    for c in sorted(crit):
+        pub = sum(1 for r in crit[c] if r["publicly_reproducible"] == "yes")
+        print(f"    {c:11s} {len(crit[c]):3d} results, {pub} publicly "
+              f"reproducible")
+    # The question a reviewer asks first, answered without being asked.
+    weak = [r for r in rows if r["claim_criticality"] == "central"
+            and r["publicly_reproducible"] != "yes"]
+    if weak:
+        print("  CENTRAL results a reader cannot fully recompute from the "
+              "archive alone:")
+        for r in weak:
+            print(f"    {r['result_id']:24s} level {r['level']}  "
+                  f"{r['publicly_reproducible']:8s} {r['limitations']}")
+        print("    These are what the data-availability statement must name "
+              "explicitly.")
 
     if args.schema_only:
         return 1 if problems else 0
