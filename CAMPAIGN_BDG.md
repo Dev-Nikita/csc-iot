@@ -577,3 +577,39 @@ Nothing on disk depended on it, because the orchestrator receives the id through
 the stamper calls, and three assertions: the two serialisations agree, a
 recreated identical topology keeps its id, and a real change of impairment
 changes it.
+
+**13, 2026-11-09. Mode F completed and the prefix gate stopped the chain; the
+split is a reproduction, not a failure of the run.**
+
+`bdg2-f-s42` wrote all 1296 branches with zero refusals. Five of 72 cells hold
+two prefix states at group sizes **[17, 1]**: `c09-a14`, `c09-a20`, `c09-a26`,
+`c09-a30`, `c10-a26`. `c09` and `c10` are the campaign's two **D5** points and
+every affected anchor is 14 or later, on an anchor list of 2, 8, 14, 20, 26, 30.
+
+The same pattern has now appeared three times: 13 of 200 cells of
+`d45-matrix-v1`, all D5 at late anchors, with nil measured impact; 5 of 72 in
+`bdg-b-s42` on the old stack, three of them the same cells as here; and 5 of 72
+here, at six repeats, on a different stack. Prefix identity under D5 at a late
+anchor fails at a low rate across repeat counts and substrates. That is a
+property of the mechanism and the instrument and it belongs in the paper as a
+measured rate, with the mechanism stated as an open question rather than
+explained.
+
+*The chain stopped because the gate had only one answer.* `m2prime_report.py`
+refused the matrix, which is right for an unqualified use and wrong as the end
+of the story: it would have discarded 1291 good replays. `PREFIX_EXCLUSION.md`
+now defines what a split cell licenses, frozen before any `J_obs` of this matrix
+existed --- the chain had not reached `jobs.py`, so no outcome could have shaped
+the policy. The primary reading excludes the branch outside its cell's majority
+prefix state, decided on the anchor hash alone, 5 branches of 1296; the
+cell-level and A-prime readings are computed and reported beside it, and a cell
+with no strict majority is excluded whole rather than resolved by a coin-flip.
+
+`analysis/prefix_exclusion.py` writes the decision into the matrix,
+`analysis/jobs.py` applies it in the one place every downstream table reads, and
+the gate is now satisfied by a frozen policy that matches the splits on disk ---
+and refuses when it does not. A test negates every objective value in a matrix
+and asserts the decision is byte-identical.
+
+*Cost of the stop:* five days of idle machine. The chain resumes at mode Q
+without rerunning F.

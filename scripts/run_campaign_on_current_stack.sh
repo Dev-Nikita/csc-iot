@@ -116,6 +116,20 @@ run_matrix bdg2-quiescence-s42 3 quiescence || { echo "STOP: Q did not complete"
 step "3/6  mode R as bdg2-reset-s42"
 run_matrix bdg2-reset-s42 3 reset || { echo "STOP: R did not complete"; exit 1; }
 
+# A split cell is a defect that the policy in PREFIX_EXCLUSION.md resolves from
+# anchor hashes alone. It is frozen into each matrix BEFORE jobs.py runs, which
+# is what keeps the decision independent of the objective. mode F's first run
+# stopped here with five cells at group sizes [17, 1] and 1291 good replays that
+# a blanket refusal would have thrown away.
+step "3b/6  freezing the prefix-exclusion decision, before any J_obs exists"
+for n in bdg2-f-s42 bdg2-quiescence-s42 bdg2-reset-s42; do
+  [ -d "data/raw/$STACK/$n" ] || continue
+  [ -f "data/raw/$STACK/$n/jobs.csv" ] && {
+    echo "NOTE: $n already has jobs.csv; its exclusion set must predate it"; }
+  python3 -I analysis/prefix_exclusion.py "data/raw/$STACK/$n" --write \
+    || { echo "STOP: the exclusion decision for $n could not be frozen"; exit 1; }
+done
+
 step "4/6  validating all three -- this refuses a void ablation"
 ok=1
 for n in bdg2-f-s42 bdg2-quiescence-s42 bdg2-reset-s42; do

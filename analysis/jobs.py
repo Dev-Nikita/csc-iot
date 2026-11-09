@@ -305,10 +305,27 @@ def main():
                       "analysis/calibrate_budget.py.", file=sys.stderr)
                 return 2
 
+    # Branches a split cell cannot license, decided from anchor hashes alone
+    # under the policy frozen in PREFIX_EXCLUSION.md and recorded in the matrix
+    # before any J_obs existed. Applied HERE, once, because every band, table
+    # and model result downstream reads jobs.csv: filtering in each analysis
+    # separately is how two of them end up disagreeing about what ran.
+    import prefix_exclusion
+    excl_doc = prefix_exclusion.load(args.root)
+    excluded = set(excl_doc["excluded_branches"]) if excl_doc else set()
+    if excluded:
+        print(f"prefix exclusions: {len(excluded)} branches under policy "
+              f"{excl_doc['policy']}, from {len(excl_doc['split_cells'])} split "
+              f"cells. See {args.root}/prefix_exclusions.json", file=sys.stderr)
+
     rows = []
+    skipped = []
     matrix = branches.read_matrix(args.root)
     pattern = branches.branch_pattern(args.root)
     for d in sorted(glob.glob(os.path.join(args.root, pattern))):
+        if os.path.basename(d) in excluded:
+            skipped.append(os.path.basename(d))
+            continue
         path = os.path.join(d, "outcome.json")
         if not os.path.exists(path):
             continue
@@ -346,6 +363,12 @@ def main():
 
     if not rows:
         print(f"no branches with outcomes under {args.root}", file=sys.stderr)
+        return 2
+    if excluded and set(skipped) != excluded:
+        print(f"REFUSED: the exclusion set names {len(excluded)} branches and "
+              f"{len(set(skipped))} of them were found under {args.root}. An "
+              f"exclusion that does not match the branches on disk means the "
+              f"set belongs to a different matrix.", file=sys.stderr)
         return 2
 
     # A set that mixes reconstructed legacy factors with recorded ones is not a

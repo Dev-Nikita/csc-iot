@@ -331,6 +331,41 @@ def main():
         print(f"  cell. Whether the declared fault took effect is checked on")
         print(f"  throughput by audit_accounting.py, not on this hash.")
 
+    # A split cell is a real defect and the matrix must not be scored as if it
+    # were not. It is not, however, a void matrix: PREFIX_EXCLUSION.md defines
+    # what a split cell licenses, and when that decision has been frozen into
+    # the matrix the gate is satisfied by it rather than by pretending the split
+    # is absent. `bdg2-f-s42` completed 1296 branches with zero refusals and
+    # five cells at group sizes [17, 1]; refusing the whole run would have
+    # discarded 1291 good replays.
+    if bad_prefix:
+        import prefix_exclusion
+        frozen = prefix_exclusion.load(args.root)
+        if frozen is not None:
+            covered = {c["cell"] for c in frozen["split_cells"]}
+            found = {label for label, _, _, _ in split_cells}
+            if covered == found:
+                print("")
+                print(f"PREFIX SPLITS COVERED BY POLICY "
+                      f"{frozen['policy']}: {len(found)} cells, "
+                      f"{len(frozen['excluded_branches'])} branches excluded by "
+                      f"anchor state alone.")
+                for rec in frozen["split_cells"]:
+                    print(f"  {rec['cell']}: sizes {rec['group_sizes']} -> "
+                          f"{rec['resolution']}")
+                print("  The objective is computed without them; the cell-level "
+                      "and A-prime readings")
+                print("  are reported beside the primary one, per "
+                      "PREFIX_EXCLUSION.md.")
+                bad_prefix = False
+            else:
+                print("", file=sys.stderr)
+                print(f"REFUSED: the frozen exclusion set covers {sorted(covered)} "
+                      f"and the matrix splits in {sorted(found)}. A policy that "
+                      f"does not match what is on disk is not a policy.",
+                      file=sys.stderr)
+                return 1
+
     if bad_prefix:
         print("", file=sys.stderr)
         print(f"PREFIX IDENTITY FAILURE: {len(split_cells)} of {len(by_cell)} "
@@ -339,6 +374,10 @@ def main():
               "the actions compared", file=sys.stderr)
         print("  there were not applied to the same state and the comparison is "
               "not licensed.", file=sys.stderr)
+        print("  If this is the known D5 late-anchor split, freeze the "
+              "exclusion with", file=sys.stderr)
+        print("  analysis/prefix_exclusion.py --write and read "
+              "PREFIX_EXCLUSION.md first.", file=sys.stderr)
         for label, n, distinct, sizes in split_cells[:30]:
             print(f"    {label}: {n} branches, {distinct} states, "
                   f"group sizes {sizes}", file=sys.stderr)
