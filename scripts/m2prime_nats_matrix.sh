@@ -504,6 +504,26 @@ for sidx in $(seq 1 "$SCENARIO_COUNT"); do
 done
 cleanup
 
+# The prefix-exclusion decision is frozen HERE, by the runner, immediately after
+# the last branch and before the matrix is validated or scored.
+#
+# This is not a convenience. The decision reads anchor hashes and nothing else,
+# and at this moment no J_obs for this matrix exists anywhere -- jobs.py has not
+# run and cannot have run. Writing it here therefore makes the ordering that
+# PREFIX_EXCLUSION.md requires a property of the pipeline instead of a property
+# of whoever remembers to run a script, and it is the strongest form that
+# guarantee can take.
+#
+# It also fixes a real stoppage. m2prime_report.py refuses a matrix with split
+# cells unless a frozen policy covers them, the campaign chain froze the policy
+# only after all three modes had run, and so every mode with a D5 late-anchor
+# split stopped the chain at its own validation: mode F cost five idle days and
+# mode Q about forty hours. The freeze cannot come after the gate that needs it.
+if [ -x /usr/bin/python3 ] || command -v python3 >/dev/null; then
+  python3 -I analysis/prefix_exclusion.py "$OUT" --write \
+    || echo "WARN: the prefix-exclusion decision could not be frozen; the report below will refuse a split matrix"
+fi
+
 if [ "$HORIZON" -eq 0 ]; then
   python3 analysis/m2prime_report.py --prefix-only "$OUT" | tee "$OUT/report.txt"
 else

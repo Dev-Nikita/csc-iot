@@ -130,7 +130,11 @@ run_matrix bdg2-reset-s42 3 reset || { echo "STOP: R did not complete"; exit 1; 
 # is what keeps the decision independent of the objective. mode F's first run
 # stopped here with five cells at group sizes [17, 1] and 1291 good replays that
 # a blanket refusal would have thrown away.
-step "3b/6  freezing the prefix-exclusion decision, before any J_obs exists"
+# The runner now freezes each matrix's decision as its last act, before its own
+# validation, so this step only CONFIRMS. prefix_exclusion.py --write is
+# idempotent on an unchanged decision and refuses a changed one, which is
+# exactly the check wanted here.
+step "3b/6  confirming each matrix's frozen prefix-exclusion decision"
 for n in bdg2-f-s42 bdg2-quiescence-s42 bdg2-reset-s42; do
   [ -d "data/raw/$STACK/$n" ] || continue
   [ -f "data/raw/$STACK/$n/jobs.csv" ] && {

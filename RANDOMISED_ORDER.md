@@ -52,6 +52,66 @@ once in the middle six and once in the last six. The constraint is part of the
 rule, not a retry until the data look good, and the generator refuses a cell it
 cannot satisfy rather than relaxing it.
 
+## The order effect is identified INSIDE this arm, not by comparing two matrices
+
+This is the main design decision and it was wrong in the first draft of this
+file, which made the F-against-`forder` comparison primary.
+
+In `bdg2-f-s42` action identity and execution position are the same column. In
+`bdg2-forder-s42` they are **orthogonal by construction**: every action appears
+in every third of the sequence, so position varies within action and action
+varies within position. The order effect is therefore estimable **within this
+one matrix**, from its own `exec_index`, with no second matrix involved.
+
+That matters because a comparison between two matrices run two days apart
+cannot separate the order of execution from whatever changed on the host in
+between --- a point raised in review and a correct one. The within-arm estimate
+does not have that problem: both the early and the late positions of every
+action occur inside the same cell, minutes apart, on one stack.
+
+So the analysis is in two parts with different standing:
+
+* **Primary, within `forder`:** the effect of execution position on `J_obs`,
+  estimated with action held fixed, and the effect of action with position
+  balanced. If the position effect is small relative to the band, the confound
+  in the existing matrices is bounded by a measurement taken where it is
+  identifiable.
+* **Secondary, `forder` against `f`:** does the headline unresolved share move?
+  This is a robustness check on the published number and it inherits the
+  two-days-apart problem, so it is reported as robustness and never as an
+  attribution of the difference to order alone. Everything else is held
+  identical --- points, anchors, repeats, actions, horizon, period, emission
+  spread, master and netem seed, stack id --- and the stack fingerprint and
+  `startup.json` of both arms are reported beside the comparison so that any
+  change is visible rather than assumed away.
+
+## Randomization inference must use the mechanism that was actually used
+
+The order is a **constrained** draw: each action appears in each third of the
+eighteen positions. A reference distribution that permutes the action label
+freely over all eighteen positions is therefore not the distribution the design
+induces, and a test built on it is not a randomization test of this experiment.
+
+Two things are kept apart, and the code must not blur them:
+
+* **Design-based randomization inference**, for the sharp null that assignment
+  of an action to a position has no effect. This is valid *because* the
+  assignment mechanism is known and was executed as specified, and its reference
+  set is **the set of assignments the constrained mechanism could have
+  produced** --- enumerated or sampled from the same constrained draw, never
+  from free permutations.
+* **The permutation test of `analysis/paired_comparator.py`**, whose exactness
+  rests on exchangeability of the label. Randomisation makes that assumption
+  defensible here in a way it is not in the fixed-order matrices, but it does
+  not make the test valid for every null one might state --- equal means with
+  unequal dispersion remains outside it.
+
+The generator therefore emits the realised assignment **and** the constrained
+reference set it was drawn from, and the analysis asserts that every member of
+the reference set satisfies the thirds constraint before using it. A test is
+added for exactly that: a reference set containing a free permutation is a bug,
+not a conservative choice.
+
 ## The reading criterion, decided now
 
 The comparison is `bdg2-forder-s42` against `bdg2-f-s42`: same points, same
@@ -80,6 +140,26 @@ Eight points is chosen against an observed unresolved share of 38--55 %: large
 enough that ordinary movement between two runs of 1296 branches will not trip
 it, small enough that it would catch an effect able to change the paper's
 headline range. It is written here before either number exists.
+
+**And it is a robustness criterion, not a proof of equivalence.** An observed
+difference of four points does not establish that the true difference is under
+eight. So the secondary comparison carries **two verdicts**, decided here:
+
+| check | what it licenses |
+|---|---|
+| observed difference <= 8 pp | the descriptive robustness criterion is met |
+| the uncertainty interval for the difference lies entirely within +/- 8 pp | the stronger statement: equivalence within this design |
+
+The interval is computed on the **paired** differences --- both arms hold the
+same 72 cells, so the cells pair by construction --- resampling **design
+points**, because cells inside a point share the fault schedule and the workload
+stream. If the first check passes and the second is inconclusive, the result is
+reported as robustness without claiming statistical equivalence, and **no further
+arm is run to settle it**.
+
+The separate criterion "no cell resolved in both arms names a different winner"
+stays, as a strict diagnostic. Over 72 cells it is not an error-rate guarantee
+and is not described as one.
 
 ## What this arm does not do
 
