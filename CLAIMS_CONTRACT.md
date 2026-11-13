@@ -155,6 +155,19 @@ the scenarios, not only under the one master seed the published matrices used.
    property of the seed and must be reported as one;
 3. the sign of the resolvable/unresolved split is the same in every arm.
 
+**Rule 2's operationalisation, fixed 2026-11-13 before part D's numbers were
+read.** The frozen sentence names two variances without defining their units, so
+the assignment is written down rather than chosen at reading time. Per (point,
+seed) compute the unresolved share over that point's cells --- a 12 x 5 table
+whose cells are the declared independent units. Then `sigma2_seed` is the
+variance of the five seed means of those point-level shares, `sigma2_within` is
+the mean over seeds of the variance of the twelve point-level shares inside that
+seed, and rule 2 holds when `sigma2_seed <= 4 * sigma2_within`. Reading the seed
+means as the between-seed quantity and the spread across points inside a seed as
+the within-seed quantity is the only assignment consistent with "design point x
+seed is the independent unit". `analysis/seed_variance.py` implements it and
+`tests/test_seed_variance.py` asserts it, including a case built to fail it.
+
 **Refuted if** any arm resolves essentially everything, or if the between-seed
 spread swamps the effect.
 

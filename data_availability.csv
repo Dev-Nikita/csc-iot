@@ -10,7 +10,7 @@ C3,cost_sensitivity,sec:results-cost,b5-matrix-v2;d45-matrix-v1,jobs.csv,python3
 C4,rcaeval_hit1_flip,tab:rcaeval,RE1-375-cases,rcaeval_summary.csv,python3 -I analysis/rcaeval_reanalysis.py {rcaeval_root},B,no,partial,central,unverified,L-RCAEVAL-001
 C4,rcaeval_replication,tab:replication-sensitivity,RE1-375-cases,rcaeval_summary.csv,python3 -I analysis/rcaeval_reanalysis.py {rcaeval_root},B,no,partial,central,unverified,L-RCAEVAL-001
 C5,mode_comparison,sec:results-modes,bdg2-f-s42;bdg2-quiescence-s42;bdg2-reset-s42,mode-comparison-bdg2.txt,python3 -I analysis/mode_comparison.py {raw} --full bdg2-f-s42 --ablated bdg2-quiescence-s42 --ablated bdg2-reset-s42,A,no,yes,central,unverified,L-REPEATS-001
-C6,seed_variance,sec:results-seeds,bdg2-d-k1-s42;bdg2-d-k2-s42;bdg2-d-k3-s42;bdg2-d-k4-s42;bdg2-d-k5-s42,TBD,TBD,A,no,yes,central,unverified,L-SEED-001;L-REPEATS-001
+C6,seed_variance,sec:results-seeds,bdg2-d-k1-s42;bdg2-d-k2-s42;bdg2-d-k3-s42;bdg2-d-k4-s42;bdg2-d-k5-s42,seed_variance_output.txt,python3 -I analysis/seed_variance.py {raw} --arm bdg2-d-k1-s42 --arm bdg2-d-k2-s42 --arm bdg2-d-k3-s42 --arm bdg2-d-k4-s42 --arm bdg2-d-k5-s42 --reference bdg2-f-s42,A,no,yes,central,unverified,L-SEED-001;L-REPEATS-001
 C7,permutation_comparator,sec:results-comparator,bdg2-f-s42,jobs.csv,python3 -I analysis/paired_comparator.py {root}/jobs.csv --by-point,A,no,yes,supporting,unverified,L-ORDER-001;L-REPEATS-001
 C7,order_effects,sec:results-comparator,bdg2-f-s42,jobs.csv,python3 -I analysis/order_effects.py {root}/jobs.csv,A,no,yes,supporting,unverified,L-ORDER-001
 -,crc_threshold,sec:results-crc,b5-matrix-v2,crc_ledger.csv,python3 -I analysis/recompute_crc_independent.py {package},A,no,yes,supporting,unverified,
