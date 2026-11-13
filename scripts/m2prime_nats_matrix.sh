@@ -79,6 +79,12 @@ ROOT="${ROOT:-data/raw}"
 # left and only the declared initial reset separates them -- which is what an
 # evaluation that replays without reconstructing looks like. Anything else is
 # refused rather than silently treated as full.
+# The within-cell execution order for the randomised-order arm. Empty means the
+# historical fixed order -- scenario, anchor, action, repeat -- which is what
+# every matrix before 2026-11-13 ran and what L-ORDER-001 records. A schedule
+# makes action identity and execution position independent inside the cell, so
+# the order effect becomes estimable within the arm instead of confounded.
+ORDER_SCHEDULE="${ORDER_SCHEDULE:-}"
 MODE="${MODE:-full}"
 case "$MODE" in
   full|quiescence|reset) ;;
@@ -211,6 +217,8 @@ cat > "$OUT/matrix.json" <<JSON
   "bus_impl": "nats",
   "fresh_topology_per_branch": $([ "$MODE" = reset ] && echo false || echo true),
   "mode": "$MODE",
+  "order_schedule": $([ -n "$ORDER_SCHEDULE" ] && echo "\"$ORDER_SCHEDULE\"" || echo null),
+  "within_cell_order": "$([ -n "$ORDER_SCHEDULE" ] && echo constrained-random || echo fixed-action-blocks)",
   "started_utc": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 }
 JSON
@@ -402,7 +410,7 @@ MANIFEST
   # Whether this branch really got a fresh topology is recorded per branch, so
   # an ablation that silently failed to ablate is visible in the evidence rather
   # than only in the wall clock.
-  echo "{\"startup_attempts\": $attempt, \"tore_down_first\": $tore_down}" > "$dir/startup.json"
+  echo "{\"startup_attempts\": $attempt, \"tore_down_first\": $tore_down, \"exec_index\": ${EXEC_INDEX:-null}, \"cell_exec_index\": ${CELL_EXEC_INDEX:-null}}" > "$dir/startup.json"
   if [ "$started" -ne 1 ]; then
     echo "compose startup failed after $attempt attempts" >"$dir/REFUSED.txt"; return 1
   fi
@@ -489,19 +497,78 @@ print(' '.join(s.lstrip('/') for s in need
   echo "ok $branch"
 }
 
-for sidx in $(seq 1 "$SCENARIO_COUNT"); do
-  for anchor in $ANCHOR_SEQ; do
-    for action in $ACTIONS; do
-      for repeat in $(seq 1 "$REPEATS"); do
-        if ! run_branch "$sidx" "$anchor" "$action" "$repeat"; then
-          echo "REFUSED scenario $sidx a$(printf %02d "$anchor")-$action-r$(printf %02d "$repeat")"
-          echo "FAIL FAST: the incomplete matrix remains on disk for diagnosis"
-          exit 1
-        fi
+EXEC_INDEX=0
+export EXEC_INDEX CELL_EXEC_INDEX
+if [ -n "$ORDER_SCHEDULE" ]; then
+  # Schedule-driven. The order of a cell's branches comes from the file, which
+  # was drawn from the design alone before the run and carries the constrained
+  # reference set the analysis must use. The runner does not draw anything: a
+  # schedule generated at run time could not be checked against the design
+  # afterwards.
+  [ -f "$ORDER_SCHEDULE" ] || { echo "FAIL: $ORDER_SCHEDULE not found"; exit 2; }
+  python3 - "$ORDER_SCHEDULE" "$SCENARIOS" "$ACTIONS" "$REPEATS" "$ANCHOR_SPEC" <<'GUARD' || exit 2
+import json, sys
+sched = json.load(open(sys.argv[1]))
+scen = json.load(open(sys.argv[2]))
+if sched.get("scenarios_hash") != scen.get("scenarios_hash"):
+    sys.exit(f"FAIL: the schedule was drawn for scenario set "
+             f"{sched.get('scenarios_hash')} and this run uses "
+             f"{scen.get('scenarios_hash')}.")
+if sched.get("actions") != sys.argv[3].split():
+    sys.exit(f"FAIL: the schedule's actions {sched.get('actions')} differ from "
+             f"ACTIONS={sys.argv[3]!r}.")
+if int(sched.get("repeats", -1)) != int(sys.argv[4]):
+    sys.exit(f"FAIL: the schedule is for {sched.get('repeats')} repeats and "
+             f"REPEATS={sys.argv[4]}.")
+want = len(scen["scenarios"]) * len(sched["anchors"])
+if len(sched["cells"]) != want:
+    sys.exit(f"FAIL: the schedule covers {len(sched['cells'])} cells and the "
+             f"design needs {want}.")
+k = len(sched["actions"]) * int(sched["repeats"]) // 3
+for c in sched["cells"]:
+    o = c["order"]
+    for j in range(3):
+        if {x.split("|")[0] for x in o[j*k:(j+1)*k]} != set(sched["actions"]):
+            sys.exit(f"FAIL: {c['scenario']}-{c['anchor']} violates the thirds "
+                     f"constraint the schedule claims.")
+print(f"schedule ok: {len(sched['cells'])} cells, hash {sched.get('schedule_hash')}")
+GUARD
+  cp "$ORDER_SCHEDULE" "$OUT/order_schedule.json"
+  while read -r sidx anchor action repeat cellidx; do
+    EXEC_INDEX=$((EXEC_INDEX+1)); CELL_EXEC_INDEX="$cellidx"
+    if ! run_branch "$sidx" "$anchor" "$action" "$repeat"; then
+      echo "REFUSED scenario $sidx a$(printf %02d "$anchor")-$action-r$(printf %02d "$repeat")"
+      echo "FAIL FAST: the incomplete matrix remains on disk for diagnosis"
+      exit 1
+    fi
+  done < <(python3 - "$ORDER_SCHEDULE" "$SCENARIOS" <<'EMIT'
+import json, sys
+sched = json.load(open(sys.argv[1]))
+ids = [s["scenario_id"] for s in json.load(open(sys.argv[2]))["scenarios"]]
+index = {sid: i + 1 for i, sid in enumerate(ids)}
+for c in sched["cells"]:
+    for n, item in enumerate(c["order"], 1):
+        action, rep = item.split("|")
+        print(index[c["scenario"]], int(c["anchor"].lstrip("a")), action,
+              int(rep.lstrip("r")), n)
+EMIT
+)
+else
+  for sidx in $(seq 1 "$SCENARIO_COUNT"); do
+    for anchor in $ANCHOR_SEQ; do
+      for action in $ACTIONS; do
+        for repeat in $(seq 1 "$REPEATS"); do
+          EXEC_INDEX=$((EXEC_INDEX+1)); CELL_EXEC_INDEX=$((EXEC_INDEX))
+          if ! run_branch "$sidx" "$anchor" "$action" "$repeat"; then
+            echo "REFUSED scenario $sidx a$(printf %02d "$anchor")-$action-r$(printf %02d "$repeat")"
+            echo "FAIL FAST: the incomplete matrix remains on disk for diagnosis"
+            exit 1
+          fi
+        done
       done
     done
   done
-done
+fi
 cleanup
 
 # The prefix-exclusion decision is frozen HERE, by the runner, immediately after
