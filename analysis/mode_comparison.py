@@ -86,6 +86,29 @@ def load_matrix(root, name):
             refuse(f"{name} declares mode=reset, yet all {total} branches tore "
                    f"the topology down first. Nothing was ablated.")
 
+    # An arm whose every branch is unlicensed is not a missing file. It is the
+    # ablation's result, and it is categorical: mode R removes the per-branch
+    # teardown, so each branch starts from whatever state its predecessor left,
+    # no cell holds a majority prefix state, and PREFIX_EXCLUSION.md excludes
+    # every cell whole. There is nothing to score and that is the finding --
+    # without the fresh topology the premise that licenses an action comparison
+    # does not hold anywhere, rather than holding a little worse.
+    excl = os.path.join(d, "prefix_exclusions.json")
+    if os.path.exists(excl):
+        doc = read_json(excl)
+        n_excluded = len(doc.get("excluded_branches", []))
+        n_branches = len(glob.glob(os.path.join(d, "*-a*", "anchor.json")))
+        if n_branches and n_excluded == n_branches:
+            return {"name": name, "dir": d, "meta": meta, "rows": [],
+                    "mode": meta.get("mode", "unrecorded"),
+                    "prefix_destroyed": {
+                        "branches": n_branches, "excluded": n_excluded,
+                        "cells": len(doc.get("split_cells", [])),
+                        "whole_cells": len(doc.get("excluded_cells", [])),
+                        "states": sorted({c["distinct_states"]
+                                          for c in doc.get("split_cells", [])}),
+                    }}
+
     jobs_path = os.path.join(d, "jobs.csv")
     if not os.path.exists(jobs_path):
         refuse(f"{name} has no jobs.csv. Run scripts/analyze_matrix.sh first; "
@@ -421,6 +444,10 @@ def main():
 
     full = load_matrix(args.root, args.full)
     abls = [load_matrix(args.root, n) for n in args.ablated]
+    # An arm with no prefix left cannot be compared and must not be silently
+    # dropped either. It is reported first, in full, as its own result.
+    destroyed = [m for m in abls if m.get("prefix_destroyed")]
+    abls = [m for m in abls if not m.get("prefix_destroyed")]
     require_same_substrate([full] + abls)
     if full["mode"] not in ("full", "unrecorded"):
         refuse(f"--full names {args.full}, whose manifest says mode="
@@ -429,6 +456,27 @@ def main():
         if m["mode"] in ("full", "unrecorded"):
             refuse(f"--ablated names {m['name']}, whose manifest says mode="
                    f"{m['mode']!r}. That is not an ablation.")
+
+    if destroyed:
+        print("PREFIX IDENTITY DESTROYED BY THE ABLATION -- a categorical result")
+        for m in destroyed:
+            pd = m["prefix_destroyed"]
+            print(f"\n  {m['name']}  mode={m['mode']}")
+            print(f"    {pd['excluded']} of {pd['branches']} branches "
+                  f"unlicensed; {pd['cells']} cells split, {pd['whole_cells']} "
+                  f"excluded whole")
+            print(f"    distinct prefix states per split cell: {pd['states']}")
+            print("    No cell holds a majority prefix state, so no action "
+                  "comparison in this")
+            print("    arm is licensed and there is no objective to score. "
+                  "That is the measurement:")
+            print("    removing the fresh topology per branch does not shift "
+                  "the winners, it removes")
+            print("    the premise the comparison rests on -- everywhere, not "
+                  "at the margin.")
+            print("    Read PREFIX_EXCLUSION.md and CAMPAIGN_BDG.md before "
+                  "quoting this.")
+        print()
 
     print("MODE COMPARISON")
     print("rules frozen in MODE_COMPARISON.md before any of these numbers existed")

@@ -226,3 +226,32 @@ def test_the_unmatched_null_reading_is_the_one_that_flatters():
     # while the gap between two five-repeat means is a fraction of that
     assert n5["band"] >= 0.9
     assert n5["resolved"] == 0
+
+
+def test_an_arm_with_every_branch_unlicensed_is_a_result_not_a_missing_file(tmp_path):
+    """Mode R destroys prefix identity in every cell; that is the measurement."""
+    d = _matrix(tmp_path, "r", "reset", _two_action_spec(0.0, 3), 3)
+    (d / "jobs.csv").unlink()
+    names = []
+    for action in ("NO_OP", "REROUTE"):
+        for i in range(1, 4):
+            b = d / f"c01-a01-{action}-r{i:02d}"
+            b.mkdir()
+            # every branch a different prefix state: no majority anywhere
+            (b / "anchor.json").write_text(
+                json.dumps({"hash": f"h-{action}-{i}"}))
+            names.append(b.name)
+    (d / "prefix_exclusions.json").write_text(json.dumps({
+        "policy": "branch-majority-v1",
+        "excluded_branches": sorted(names),
+        "excluded_cells": ["c01-a01"],
+        "split_cells": [{"cell": "c01-a01", "branches": 6,
+                         "distinct_states": 6, "group_sizes": [1] * 6,
+                         "resolution": "cell excluded -- no strict majority"}],
+    }))
+    m = mc.load_matrix(str(tmp_path), "r")
+    assert m["rows"] == []
+    assert m["prefix_destroyed"]["excluded"] == 6
+    assert m["prefix_destroyed"]["branches"] == 6
+    assert m["prefix_destroyed"]["whole_cells"] == 1
+    assert m["prefix_destroyed"]["states"] == [6]

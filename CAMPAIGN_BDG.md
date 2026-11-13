@@ -653,3 +653,34 @@ the raw string **including the runtime-assigned handle**, and the id becomes
 unreproducible by construction. That would explain why no single-field variant
 reproduced it. It is a hypothesis, it is not tested, and the paper claims
 nothing about that id beyond the composition recorded in amendment 1.
+
+**15, 2026-11-13. The campaign is complete, and mode R's answer is categorical.**
+
+5832 branches on one stack, `4df75e0d98c288c5`: F 1296 at six repeats, Q 648,
+R 648, part D 3240 across five derived seeds. Part D ran 18.3 hours and finished
+2026-11-12T18:04Z. Prefix exclusions per arm, decided on anchor hashes alone by
+the runner before any objective existed: F 5, Q 2, D 1, 2, 4, 4, 1 --- the
+familiar low rate under D5 at late anchors --- and **R 648 of 648**.
+
+*That last number is the result, not a failure.* Mode R removes the per-branch
+teardown, so each branch starts from whatever state its predecessor left. No
+cell holds a majority prefix state, every cell is excluded whole, and there is
+no objective to score anywhere in the arm. The fresh topology is therefore not
+a protocol step whose value is marginal: **without it the premise that licenses
+an action comparison does not hold at all** --- not a little worse, not at the
+margin, nowhere. The first reset run was void because it ablated nothing
+(amendment 5); this one ablated, and what it removed was the comparison itself.
+
+This is the cleanest result the mode study can produce and it is adverse to
+nobody: it says one of the protocol's two steps is load-bearing in the strongest
+possible sense, and the other --- the transport-quiescence barrier --- was
+measured on the old substrate to change no resolved winner in 72 cells.
+
+`analysis/mode_comparison.py` now reports an arm whose every branch is
+unlicensed as this categorical finding instead of refusing for a missing
+`jobs.csv`, which is what it did at first and which reads like a pipeline error
+rather than a measurement. The arm is reported in full and excluded from the
+cell-by-cell comparison, because there is nothing there to compare.
+
+*Still to read:* the F-against-Q comparison on this substrate, and part D's five
+arms against the C6 rules. Both are scoring runs over data already on disk.
