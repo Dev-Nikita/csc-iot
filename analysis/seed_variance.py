@@ -211,6 +211,44 @@ def main():
           + ("ok" if ratio <= MAX_VARIANCE_RATIO else "FAIL"))
     rule2 = ratio <= MAX_VARIANCE_RATIO
 
+    # Rule 2 compares seed-to-seed movement of a mean against the spread ACROSS
+    # DESIGN POINTS inside a seed. That spread is dominated by the design --
+    # D3 points resolve, D4 and D5 points do not -- so sigma2_within is large by
+    # construction and the ratio passes almost whatever the seeds do. The rule
+    # was frozen and it passed; it is reported as the weak test it is, and the
+    # statistic that actually answers the question is printed beside it.
+    print("\n  WEAKNESS OF RULE 2, stated rather than left for a reader to "
+          "notice:")
+    print("  sigma2_within above is the spread across design points inside one "
+          "seed, and that")
+    print("  spread is the design's own heterogeneity, not seed noise. The "
+          "ratio therefore")
+    print("  passes nearly automatically. The informative quantity is PAIRED: "
+          "for each point,")
+    print("  how far its share moves across the five seeds.")
+    spreads, variances = [], []
+    print(f"\n  {'point':8s}{'min':>8s}{'max':>8s}{'range':>8s}")
+    for i, p_ in enumerate(points):
+        vals = [table[n][i] for n in args.arm if table[n][i] is not None]
+        if not vals:
+            continue
+        rng = max(vals) - min(vals)
+        spreads.append(rng)
+        variances.append(variance(vals))
+        print(f"  {p_:8s}{min(vals):8.2f}{max(vals):8.2f}{rng:8.2f}")
+    if spreads:
+        zero = sum(1 for x in spreads if x == 0.0)
+        print(f"\n  points whose share does not move at all across the five "
+              f"seeds: {zero} of {len(spreads)}")
+        print(f"  mean across-seed range {mean(spreads):.3f}   "
+              f"max {max(spreads):.3f}   "
+              f"mean across-seed variance {mean(variances):.6f}")
+        print("  This is the paired evidence for seed robustness and it is "
+              "stronger than rule 2.")
+        print("  A point whose share is identical under five independent seeds "
+              "is a point whose")
+        print("  resolvability is set by its fault mechanism, not by the draw.")
+
     print("\nRULE 3  the same sign of the split in every arm")
     signs = {name: (arms[name]["share"] > 0.5) for name in args.arm}
     rule3 = len(set(signs.values())) == 1

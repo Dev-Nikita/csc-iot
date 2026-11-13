@@ -208,3 +208,43 @@ raw tree available on request.
 nothing else. Prose there was how a limitation came to exist in two places with
 two wordings; `tests/test_data_availability.py` now asserts that every id cited
 in the register has a heading here.*
+
+## L-DRIFT-001 --- Host drift over the matrix, measured
+
+**Status: BOUNDED, with numbers.**
+
+`analysis/order_effects.py` on `bdg2-f-s42`:
+
+* **within-block trend nil.** Over 216 (cell, action) blocks the mean signed
+  Spearman rho of `J_obs` against repeat index is **+0.0126**, sign-flip
+  p = 0.67. There is no warm-up or thermal trend inside a block.
+* **across-matrix drift real and sizeable.** Computed inside each action
+  separately, so the action effect is removed by construction, rho against cell
+  order is **+0.29 (NO_OP), +0.35 (THROTTLE), +0.34 (REROUTE)**. `J_obs` rises
+  monotonically over the seven hours the matrix takes, in all three actions
+  alike.
+
+*What this means for each quantity, and the two readings differ.*
+
+The action contrast is formed **inside** a cell, over minutes, and at that scale
+the trend is nil --- which bounds the practical reach of `L-ORDER-001` without
+removing the confound, since position and action remain the same column. The
+**pooled band**, by contrast, is pooled **across** cells drawn from different
+hours of the run, so the hours-scale drift enters it: part of the pooled
+dispersion is host drift rather than replay nondeterminism. That inflates the
+band, which makes the resolvability verdict *conservative* --- more comparisons
+are called unresolvable than replay noise alone would require. The paper must
+say this rather than let a reader infer the opposite.
+
+*Per-action dispersion, which bears on the permutation test's null.* Median
+within-cell range 0.0089 (NO_OP), 0.0100 (THROTTLE), 0.0080 (REROUTE); maxima
+0.062, 0.081, 0.061. The three are close, so a rejection driven by unequal
+spread rather than by location is unlikely here --- the Behrens--Fisher concern
+is live in principle and small in this data, and both halves of that sentence
+are reported.
+
+*What would remove it:* a matrix whose cell order is randomised as well as its
+action order, which would spread each cell's hours-scale position at random.
+That is a further design change and is not in `RANDOMISED_ORDER.md`, which
+addresses the within-cell order only. Noted as a known remaining limitation
+rather than silently folded in.

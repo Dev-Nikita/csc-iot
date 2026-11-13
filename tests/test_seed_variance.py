@@ -81,3 +81,23 @@ def test_a_missing_jobs_csv_is_refused_with_the_command_to_make_it(tmp_path):
     with pytest.raises(SystemExit) as e:
         sv.load_arm(str(tmp_path), "bdg2-d-k1-s42")
     assert "analysis/jobs.py" in str(e.value)
+
+
+def test_the_paired_across_seed_range_is_zero_when_seeds_agree():
+    """The statistic that answers the question rule 2 only gestures at."""
+    table = {"k1": [0.17, 1.00, 0.50], "k2": [0.17, 1.00, 0.50],
+             "k3": [0.17, 1.00, 0.50]}
+    ranges = [max(v) - min(v) for v in zip(*table.values())]
+    assert ranges == [0.0, 0.0, 0.0]
+    assert sv.mean(ranges) == 0.0
+
+
+def test_rule_two_passes_on_a_design_dominated_table_that_says_nothing_about_seeds():
+    """Why rule 2 is weak: between-point heterogeneity inflates its denominator."""
+    # every seed identical, but points range from 0 to 1 -> huge within, zero between
+    table = {f"k{i}": [0.0, 0.17, 0.5, 0.83, 1.0] for i in range(1, 6)}
+    seed_means = [sv.mean(v) for v in table.values()]
+    within = [sv.variance(v) for v in table.values()]
+    ratio = sv.variance(seed_means) / sv.mean(within)
+    assert ratio == 0.0
+    assert sv.mean(within) > 0.1, "the denominator is the design, not seed noise"

@@ -189,7 +189,7 @@ def main():
           "printed below.\n")
 
     rows, any_sampled = [], False
-    decided = resolved = both = test_only = band_only = 0
+    decided = top_decided_n = resolved = both = test_only = band_only = 0
     for key in sorted(cells):
         per_action = cells[key]
         actions = sorted(per_action)
@@ -207,23 +207,37 @@ def main():
         gap = order[1][1] - order[0][1] if len(order) > 1 else 0.0
         cell_resolved = gap > band
 
-        decided += cell_decided
-        resolved += cell_resolved
-        both += cell_decided and cell_resolved
-        test_only += cell_decided and not cell_resolved
-        band_only += cell_resolved and not cell_decided
-        rows.append((key, cell_resolved, cell_decided, gap, tests, verdicts,
-                     order[0][0]))
+        # The band's verdict is about ONE pair: the best action and the
+        # runner-up. "Any pair survives Holm" is a different question, and
+        # putting the two side by side as though they were the same one
+        # overstates what the test adds -- in this data a cell whose top two
+        # differ by a hundredth of the band is still "decided", because the
+        # THIRD action is far from both and that pair is what survives. The
+        # like-for-like comparison is the test on the top pair, and it is the
+        # one the headline must use.
+        top_pair = tuple(sorted((order[0][0], order[1][0]))) \
+            if len(order) > 1 else None
+        top_decided = bool(top_pair and verdicts.get(top_pair, (1, 1, False))[2])
 
-    print(f"{'cell':12s}{'band':>10s}{'test':>8s}{'gap':>11s}"
+        decided += cell_decided
+        top_decided_n += top_decided
+        resolved += cell_resolved
+        both += top_decided and cell_resolved
+        test_only += top_decided and not cell_resolved
+        band_only += cell_resolved and not top_decided
+        rows.append((key, cell_resolved, cell_decided, top_decided, gap, tests,
+                     verdicts, order[0][0]))
+
+    print(f"{'cell':12s}{'band':>10s}{'top':>6s}{'any':>6s}{'gap':>11s}"
           f"{'gap/band':>10s}  winner     pairs (Delta, p, Holm)")
-    for key, res, dec, gap, tests, verdicts, winner in rows:
+    for key, res, dec, topdec, gap, tests, verdicts, winner in rows:
         label = "-".join(key)
         detail = "  ".join(
             f"{a[0][:2]}/{b[0][:2]} {d:+.4f} p={p:.4f}"
             f"{'*' if verdicts[(a, b)][2] else ' '}"
             for (a, b), p, _, _, d in tests)
-        print(f"{label:12s}{'res' if res else '-':>10s}{'dec' if dec else '-':>8s}"
+        print(f"{label:12s}{'res' if res else '-':>10s}"
+              f"{'dec' if topdec else '-':>6s}{'dec' if dec else '-':>6s}"
               f"{gap:11.5f}{(gap / band if band else float('nan')):10.2f}  "
               f"{winner:10s} {detail}")
 
@@ -235,12 +249,21 @@ def main():
               "(see above)")
         print("  The remaining lines are printed for completeness and must not "
               "be reported.")
-    print(f"  decided by the test       {decided:4d} / {n}  {decided / n:6.1%}")
+    print(f"  TOP pair decided          {top_decided_n:4d} / {n}  "
+          f"{top_decided_n / n:6.1%}   <-- the like-for-like comparison")
+    print(f"  any pair decided          {decided:4d} / {n}  {decided / n:6.1%}"
+          f"   (a different question; see below)")
     print(f"  both                      {both:4d} / {n}  {both / n:6.1%}")
     print(f"  test only, under the band {test_only:4d} / {n}  "
           f"{test_only / n:6.1%}")
     print(f"  band only, not decided    {band_only:4d} / {n}  "
           f"{band_only / n:6.1%}")
+    print("\n  \"any pair decided\" counts a cell where some pair survives Holm, "
+          "which is\n  usually the pair involving the action that is far from "
+          "both others. The band\n  judges the TOP two. Only the top-pair row "
+          "above compares like with like, and\n  the headline must use it; the "
+          "any-pair row is reported so the difference is\n  visible rather "
+          "than quietly chosen.")
     print("\n  \"test only\" is not a correction of the band. It is a difference")
     print("  this instrument reproduces across replays yet cannot resolve "
           "against its own")
