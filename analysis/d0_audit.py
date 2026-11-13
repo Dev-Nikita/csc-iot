@@ -15,6 +15,16 @@ import itertools
 import json
 import numpy as np
 import pandas as pd
+# Run under `python3 -I` the script's own directory is NOT on sys.path, so a
+# sibling import fails with ModuleNotFoundError. The documented recompute
+# commands use -I deliberately -- it is how a script that reads downloaded data
+# is run safely -- so every analysis that imports a sibling puts its own
+# directory on the path itself rather than depending on how it was invoked.
+# This cost a scoring run of five part-D arms.
+import os as _os
+import sys as _sys
+_sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+
 from common import RAW, PROC, load_config
 
 

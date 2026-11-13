@@ -136,7 +136,7 @@ def test_a_different_substrate_is_refused(tmp_path):
 
 def _ten_repeats(jitter):
     return rows({("c01", "a01", "NO_OP", f"r{i:02d}"): jitter[i - 1]
-                 for i in range(1, 11)})
+                 for i in range(1, len(jitter) + 1)})
 
 
 def test_band_pairs_group_by_cell_not_by_action():
@@ -255,3 +255,17 @@ def test_an_arm_with_every_branch_unlicensed_is_a_result_not_a_missing_file(tmp_
     assert m["prefix_destroyed"]["branches"] == 6
     assert m["prefix_destroyed"]["whole_cells"] == 1
     assert m["prefix_destroyed"]["states"] == [6]
+
+
+def test_a_short_half_makes_the_null_reading_unavailable_not_wrong():
+    """On a six-repeat matrix, 5-against-5 is 5-against-1 and must refuse."""
+    full = {"rows": _ten_repeats([0.0, 1.0, 0.0, 1.0, 0.1, 1.0])[:6]}
+    n5 = mc.null_mode(full, range(1, 6), range(6, 11), full["rows"], "N5")
+    assert n5.get("unavailable") is True
+    assert n5["want"] == (5, 5)
+    assert n5["have"][1] < 5
+    # the matched reading on the same matrix is fine
+    n3 = mc.null_mode(full, range(1, 4), range(4, 7),
+                      mc.subset(full["rows"], range(1, 4)), "N3")
+    assert not n3.get("unavailable")
+    assert n3["n_per_side"] == (3, 3)

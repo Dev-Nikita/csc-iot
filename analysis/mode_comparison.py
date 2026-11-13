@@ -356,6 +356,24 @@ def null_mode(full, left, right, band_rows, label):
     lo, hi = subset(full["rows"], left), subset(full["rows"], right)
     if not lo or not hi:
         return None
+    # A half that is SHORT is worse than a half that is missing: it computes
+    # happily and is printed under a label that says something else. On a
+    # six-repeat matrix the five-against-five reading asks for repeats 6..10,
+    # finds only r06, and reports a five-against-ONE contrast as "5 against 5".
+    # That is exactly the class of defect this file exists to catch, so the
+    # reading refuses unless both halves are the size its own label claims.
+    want = (len(list(left)), len(list(right)))
+    have = collections.Counter()
+    for r in lo:
+        have[("lo",) + (r["scenario"], r["anchor"], r["action"])] += 1
+    got_lo = min(have.values()) if have else 0
+    have = collections.Counter()
+    for r in hi:
+        have[("hi",) + (r["scenario"], r["anchor"], r["action"])] += 1
+    got_hi = min(have.values()) if have else 0
+    if got_lo < want[0] or got_hi < want[1]:
+        return {"label": label, "unavailable": True, "want": want,
+                "have": (got_lo, got_hi)}
     band, npairs = pooled_band(band_rows)
     acc = collections.defaultdict(lambda: ([], []))
     for r in lo:
@@ -515,6 +533,15 @@ def main():
     for nm in readings:
         if nm is None:
             print("    unavailable: F does not have the repeats this reading needs")
+            continue
+        if nm.get("unavailable"):
+            print(f"\n    {nm['label']}")
+            print(f"      UNAVAILABLE: this reading needs {nm['want'][0]} and "
+                  f"{nm['want'][1]} repeats a side and the matrix supplies "
+                  f"{nm['have'][0]} and {nm['have'][1]}.")
+            print(f"      Computing it anyway would print a "
+                  f"{nm['have'][0]}-against-{nm['have'][1]} contrast under a "
+                  f"label that claims otherwise.")
             continue
         g = sorted(nm["gaps"])
         print(f"\n    {nm['label']}")

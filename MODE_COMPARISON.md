@@ -189,3 +189,22 @@ width rather than a hairline around 1.
 Every band ratio printed before this amendment is withdrawn. The conclusion
 labels, the resolvable fractions, the per-fault breakdown and both null readings
 are unaffected: they never used the ratio interval.
+
+## Amendment 3, 2026-11-13: a short half is worse than a missing one
+
+On the new substrate mode F runs at six repeats, so the five-against-five
+reading asks for repeats 6..10, finds only `r06`, and computed a
+**five-against-one** contrast which was printed under a label saying "5 against
+5". It reported 1.9 %, which looks reasonable and is not the quantity named.
+
+`null_mode` now refuses a reading whose halves are smaller than its own label
+claims, and prints what it needed against what the matrix supplies. The check is
+on the minimum per cell, not on the total, because one short cell is enough to
+make the label wrong.
+
+The matched reading N3 is unaffected and is the one that matters: on
+`bdg2-f-s42` it gives **4 of 216 null contrasts above the band 0.018262, 1.9 %**,
+against the 5 % a Q0.95 band admits by construction, with the largest null gap
+0.027168 --- above the band, so false positives exist here and there are few of
+them. That is the procedure's own false-positive rate, measured on the same
+substrate, at the same repeat count as the contrasts it calibrates.
