@@ -684,3 +684,34 @@ cell-by-cell comparison, because there is nothing there to compare.
 
 *Still to read:* the F-against-Q comparison on this substrate, and part D's five
 arms against the C6 rules. Both are scoring runs over data already on disk.
+
+**16, 2026-11-13/14. The randomised arm executed one branch of 1296, and
+nothing failed.**
+
+The schedule worked: `schedule ok: 72 cells`, and the first branch was
+`c01-a02-REROUTE-r06` rather than `c01-a02-NO_OP-r01`, which is the order being
+applied. Then the matrix stopped at one branch and the loop ended **normally**.
+No refusal, no error; the completeness check reported `expected=1296 actual=1`
+seven minutes later.
+
+*The cause, reproduced in isolation rather than inferred.* The new
+schedule-driven path streamed the schedule into `while read` from a process
+substitution, and a command inside the loop body --- docker, or the orchestrator
+--- read from that same stdin and consumed the remaining 1295 lines. A twelve-line
+harness with a stub that does `cat >/dev/null` executes **1 of 12** that way and
+**12 of 12** with the schedule read into an array first and `</dev/null` on the
+branch call. The fixed-order path never had this defect because it iterates with
+`for`.
+
+*Two fixes, and the second is the one that matters.* The schedule is read into
+an array before the loop and every `run_branch` call gets `/dev/null` on stdin.
+And the runner now asserts the count twice: the emitted schedule must hold
+exactly the branches the design needs, checked **before** the run, and
+`EXEC_INDEX` must equal that number **after** it, with an explicit refusal
+saying that a loop which ended early without a branch failing means something
+consumed the iteration itself. A loop that stops silently is worse than one that
+crashes, and this one would have been caught in seconds instead of minutes ---
+or, on a longer arm, hours.
+
+`bdg2-forder-s42`'s one-branch directory is quarantined. It is not a
+measurement.

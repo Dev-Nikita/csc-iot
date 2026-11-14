@@ -534,14 +534,17 @@ for c in sched["cells"]:
 print(f"schedule ok: {len(sched['cells'])} cells, hash {sched.get('schedule_hash')}")
 GUARD
   cp "$ORDER_SCHEDULE" "$OUT/order_schedule.json"
-  while read -r sidx anchor action repeat cellidx; do
-    EXEC_INDEX=$((EXEC_INDEX+1)); CELL_EXEC_INDEX="$cellidx"
-    if ! run_branch "$sidx" "$anchor" "$action" "$repeat"; then
-      echo "REFUSED scenario $sidx a$(printf %02d "$anchor")-$action-r$(printf %02d "$repeat")"
-      echo "FAIL FAST: the incomplete matrix remains on disk for diagnosis"
-      exit 1
-    fi
-  done < <(python3 - "$ORDER_SCHEDULE" "$SCENARIOS" <<'EMIT'
+  # The schedule is read into an array FIRST, and run_branch gets /dev/null on
+  # stdin.
+  #
+  # The first version streamed the schedule into `while read` from a process
+  # substitution. A command inside the loop body -- docker, or the orchestrator
+  # -- read from the same stdin and drank the remaining 1295 lines, so the
+  # matrix executed exactly ONE branch and the loop ended normally. Nothing
+  # failed; the runner simply stopped after one branch and the completeness
+  # check reported it seven minutes later. The fixed-order path never had this
+  # because it iterates with `for`.
+  mapfile -t SCHEDULED < <(python3 - "$ORDER_SCHEDULE" "$SCENARIOS" <<'EMIT'
 import json, sys
 sched = json.load(open(sys.argv[1]))
 ids = [s["scenario_id"] for s in json.load(open(sys.argv[2]))["scenarios"]]
@@ -553,13 +556,38 @@ for c in sched["cells"]:
               int(rep.lstrip("r")), n)
 EMIT
 )
+  WANT=$((SCENARIO_COUNT * ANCHOR_COUNT * $(printf '%s\n' $ACTIONS | wc -l) * REPEATS))
+  if [ "${#SCHEDULED[@]}" -ne "$WANT" ]; then
+    echo "FAIL: the schedule emits ${#SCHEDULED[@]} branches and the design "
+    echo "      needs $WANT. Refusing before the run rather than after it."
+    exit 2
+  fi
+  echo "scheduled ${#SCHEDULED[@]} branches in constrained-random order"
+  for line in "${SCHEDULED[@]}"; do
+    set -- $line
+    EXEC_INDEX=$((EXEC_INDEX+1)); CELL_EXEC_INDEX="$5"
+    if ! run_branch "$1" "$2" "$3" "$4" </dev/null; then
+      echo "REFUSED scenario $1 a$(printf %02d "$2")-$3-r$(printf %02d "$4")"
+      echo "FAIL FAST: the incomplete matrix remains on disk for diagnosis"
+      exit 1
+    fi
+  done
+  # A loop that stops early without failing is what cost this arm its first
+  # attempt. The count is asserted here, before anything downstream reads the
+  # matrix as if it were complete.
+  if [ "$EXEC_INDEX" -ne "$WANT" ]; then
+    echo "FAIL: executed $EXEC_INDEX branches of $WANT. The loop ended early"
+    echo "      without a branch failing, which means something consumed the"
+    echo "      iteration itself. The matrix is incomplete and is not scored."
+    exit 1
+  fi
 else
   for sidx in $(seq 1 "$SCENARIO_COUNT"); do
     for anchor in $ANCHOR_SEQ; do
       for action in $ACTIONS; do
         for repeat in $(seq 1 "$REPEATS"); do
           EXEC_INDEX=$((EXEC_INDEX+1)); CELL_EXEC_INDEX=$((EXEC_INDEX))
-          if ! run_branch "$sidx" "$anchor" "$action" "$repeat"; then
+          if ! run_branch "$sidx" "$anchor" "$action" "$repeat" </dev/null; then
             echo "REFUSED scenario $sidx a$(printf %02d "$anchor")-$action-r$(printf %02d "$repeat")"
             echo "FAIL FAST: the incomplete matrix remains on disk for diagnosis"
             exit 1
