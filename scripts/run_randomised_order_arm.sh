@@ -76,8 +76,20 @@ step "3/4  score it, then the order effect WITHIN this arm -- the primary readin
 python3 -I analysis/jobs.py "data/raw/$STACK/$NAME" --latency-max-ms 3000 \
   --latency-max-epochs 14 --allow-partial-cost \
   --out "data/raw/$STACK/$NAME/jobs.csv" | tail -2
+# The primary reading is the WITHIN-arm analysis, and it needs the execution
+# position, not the repeat index. order_effects.py reads the repeat index,
+# which is the right proxy only while the two coincide -- in this arm the
+# schedule decorrelated them on purpose, so running it here would analyse the
+# one variable the design removed the meaning from. It is still printed, for
+# the across-matrix drift it does measure.
+python3 -I analysis/order_within_arm.py "data/raw/$STACK/$NAME/jobs.csv" \
+  --schedule "data/raw/$STACK/$NAME/order_schedule.json" \
+  | tee data/derived/order-within-forder.txt
+echo
+echo "--- drift across the matrix, from the fixed-order script (the repeat-index"
+echo "--- trend it also prints is NOT the order effect in this arm):"
 python3 -I analysis/order_effects.py "data/raw/$STACK/$NAME/jobs.csv" \
-  | tee data/derived/order-effects-forder.txt | tail -30
+  | tee data/derived/order-effects-forder.txt | sed -n '/across-matrix/,$p' | head -12
 
 step "4/4  the secondary reading: the headline share against $REF"
 python3 -I analysis/paired_comparator.py "data/raw/$STACK/$NAME/jobs.csv" \

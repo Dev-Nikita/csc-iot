@@ -358,7 +358,25 @@ def main():
         name = os.path.basename(d)
         # The factors come from the branch's own manifest, never from its name.
         rec = branches.read(d, matrix)
+        # The execution position of this branch. Under the historical fixed
+        # order it is redundant with the action block, which is exactly why
+        # L-ORDER-001 exists; under a randomised schedule it is the only record
+        # of WHEN a branch ran, and the repeat index no longer carries it. An
+        # analysis of order that reads the repeat index on a randomised matrix
+        # is analysing a variable the schedule deliberately decorrelated.
+        exec_index = cell_exec_index = ""
+        su = os.path.join(d, "startup.json")
+        if os.path.exists(su):
+            try:
+                with open(su) as fh:
+                    stt = json.load(fh)
+                exec_index = stt.get("exec_index") if stt.get("exec_index") is not None else ""
+                cell_exec_index = stt.get("cell_exec_index") if stt.get("cell_exec_index") is not None else ""
+            except (ValueError, OSError):
+                pass
         rows.append({"branch": name,
+                     "exec_index": exec_index,
+                     "cell_exec_index": cell_exec_index,
                      "scenario": rec["scenario_id"],
                      "anchor": f"a{rec['anchor']:02d}",
                      "action": rec["action"],
