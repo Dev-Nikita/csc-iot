@@ -13,7 +13,29 @@ evidence named.
 
 ## L-ORDER-001 --- Action identity is perfectly confounded with execution-block position
 
-**Status: OPEN.** Not fixable in the existing data by any analysis.
+**Status: BOUNDED by measurement, 2026-11-17.** Still not fixable in the
+fixed-order data by any analysis; its size is now measured in an arm where it
+is identifiable.
+
+`bdg2-forder-s42`, 1296 branches, within-cell order a constrained random draw:
+
+* **the position effect is not distinguishable from zero.** Pooled mean signed
+  Spearman rho of `J_obs` against execution position, action held fixed,
+  **+0.0407** over 216 (cell, action) blocks; sign-flip test **p = 0.20**.
+* **no conclusion moves.** Adjusting each cell for a linear position trend
+  changes the winner in 8 of 72 cells and in **0 of the 19 cells the band
+  resolves**. A winner change in a cell the evaluation cannot resolve overturns
+  nothing, because there was no conclusion there.
+* **the headline does not move.** Unresolved share 73.6 % against the
+  fixed-order arm's 72.2 % --- a difference of **1.4 points** against the 8-point
+  criterion frozen in `RANDOMISED_ORDER.md` --- with **0 disagreements** among the
+  19 cells resolved in both arms, and a band ratio of 1.031 whose interval
+  [0.769, 1.317] contains 1.
+
+Both clauses of the frozen criterion are therefore met and **C2 stands as
+written**. The confound is bounded, not removed: the fixed-order matrices
+remain fixed-order, and what this arm licenses is a statement about how large
+the effect could have been, measured where it can be seen.
 
 `scripts/m2prime_nats_matrix.sh` executes a cell as scenario, anchor, action,
 repeat. Each action therefore occupies a contiguous block of wall-clock time

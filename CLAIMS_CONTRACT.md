@@ -65,6 +65,15 @@ of contrasts, or if it agrees with the repeat-mean winner at essentially every
 contrast while the unresolved share is also small --- the two together would mean
 the repetition buys nothing.
 
+**C2 inherited L-ORDER-001 and the inheritance is now discharged, 2026-11-17.**
+The randomised-order arm met both clauses of the criterion frozen before it ran:
+the unresolved share moved 1.4 points against a bound of 8, and no cell resolved
+in both arms named a different winner. The position effect itself is not
+distinguishable from zero (p = 0.20) and adjusting for it changes the winner in
+0 of the 19 resolved cells. C2 stands as written; the paragraph below records
+what the inheritance was, because a discharged caveat that is deleted looks like
+one that was never noticed.
+
 **C2 inherits L-ORDER-001, and this is stated here rather than in a footnote.**
 The resolvable share is a function of the band and of the between-action gap, and
 the gap is confounded with execution position. A gap distorted by position can
