@@ -12,7 +12,7 @@ Q 648, R 648, part D 3240 over five derived seeds.
 | claim | verdict | what decided it |
 |---|---|---|
 | C1 measured resolution binds | **supported** | 20 of 72 cells resolved, 72.2 % unresolved, against a refutation bound of "below 20 % unresolved" |
-| C2 one execution always names a winner | **supported, and inherits L-ORDER-001** | unchanged from the archived corpus; the order confound is bounded only once the randomised arm is read |
+| C2 one execution always names a winner | **supported** | unchanged from the archived corpus; the order confound is now bounded by the randomised arm, 1.4 points against a bound of 8 |
 | C3 three identifiability limits | **supported** | unchanged; 187/187 after the observability fix |
 | C4 not confined to our testbed | **supported** | unchanged; RCAEval single-run 8 of 375 against 43 of 75 paired |
 | C5 what the protocol's steps are worth | **supported, with two opposite answers** | Q: 0 disagreements in 72 cells. R: prefix identity destroyed in 72 of 72 cells |
@@ -76,15 +76,51 @@ By design point the test fails exactly where the band fails hardest: at the two
 D5 points it decides 1 and 2 of 6 cells, and resolves 0. D5 is undecidable by
 either criterion, which is a property of the mechanism.
 
+## The randomised-order arm, 2026-11-17 --- and the result that is design-valid
+
+`bdg2-forder-s42`: 1296 branches, within-cell order a constrained random draw,
+execution position recorded per branch. Everything else copied from
+`bdg2-f-s42`: same points, anchors, actions, repeats, horizon, period, emission
+spread, master and netem seed, same stack.
+
+**The confound is bounded.** Position effect not distinguishable from zero
+(pooled mean signed rho +0.0407, sign-flip p = 0.20). Adjusting for position
+changes the winner in 8 of 72 cells and in **0 of the 19** the band resolves.
+Unresolved share 73.6 % against 72.2 %, a difference of **1.4 points** against
+the frozen bound of 8, with **0 disagreements** among cells resolved in both
+arms and a band ratio of 1.031, interval [0.769, 1.317].
+
+**And the central claim now has a design-valid test behind it.** In this arm
+the actions were assigned to positions by a known mechanism, so randomisation
+inference against that mechanism's own reference set needs no exchangeability
+assumption and carries no `L-ORDER-001` qualification. On the top pair --- the
+same pair the band judges --- it rejects the sharp null of no assignment effect
+in **32 of 68 cells, 47.1 %**, while the band resolves **19 of 72, 26.4 %**.
+
+| reading on the randomised arm | cells | share |
+|---|---|---|
+| resolved at the measured band | 19 / 72 | 26.4 % |
+| **randomisation test, top pair, design-valid** | **32 / 68** | **47.1 %** |
+| permutation test, top pair, conditional | 36 / 72 | 50.0 % |
+| randomisation test, spread over all three actions | 63 / 68 | 92.6 % |
+
+Two things follow and the paper should say both.
+
+The design-valid test and the conditional one agree closely, 47.1 % against
+50.0 %. That is a measurement of what the conditioning in the fixed-order
+matrices cost: very little.
+
+And roughly **twenty points of comparisons** --- the gap between 47.1 % and
+26.4 % --- are differences that a test valid by construction of the experiment
+calls real and that the evaluation's own measured resolution cannot see. That
+is the paper's claim in the strongest form available to it, and it no longer
+rests on an assumption a reviewer can decline.
+
 ## What is still open before submission
 
-1. **The randomised-order arm.** `L-ORDER-001` is not closed and C2 inherits it.
-   `scripts/run_randomised_order_arm.sh` runs it: 1296 branches, about 7.3
-   hours, order drawn per cell from the design and constrained so each action
-   appears in each third. The primary reading is **within** that arm, where
-   action and position are independent; the comparison against `bdg2-f-s42` is
-   the secondary robustness check under the two verdicts in
-   `RANDOMISED_ORDER.md`.
+1. ~~**The randomised-order arm.**~~ **Done.** See above. `L-ORDER-001` is not closed and C2 inherits it.
+   The criterion it was read against was frozen before it ran and both
+   clauses were met.
 2. **The data-availability register, verified.** Twenty-three rows, schema
    consistent, none of them yet recomputed against the published package.
 3. **`L-DRIFT-001`.** Within a block the trend is nil; across the matrix
