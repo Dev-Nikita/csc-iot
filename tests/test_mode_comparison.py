@@ -269,3 +269,18 @@ def test_a_short_half_makes_the_null_reading_unavailable_not_wrong():
                       mc.subset(full["rows"], range(1, 4)), "N3")
     assert not n3.get("unavailable")
     assert n3["n_per_side"] == (3, 3)
+
+
+def test_a_variant_arm_is_compared_at_its_own_repeat_count(tmp_path):
+    """The F3 rule equalises repeat counts; equal counts need no truncating."""
+    spec = {k: v for i in range(1, 7) for k, v in (
+        (("c01", "a01", "NO_OP", f"r{i:02d}"), 1.0),
+        (("c01", "a01", "REROUTE", f"r{i:02d}"), 0.0))}
+    f = mc.load_matrix(str(tmp_path), _matrix(
+        tmp_path, "f", "full", spec, 6).name)
+    v = mc.load_matrix(str(tmp_path), _matrix(
+        tmp_path, "v", "full", spec, 6,
+        extra={"within_cell_order": "constrained-random"}).name)
+    at3 = mc.compare(f, v)
+    at6 = mc.compare(f, v, repeats=6)
+    assert at3["pairs_full"] < at6["pairs_full"]

@@ -180,3 +180,38 @@ much the conditioning cost.
 After the current campaign finishes, as its own matrix, under the run lock. Not
 before: changing the runner while F, Q, R and part D are executing would split
 the campaign across two designs, which is worse than the limitation it fixes.
+
+---
+
+## Amendment 1, 2026-11-17: three readings needed fixing before they could be read
+
+The arm ran: 1296 branches, the schedule applied, `cell_exec_index` recorded.
+Three things in the analysis were wrong or missing and are corrected before any
+verdict is taken from them.
+
+**The position effect needed a test, not an eyeball.** Part 1 printed a pooled
+mean signed rho and left "small" to the reader. Under no position effect the
+sign of each cell's rho is arbitrary, so a sign-flip test of the pooled mean is
+available with no assumption about the shape of rho at six points, and it is now
+computed and printed with its verdict.
+
+**A winner change in an unresolvable cell overturns nothing.** Part 2 counted
+cells whose winner moves after detrending, over all 72. A cell the evaluation
+cannot resolve has no conclusion for the adjustment to overturn, so the count is
+now also reported among the cells that were **resolved at this arm's band** ---
+and that is the only line that bears on a result.
+
+**The randomisation test had the defect I had just removed from the
+comparator.** Its statistic was the spread across all three action means, which
+is driven by whichever action sits far from the other two --- exactly the
+"any pair" reading that was wrong beside the band's top-two verdict. The
+top-pair statistic is now computed alongside it, using the same pair of actions
+re-labelled by the mechanism, and it is the like-for-like number.
+
+**And the cross-arm check needed a way to run.** `bdg2-forder-s42` is mode F, so
+`--ablated` refuses it, correctly: nothing was removed. `--variant` compares two
+full-protocol arms that differ in `within_cell_order`, refuses one that differs
+in nothing, and compares at the arms' own repeat count rather than truncating to
+three --- the three-repeat rule exists to stop a ten-against-three reading from
+measuring the repeat count, and with six against six there is nothing to
+equalise.

@@ -297,9 +297,17 @@ def prefix_split_cells(root_dir):
     return {k for k, v in by_cell.items() if len(v) != 1}
 
 
-def compare(full, abl, clean_only=None):
-    """One ablated mode against F at three repeats."""
-    f_rows = subset(full["rows"], range(1, ABLATION_REPEATS + 1))
+def compare(full, abl, clean_only=None, repeats=None):
+    """One ablated mode against F at three repeats.
+
+    `repeats` overrides that for a VARIANT arm. The F3 rule exists to stop a
+    ten-against-three reading from measuring the repeat count; when the two
+    arms already hold the same number of repeats there is nothing to equalise
+    and truncating F would discard half the data for no reason. The override is
+    only ever passed when the counts match, and the header says which was used.
+    """
+    n_rep = repeats if repeats else ABLATION_REPEATS
+    f_rows = subset(full["rows"], range(1, n_rep + 1))
     a_rows = abl["rows"]
     if clean_only is not None:
         f_rows = [r for r in f_rows if (r["scenario"], r["anchor"]) in clean_only]
@@ -458,10 +466,29 @@ def main():
     ap.add_argument("--full", required=True, help="the mode-F matrix")
     ap.add_argument("--ablated", action="append", default=[],
                     help="an ablated matrix; repeatable")
+    ap.add_argument("--variant", action="append", default=[],
+                    help="a full-protocol matrix differing in the order "
+                         "regime, not an ablation; repeatable")
     args = ap.parse_args()
 
     full = load_matrix(args.root, args.full)
     abls = [load_matrix(args.root, n) for n in args.ablated]
+    # A variant is mode F with something else changed -- the within-cell
+    # execution order is the case this exists for. It is compared with the same
+    # machinery and is NOT called an ablation, because nothing was removed.
+    for n in args.variant:
+        m = load_matrix(args.root, n)
+        if m.get("mode") not in ("full", "unrecorded"):
+            refuse(f"--variant names {n}, whose manifest says mode="
+                   f"{m['mode']!r}. A variant is a full-protocol run.")
+        order_a = full["meta"].get("within_cell_order", "fixed-action-blocks")
+        order_b = m["meta"].get("within_cell_order", "fixed-action-blocks")
+        if order_a == order_b:
+            refuse(f"--variant names {n}, whose within_cell_order is "
+                   f"{order_b!r}, the same as the reference. A variant that "
+                   f"varies nothing is not a comparison.")
+        m["variant_of"] = (order_a, order_b)
+        abls.append(m)
     # An arm with no prefix left cannot be compared and must not be silently
     # dropped either. It is reported first, in full, as its own result.
     destroyed = [m for m in abls if m.get("prefix_destroyed")]
@@ -471,6 +498,8 @@ def main():
         refuse(f"--full names {args.full}, whose manifest says mode="
                f"{full['mode']!r}. The reference arm must be the full protocol.")
     for m in abls:
+        if m.get("variant_of"):
+            continue
         if m["mode"] in ("full", "unrecorded"):
             refuse(f"--ablated names {m['name']}, whose manifest says mode="
                    f"{m['mode']!r}. That is not an ablation.")
@@ -556,8 +585,17 @@ def main():
           "MODE_COMPARISON.md amendment 1.")
 
     for m in abls:
-        report_compare(compare(full, m), f"{m['name']} (mode {m['mode']}) "
-                                         f"against {full['name']} at three repeats")
+        if m.get("variant_of"):
+            rep = int(m["meta"].get("repeats", ABLATION_REPEATS))
+            a, b = m["variant_of"]
+            report_compare(
+                compare(full, m, repeats=rep),
+                f"{m['name']} (within-cell order {b}) against {full['name']} "
+                f"({a}) at {rep} repeats each")
+        else:
+            report_compare(compare(full, m),
+                           f"{m['name']} (mode {m['mode']}) against "
+                           f"{full['name']} at three repeats")
 
     # Mode A': the same headline over prefix-clean cells only.
     split_f = prefix_split_cells(full["dir"])

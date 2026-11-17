@@ -37,8 +37,13 @@ Three readings, in the order they matter:
 import argparse
 import collections
 import csv
+import itertools
 import json
+import random
 import sys
+
+SIGNFLIP_DRAWS = 20000
+SIGNFLIP_SEED = 20261117
 
 
 def mean(xs):
@@ -154,12 +159,43 @@ def main():
               f"mean |rho| {mean([abs(x) for x in v]):.4f}")
     print(f"   {'pooled':10s} cells={len(all_rhos):4d}  mean signed rho "
           f"{mean(all_rhos):+.4f}")
+    # "Small" is not a verdict. Under no position effect the sign of each
+    # cell's rho is arbitrary, so flipping signs gives the null distribution of
+    # the mean directly, with no assumption about the shape of rho at n=6.
+    rng = random.Random(SIGNFLIP_SEED)
+    obs = abs(mean(all_rhos))
+    hits = 1
+    for _ in range(SIGNFLIP_DRAWS - 1):
+        if abs(mean([r if rng.random() < 0.5 else -r
+                     for r in all_rhos])) >= obs:
+            hits += 1
+    p_pos = hits / SIGNFLIP_DRAWS
+    print(f"   sign-flip test of the pooled mean: p = {p_pos:.4f} over "
+          f"{SIGNFLIP_DRAWS} draws")
+    print(f"   verdict: {'a position effect is distinguishable from zero' if p_pos <= 0.05 else 'NOT distinguishable from zero at this sample'}")
     print("   A real position effect shows as a mean SIGNED rho away from "
           "zero. The mean of\n   |rho| is large at six points whatever the "
           "data do and is printed only beside it.")
 
     # ---- 2. does adjusting for position change the verdict? ---------------
+    # The band of this arm, so a winner change can be reported where it
+    # matters: a cell the evaluation could not resolve anyway has no conclusion
+    # for the adjustment to overturn.
+    pair_diffs = []
+    for key, rs in cells.items():
+        by_action = collections.defaultdict(list)
+        for r in rs:
+            by_action[r["action"]].append(r["J"])
+        for vals in by_action.values():
+            pair_diffs += [abs(a - b)
+                           for a, b in itertools.combinations(vals, 2)]
+    pair_diffs.sort()
+    h = (len(pair_diffs) - 1) * 0.95
+    lo = int(h)
+    band = pair_diffs[lo] + (h - lo) * (pair_diffs[min(lo + 1, len(pair_diffs) - 1)] - pair_diffs[lo])
+
     changed_winner = 0
+    changed_resolved = resolved_cells = 0
     gaps_before, gaps_after, slopes = [], [], []
     for key, rs in sorted(cells.items()):
         pts = [(r["pos"], r["J"]) for r in rs]
@@ -173,13 +209,26 @@ def main():
         after = {a: mean(v) for a, v in after.items()}
         ob = sorted(before.items(), key=lambda kv: (kv[1], kv[0]))
         oa = sorted(after.items(), key=lambda kv: (kv[1], kv[0]))
-        gaps_before.append(ob[1][1] - ob[0][1])
+        gap_before = ob[1][1] - ob[0][1]
+        gaps_before.append(gap_before)
         gaps_after.append(oa[1][1] - oa[0][1])
-        changed_winner += int(ob[0][0] != oa[0][0])
+        flipped = ob[0][0] != oa[0][0]
+        changed_winner += int(flipped)
+        if gap_before > band:
+            resolved_cells += 1
+            changed_resolved += int(flipped)
     print("\n2. ADJUSTING FOR POSITION inside each cell (linear detrend on "
           "position)")
+    print(f"   band of this arm {band:.6f}; cells resolved at it "
+          f"{resolved_cells} of {len(cells)}")
     print(f"   cells whose winner changes after adjustment: {changed_winner} "
           f"of {len(cells)}")
+    print(f"   of those, cells that were RESOLVED at the band: "
+          f"{changed_resolved} of {resolved_cells}   <-- the ones with a "
+          f"conclusion to overturn")
+    print("   A winner change in a cell the evaluation cannot resolve "
+          "overturns nothing: there\n   was no conclusion there to begin "
+          "with. Only the second line bears on a result.")
     print(f"   median best-to-runner-up gap  before {sorted(gaps_before)[len(gaps_before)//2]:.6f}"
           f"   after {sorted(gaps_after)[len(gaps_after)//2]:.6f}")
     print(f"   median within-cell slope of J on position: "
@@ -210,7 +259,7 @@ def main():
           f"cell, every one satisfying\n   the thirds constraint (checked, "
           f"{len(sched['cells'])} cells)")
 
-    decided = total = 0
+    decided = decided_top = total = 0
     for key, rs in sorted(cells.items()):
         c = by_cell.get(key)
         if c is None:
@@ -224,9 +273,16 @@ def main():
         for a in sched["actions"]:
             observed[a] = mean([by_pos[p] for p, l in zip(order_pos, labels)
                                 if l == a])
-        ov = sorted(observed.values())
-        obs_stat = ov[-1] - ov[0]
-        hits = 1
+        ov = sorted(observed.items(), key=lambda kv: (kv[1], kv[0]))
+        # Two statistics, because the spread across all three actions is
+        # dominated by whichever action sits far from the other two -- the same
+        # defect the permutation comparator had when it printed "any pair"
+        # beside the band's top-two verdict. The top-pair statistic is the
+        # like-for-like one and it is reported as such.
+        obs_spread = ov[-1][1] - ov[0][1]
+        obs_top = ov[1][1] - ov[0][1]
+        top_names = {ov[0][0], ov[1][0]}
+        hits_spread = hits_top = 1
         draws = min(args.draws, len(c["reference_sample"]))
         for ref in c["reference_sample"][:draws]:
             lab = [x.split("|")[0] for x in ref]
@@ -235,14 +291,24 @@ def main():
                 m[a] = mean([by_pos[p] for p, l in zip(order_pos, lab)
                              if l == a])
             v = sorted(m.values())
-            if (v[-1] - v[0]) >= obs_stat:
-                hits += 1
-        p = hits / (draws + 1)
+            if (v[-1] - v[0]) >= obs_spread:
+                hits_spread += 1
+            # the same PAIR of actions, re-labelled by the mechanism
+            pair = sorted(m[a] for a in top_names)
+            if (pair[1] - pair[0]) >= obs_top:
+                hits_top += 1
         total += 1
-        decided += int(p <= 0.05)
-    print(f"   cells where the sharp null of no assignment effect is rejected "
-          f"at 0.05:\n   {decided} of {total} = "
+        decided += int(hits_spread / (draws + 1) <= 0.05)
+        decided_top += int(hits_top / (draws + 1) <= 0.05)
+    print(f"   TOP pair, the like-for-like statistic: {decided_top} of "
+          f"{total} = {decided_top / total if total else float('nan'):.1%} "
+          f"reject at 0.05")
+    print(f"   spread over all three actions:         {decided} of {total} = "
           f"{decided / total if total else float('nan'):.1%}")
+    print("   The three-action spread is driven by whichever action sits far "
+          "from the other\n   two, which is a different question from the one "
+          "the band answers. Use the top\n   pair; the spread is printed so "
+          "the gap between them is visible.")
     print("   This is design-valid: the reference set is the mechanism that "
           "assigned the\n   actions, not an exchangeability assumption. It is "
           "the one test in this paper\n   that does not carry the "
