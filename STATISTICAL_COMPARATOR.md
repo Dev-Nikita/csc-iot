@@ -156,3 +156,29 @@ all anyone gets. **That is the paper's point, and the comparator sharpens it
 rather than softening it.** Reporting the test alone would replace a question
 about what an evaluation can see with a question about what it can detect given
 enough repeats, and those are not the same question.
+
+---
+
+## Amendment 2, 2026-11-18: the top pair was selected from the data it was tested on
+
+External review raised it and it is correct. In the randomisation test of the
+randomised-order arm, *which* pair is the top pair is read off the observed
+means. Holding that pair fixed while the mechanism relabels every assignment
+tests a hypothesis selected with the same data, and the p-value is optimistic
+by an amount this design does not bound. Enumerating the assignment mechanism
+correctly does not rescue a hypothesis chosen after looking.
+
+The statistic is therefore **selection-aware**: the best-to-runner-up gap *of
+each reference assignment*, so the reference distribution contains the
+selection step. The post-selection version is computed and printed beside it,
+labelled as optimistic, because the gap between the two is the size of the
+error that would otherwise have been reported. A test asserts the two
+reference distributions differ on an assignment where some other pair is the
+closest --- which is precisely the mass the post-selection version omits.
+
+**And the denominators had to match.** The band's share was reported over 72
+cells and the test's over the 68 it can use, and a difference between two such
+numbers is partly an artefact of which cells each could read. Both are now also
+reported over the **same** cell set, with its own band recomputed on exactly
+those cells. The 72-cell and 68-cell figures are not a comparison; the common
+set is.

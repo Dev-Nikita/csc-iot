@@ -85,3 +85,31 @@ def test_thirds_check_is_applied_to_the_reference_set():
     assert owa.thirds_ok(good, actions)
     crowded = ([("A", "r1")] * 6 + [("B", "r1")] * 6 + [("C", "r1")] * 6)
     assert not owa.thirds_ok(crowded, actions)
+
+
+def test_the_selection_aware_statistic_differs_from_the_fixed_pair_one():
+    """Post-selection: the top pair is read off the observed means.
+
+    Holding that pair fixed while the mechanism relabels everything tests a
+    hypothesis chosen with the same data. The selection-aware statistic is the
+    best-to-runner-up gap of each reference assignment, so the reference
+    distribution contains the selection. On a reference assignment where some
+    OTHER pair happens to be the closest, the two statistics disagree -- which
+    is exactly the mass the post-selection version omits.
+    """
+    # observed means: A=0.0, B=0.1, C=1.0 -> top pair (A,B), gap 0.1
+    # a relabelling with means A=0.5, B=1.0, C=0.55 has top pair (A,C) gap 0.05
+    obs = {"A": 0.0, "B": 0.1, "C": 1.0}
+    ref = {"A": 0.5, "B": 1.0, "C": 0.55}
+    ov = sorted(obs.items(), key=lambda kv: (kv[1], kv[0]))
+    obs_top = ov[1][1] - ov[0][1]
+    top_names = {ov[0][0], ov[1][0]}
+    pair_fixed = sorted(ref[a] for a in top_names)
+    fixed_stat = pair_fixed[1] - pair_fixed[0]
+    v = sorted(ref.values())
+    sel_stat = v[1] - v[0]
+    assert fixed_stat == pytest.approx(0.5)      # A vs B under the relabelling
+    assert sel_stat == pytest.approx(0.05)       # A vs C, this assignment's top
+    # the fixed-pair statistic counts this draw as extreme, the selection-aware
+    # one does not -- the two reference distributions are different
+    assert (fixed_stat >= obs_top) and not (sel_stat >= obs_top)

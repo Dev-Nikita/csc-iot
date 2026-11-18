@@ -259,7 +259,8 @@ def main():
           f"cell, every one satisfying\n   the thirds constraint (checked, "
           f"{len(sched['cells'])} cells)")
 
-    decided = decided_top = total = 0
+    decided = decided_top = decided_top_fixed = total = 0
+    cells_tested = set()
     for key, rs in sorted(cells.items()):
         c = by_cell.get(key)
         if c is None:
@@ -274,15 +275,27 @@ def main():
             observed[a] = mean([by_pos[p] for p, l in zip(order_pos, labels)
                                 if l == a])
         ov = sorted(observed.items(), key=lambda kv: (kv[1], kv[0]))
-        # Two statistics, because the spread across all three actions is
-        # dominated by whichever action sits far from the other two -- the same
-        # defect the permutation comparator had when it printed "any pair"
-        # beside the band's top-two verdict. The top-pair statistic is the
-        # like-for-like one and it is reported as such.
+        # THREE statistics, and the difference between the last two is a
+        # correctness question, not a presentational one.
+        #
+        # The spread over all three actions is dominated by whichever action
+        # sits far from the other two, which is not the question the band
+        # answers.
+        #
+        # The top pair is the question the band answers -- but WHICH pair is
+        # the top pair is read off the observed means. Holding that pair fixed
+        # while the mechanism relabels everything tests a hypothesis that was
+        # selected using the same data, and the p-value is optimistic by an
+        # amount this design does not bound. The selection has to happen inside
+        # each reference assignment too, so the statistic is "the gap between
+        # the best and the runner-up under THIS assignment" -- a
+        # selection-aware statistic whose reference distribution includes the
+        # selection. `top_fixed` is kept beside it to show how much the
+        # post-selection version flatters.
         obs_spread = ov[-1][1] - ov[0][1]
         obs_top = ov[1][1] - ov[0][1]
         top_names = {ov[0][0], ov[1][0]}
-        hits_spread = hits_top = 1
+        hits_spread = hits_top_fixed = hits_top_sel = 1
         draws = min(args.draws, len(c["reference_sample"]))
         for ref in c["reference_sample"][:draws]:
             lab = [x.split("|")[0] for x in ref]
@@ -293,18 +306,66 @@ def main():
             v = sorted(m.values())
             if (v[-1] - v[0]) >= obs_spread:
                 hits_spread += 1
-            # the same PAIR of actions, re-labelled by the mechanism
+            # post-selection: the pair chosen from the OBSERVED data, held fixed
             pair = sorted(m[a] for a in top_names)
             if (pair[1] - pair[0]) >= obs_top:
-                hits_top += 1
+                hits_top_fixed += 1
+            # selection-aware: the best-to-runner-up gap of THIS assignment
+            if (v[1] - v[0]) >= obs_top:
+                hits_top_sel += 1
         total += 1
         decided += int(hits_spread / (draws + 1) <= 0.05)
-        decided_top += int(hits_top / (draws + 1) <= 0.05)
-    print(f"   TOP pair, the like-for-like statistic: {decided_top} of "
-          f"{total} = {decided_top / total if total else float('nan'):.1%} "
-          f"reject at 0.05")
-    print(f"   spread over all three actions:         {decided} of {total} = "
-          f"{decided / total if total else float('nan'):.1%}")
+        decided_top += int(hits_top_sel / (draws + 1) <= 0.05)
+        decided_top_fixed += int(hits_top_fixed / (draws + 1) <= 0.05)
+        cells_tested.add(key)
+    print(f"   top pair, SELECTION-AWARE (the reportable one):  {decided_top}"
+          f" of {total} = "
+          f"{decided_top / total if total else float('nan'):.1%}")
+    print(f"   top pair, pair fixed from the observed means:    "
+          f"{decided_top_fixed} of {total} = "
+          f"{decided_top_fixed / total if total else float('nan'):.1%}  "
+          f"<-- post-selection, optimistic")
+    print(f"   spread over all three actions:                  {decided} of "
+          f"{total} = {decided / total if total else float('nan'):.1%}")
+    print("   Which pair is the top pair is read from the observed means, so "
+          "holding it fixed\n   while the mechanism relabels everything tests "
+          "a hypothesis selected with the\n   same data. The selection-aware "
+          "statistic is the best-to-runner-up gap of each\n   reference "
+          "assignment, so the reference distribution contains the selection.")
+
+    # The band and this test must be compared on the SAME cells, or the shares
+    # have different denominators and the difference between them is partly an
+    # artefact of which cells each could use.
+    common = sorted(cells_tested)
+    band_pairs = []
+    for key in common:
+        by_action = collections.defaultdict(list)
+        for r in cells[key]:
+            by_action[r["action"]].append(r["J"])
+        for vals in by_action.values():
+            band_pairs += [abs(a - b)
+                           for a, b in itertools.combinations(vals, 2)]
+    band_pairs.sort()
+    hh = (len(band_pairs) - 1) * 0.95
+    li = int(hh)
+    band_c = band_pairs[li] + (hh - li) * (
+        band_pairs[min(li + 1, len(band_pairs) - 1)] - band_pairs[li])
+    res_c = 0
+    for key in common:
+        ms = {}
+        for r in cells[key]:
+            ms.setdefault(r["action"], []).append(r["J"])
+        o = sorted((mean(v) for v in ms.values()))
+        if len(o) > 1 and (o[1] - o[0]) > band_c:
+            res_c += 1
+    print(f"\n   ON THE SAME {len(common)} CELLS, so the denominators match:")
+    print(f"     resolved at the band                {res_c} of {len(common)}"
+          f" = {res_c / len(common) if common else float('nan'):.1%}")
+    print(f"     randomisation test, selection-aware {decided_top} of "
+          f"{len(common)} = "
+          f"{decided_top / len(common) if common else float('nan'):.1%}")
+    print("     The band over all 72 cells and the test over the cells it can "
+          "use are not\n     a comparison. These two are.")
     print("   The three-action spread is driven by whichever action sits far "
           "from the other\n   two, which is a different question from the one "
           "the band answers. Use the top\n   pair; the spread is printed so "
